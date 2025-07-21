@@ -26,7 +26,7 @@ const transports: winston.transport[] = [
       winston.format.simple()
     ),
   }),
-  
+
   // Fichier pour tous les logs
   new winston.transports.File({
     filename: path.join(logsDir, 'app.log'),
@@ -36,7 +36,7 @@ const transports: winston.transport[] = [
     maxFiles: 5,
     tailable: true,
   }),
-  
+
   // Fichier pour les erreurs uniquement
   new winston.transports.File({
     filename: path.join(logsDir, 'error.log'),
@@ -167,6 +167,20 @@ export const logWithContext = {
       type: 'performance',
       operation,
       duration: `${duration}ms`,
+      ...meta,
+    });
+  },
+
+  /**
+   * Log d'API générique
+   */
+  api: (action: string, endpoint: string, success: boolean, meta?: LogMeta) => {
+    const level = success ? 'info' : 'warn';
+    logger.log(level, 'API Action', {
+      type: 'api_action',
+      action,
+      endpoint,
+      success,
       ...meta,
     });
   },

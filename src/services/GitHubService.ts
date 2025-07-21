@@ -28,7 +28,7 @@ export class GitHubService {
 
     try {
       const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(query);
-      
+
       if (response.errors) {
         throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
       }
@@ -37,7 +37,7 @@ export class GitHubService {
       const orgNames = organizations.map((org: any) => org.login);
 
       logger.info('Organisations récupérées', { count: orgNames.length });
-      
+
       return orgNames;
     } catch (error: any) {
       logger.error('Erreur récupération organisations', { error: error.message });
@@ -135,10 +135,10 @@ export class GitHubService {
         following: counters.following?.totalCount || 0,
         publicRepos: counters.repositories?.totalCount || 0,
         publicGists: counters.gists?.totalCount || 0,
-        privateRepos: null,
-        ownedPrivateRepos: null,
-        totalPrivateRepos: null,
-        collaborators: null,
+        privateRepos: 0,
+        ownedPrivateRepos: 0,
+        totalPrivateRepos: 0,
+        collaborators: 0,
         createdAt: new Date(basic.createdAt),
         updatedAt: new Date(basic.updatedAt),
         type: basic.__typename,
@@ -785,7 +785,7 @@ export class GitHubService {
       const packages = response || [];
 
       // Filtrer les packages liés au repo (approximation par nom)
-      const repoPackages = packages.filter((pkg: any) => 
+      const repoPackages = packages.filter((pkg: any) =>
         pkg.repository?.name === repo || pkg.name.includes(repo)
       );
 
@@ -873,7 +873,7 @@ export class GitHubService {
       );
 
       const files = response.files || {};
-      
+
       const communityData = {
         healthPercentage: response.health_percentage || 0,
         hasReadme: !!files.readme,
@@ -960,7 +960,7 @@ export class GitHubService {
         repo,
         error: error.message,
       });
-      
+
       // Retourner des données vides plutôt que d'échouer
       return {
         views: { count: 0, uniques: 0 },
@@ -976,7 +976,7 @@ export class GitHubService {
    */
   public async enrichWithDevOpsData(repo: GitHubRepo): Promise<GitHubRepo> {
     const [owner, repoName] = repo.nameWithOwner.split('/');
-    
+
     try {
       logger.info('Début enrichissement DevOps', {
         nameWithOwner: repo.nameWithOwner,
@@ -1026,7 +1026,7 @@ export class GitHubService {
         nameWithOwner: repo.nameWithOwner,
         error: error.message,
       });
-      
+
       // Retourner le repo original si l'enrichissement échoue
       return repo;
     }
@@ -1037,10 +1037,13 @@ export class GitHubService {
    */
   public sanitizeDescription(description: string): string {
     if (!description) return '';
-    
+
     return description
       .replace(/[\r\n\t]/g, ' ')
       .trim()
       .substring(0, 500); // Limite de longueur
   }
-} 
+}
+
+// Export de l'instance singleton
+export const githubService = new GitHubService(); 
