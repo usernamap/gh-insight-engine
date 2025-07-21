@@ -13,7 +13,7 @@ const logsDir = path.join(process.cwd(), 'logs');
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
-  winston.format.json()
+  winston.format.json(),
 );
 
 // Configuration des transports
@@ -23,7 +23,7 @@ const transports: winston.transport[] = [
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     format: winston.format.combine(
       winston.format.colorize(),
-      winston.format.simple()
+      winston.format.simple(),
     ),
   }),
 
@@ -50,7 +50,7 @@ const transports: winston.transport[] = [
 
 // Création du logger
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.LOG_LEVEL ?? 'info',
   format: logFormat,
   transports,
   exitOnError: false,
@@ -61,7 +61,7 @@ logger.exceptions.handle(
   new winston.transports.File({
     filename: path.join(logsDir, 'exceptions.log'),
     format: logFormat,
-  })
+  }),
 );
 
 // Gestion des rejections de promesses
@@ -69,12 +69,12 @@ logger.rejections.handle(
   new winston.transports.File({
     filename: path.join(logsDir, 'rejections.log'),
     format: logFormat,
-  })
+  }),
 );
 
 // Interface pour typage strict
 export interface LogMeta {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Méthodes utilitaires
@@ -82,7 +82,7 @@ export const logWithContext = {
   /**
    * Log d'une requête API entrante
    */
-  apiRequest: (method: string, url: string, ip: string, meta?: LogMeta) => {
+  apiRequest: (method: string, url: string, ip: string, meta?: LogMeta): void => {
     logger.info('API Request', {
       type: 'api_request',
       method,
@@ -95,7 +95,7 @@ export const logWithContext = {
   /**
    * Log d'une réponse API
    */
-  apiResponse: (method: string, url: string, statusCode: number, responseTime: number, meta?: LogMeta) => {
+  apiResponse: (method: string, url: string, statusCode: number, responseTime: number, meta?: LogMeta): void => {
     const level = statusCode >= 400 ? 'warn' : 'info';
     logger.log(level, 'API Response', {
       type: 'api_response',
@@ -110,7 +110,7 @@ export const logWithContext = {
   /**
    * Log d'une requête GitHub API
    */
-  githubRequest: (endpoint: string, type: 'graphql' | 'rest', meta?: LogMeta) => {
+  githubRequest: (endpoint: string, type: 'graphql' | 'rest', meta?: LogMeta): void => {
     logger.debug('GitHub API Request', {
       type: 'github_request',
       endpoint,
@@ -122,7 +122,7 @@ export const logWithContext = {
   /**
    * Log d'une opération base de données
    */
-  database: (operation: string, collection: string, meta?: LogMeta) => {
+  database: (operation: string, collection: string, meta?: LogMeta): void => {
     logger.debug('Database Operation', {
       type: 'database',
       operation,
@@ -134,7 +134,7 @@ export const logWithContext = {
   /**
    * Log d'une analyse IA
    */
-  aiAnalysis: (analysisType: string, status: 'start' | 'success' | 'error', meta?: LogMeta) => {
+  aiAnalysis: (analysisType: string, status: 'start' | 'success' | 'error', meta?: LogMeta): void => {
     const level = status === 'error' ? 'error' : 'info';
     logger.log(level, 'AI Analysis', {
       type: 'ai_analysis',
@@ -147,7 +147,7 @@ export const logWithContext = {
   /**
    * Log d'authentification
    */
-  auth: (action: string, username: string, success: boolean, meta?: LogMeta) => {
+  auth: (action: string, username: string, success: boolean, meta?: LogMeta): void => {
     const level = success ? 'info' : 'warn';
     logger.log(level, 'Authentication', {
       type: 'auth',
@@ -161,7 +161,7 @@ export const logWithContext = {
   /**
    * Log de performance
    */
-  performance: (operation: string, duration: number, meta?: LogMeta) => {
+  performance: (operation: string, duration: number, meta?: LogMeta): void => {
     const level = duration > 5000 ? 'warn' : 'info'; // Warn si > 5s
     logger.log(level, 'Performance', {
       type: 'performance',
@@ -174,7 +174,7 @@ export const logWithContext = {
   /**
    * Log d'API générique
    */
-  api: (action: string, endpoint: string, success: boolean, meta?: LogMeta) => {
+  api: (action: string, endpoint: string, success: boolean, meta?: LogMeta): void => {
     const level = success ? 'info' : 'warn';
     logger.log(level, 'API Action', {
       type: 'api_action',
@@ -188,7 +188,7 @@ export const logWithContext = {
   /**
    * Log de sécurité
    */
-  security: (event: string, severity: 'low' | 'medium' | 'high' | 'critical', meta?: LogMeta) => {
+  security: (event: string, severity: 'low' | 'medium' | 'high' | 'critical', meta?: LogMeta): void => {
     const level = severity === 'critical' ? 'error' : severity === 'high' ? 'warn' : 'info';
     logger.log(level, 'Security Event', {
       type: 'security',
@@ -199,4 +199,4 @@ export const logWithContext = {
   },
 };
 
-export default logger; 
+export default logger;

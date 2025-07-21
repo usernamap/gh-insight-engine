@@ -59,7 +59,7 @@ export class RepoController {
         if (authenticatedUser?.githubToken) {
           try {
             logWithContext.github('fetch_repository_from_api', nameWithOwner, true);
-            
+
             // Note: Cette implémentation nécessiterait d'étendre GitHubService
             // pour récupérer un repository spécifique
             throw createError.notFound('Repository');
@@ -316,7 +316,7 @@ export class RepoController {
       const enrichedData = await githubService.enrichWithDevOpsData(
         owner,
         repo,
-        authenticatedUser.githubToken
+        authenticatedUser.githubToken,
       );
 
       if (!enrichedData) {
@@ -422,20 +422,20 @@ export class RepoController {
     try {
       // Calcul de la date limite selon la période
       const now = new Date();
-      let sinceDate = new Date();
-      
+      const sinceDate = new Date();
+
       switch (period) {
-        case '1d':
-          sinceDate.setDate(now.getDate() - 1);
-          break;
-        case '7d':
-          sinceDate.setDate(now.getDate() - 7);
-          break;
-        case '30d':
-          sinceDate.setDate(now.getDate() - 30);
-          break;
-        default:
-          sinceDate.setDate(now.getDate() - 7);
+      case '1d':
+        sinceDate.setDate(now.getDate() - 1);
+        break;
+      case '7d':
+        sinceDate.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        sinceDate.setDate(now.getDate() - 30);
+        break;
+      default:
+        sinceDate.setDate(now.getDate() - 7);
       }
 
       // Filtres pour les repositories tendance
@@ -514,4 +514,4 @@ export class RepoController {
   });
 }
 
-export default RepoController; 
+export default RepoController;

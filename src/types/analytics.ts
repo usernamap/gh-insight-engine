@@ -226,4 +226,4 @@ export interface AnalyticsExtension {
   alerts: AnalyticsAlert[];
   recommendations: AnalyticsRecommendation[];
   updatedAt: Date;
-} 
+}

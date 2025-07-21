@@ -83,7 +83,7 @@ export class InsightsController {
       const aiInsights = await aiService.generateInsights(
         userData,
         repositories,
-        latestDataset.analytics as any
+        latestDataset.analytics as any,
       );
 
       // 5. Sauvegarde des insights
@@ -144,7 +144,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucun insight IA trouvé pour cet utilisateur');
       }
 
@@ -209,7 +209,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucune analyse de personnalité trouvée');
       }
 
@@ -277,7 +277,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucune recommandation trouvée');
       }
 
@@ -350,7 +350,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucune analyse des forces trouvée');
       }
 
@@ -418,7 +418,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucune analyse des opportunités de croissance trouvée');
       }
 
@@ -494,7 +494,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucune évaluation des compétences trouvée');
       }
 
@@ -509,9 +509,9 @@ export class InsightsController {
         skills: {
           technical: skills.technical.map((skill: any) => ({
             ...skill,
-            level: skill.proficiency > 0.8 ? 'Expert' : 
-                   skill.proficiency > 0.6 ? 'Advanced' : 
-                   skill.proficiency > 0.4 ? 'Intermediate' : 'Beginner',
+            level: skill.proficiency > 0.8 ? 'Expert' :
+              skill.proficiency > 0.6 ? 'Advanced' :
+                skill.proficiency > 0.4 ? 'Intermediate' : 'Beginner',
           })),
           frameworks: skills.frameworks || [],
           tools: skills.tools || [],
@@ -573,7 +573,7 @@ export class InsightsController {
       }
 
       const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset || !latestDataset.aiInsights) {
+      if (!latestDataset?.aiInsights) {
         throw createError.notFound('Aucun insight de carrière trouvé');
       }
 
@@ -635,4 +635,4 @@ export class InsightsController {
   });
 }
 
-export default InsightsController; 
+export default InsightsController;

@@ -7,13 +7,13 @@ import { GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsOverview } from '@/types/analytics';
 import {
   AIInsightsSummary,
-  DeveloperPersonality,
-  SkillAssessment,
   CareerInsights,
+  DeveloperPersonality,
+  GrowthOpportunities,
   ProductivityAnalysis,
-  TechnicalRecommendations,
+  SkillAssessment,
   StrengthsAnalysis,
-  GrowthOpportunities
+  TechnicalRecommendations,
 } from '@/types/insights';
 import openaiConfig from '@/config/openai';
 import logger from '@/utils/logger';
@@ -25,7 +25,7 @@ export class AIService {
   public async generateCompleteInsights(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<AIInsightsSummary> {
     const startTime = Date.now();
 
@@ -43,7 +43,7 @@ export class AIService {
         productivity,
         recommendations,
         strengths,
-        growth
+        growth,
       ] = await Promise.all([
         this.analyzeDeveloperPersonality(userProfile, repositories, analytics),
         this.assessTechnicalSkills(userProfile, repositories, analytics),
@@ -62,7 +62,7 @@ export class AIService {
         productivity,
         recommendations,
         strengths,
-        growth
+        growth,
       });
 
       const processingTime = (Date.now() - startTime) / 1000;
@@ -117,13 +117,13 @@ export class AIService {
   private async analyzeDeveloperPersonality(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<DeveloperPersonality> {
     try {
       const analysisResult = await openaiConfig.generateDeveloperSummary(
         userProfile,
         repositories,
-        analytics
+        analytics,
       );
 
       const result = analysisResult.result;
@@ -154,13 +154,13 @@ export class AIService {
   private async assessTechnicalSkills(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<SkillAssessment> {
     try {
       const analysisResult = await openaiConfig.assessTechnicalSkills(
         userProfile,
         repositories,
-        analytics
+        analytics,
       );
 
       const result = analysisResult.result;
@@ -193,13 +193,13 @@ export class AIService {
   private async analyzeCareerInsights(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<CareerInsights> {
     try {
       const analysisResult = await openaiConfig.analyzeCareerInsights(
         userProfile,
         repositories,
-        analytics
+        analytics,
       );
 
       const result = analysisResult.result;
@@ -233,7 +233,7 @@ export class AIService {
   private async analyzeProductivityPatterns(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<ProductivityAnalysis> {
     try {
       // Analyse basée sur les données quantitatives + IA
@@ -283,13 +283,13 @@ export class AIService {
   private async generateTechnicalRecommendations(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<TechnicalRecommendations> {
     try {
       const analysisResult = await openaiConfig.generateRecommendations(
         userProfile,
         repositories,
-        analytics
+        analytics,
       );
 
       const result = analysisResult.result;
@@ -322,7 +322,7 @@ export class AIService {
   private async analyzeStrengths(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<StrengthsAnalysis> {
     try {
       // Analyse basée sur les métriques quantitatives
@@ -348,7 +348,7 @@ export class AIService {
   private async identifyGrowthOpportunities(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): Promise<GrowthOpportunities> {
     try {
       const skillGaps = this.identifySkillGaps(analytics);
@@ -414,7 +414,7 @@ export class AIService {
 
   private validateArchetype(archetype: any): DeveloperPersonality['archetype'] {
     const validArchetypes: DeveloperPersonality['archetype'][] = [
-      'innovator', 'builder', 'optimizer', 'maintainer', 'explorer', 'teacher'
+      'innovator', 'builder', 'optimizer', 'maintainer', 'explorer', 'teacher',
     ];
     return validArchetypes.includes(archetype) ? archetype : 'builder';
   }
@@ -434,7 +434,7 @@ export class AIService {
 
   private validateCareerLevel(level: any): CareerInsights['currentLevel'] {
     const validLevels: CareerInsights['currentLevel'][] = [
-      'junior', 'mid_level', 'senior', 'staff', 'principal', 'distinguished'
+      'junior', 'mid_level', 'senior', 'staff', 'principal', 'distinguished',
     ];
     return validLevels.includes(level) ? level : 'mid_level';
   }
@@ -462,7 +462,7 @@ export class AIService {
   private generateFallbackPersonality(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): DeveloperPersonality {
     const archetype = this.inferArchetypeFromData(repositories, analytics);
 
@@ -506,7 +506,7 @@ export class AIService {
         proficiency: this.mapCountToProficiency(stats.count),
         confidence: Math.min(100, stats.count * 20 + 40),
         evidenceStrength: stats.count >= 5 ? 'strong' : stats.count >= 3 ? 'moderate' : 'weak' as const,
-        evidence: [`${stats.count} repositories`, `Usage actif`],
+        evidence: [`${stats.count} repositories`, 'Usage actif'],
         growthPotential: 'moderate' as const,
         marketDemand: this.getLanguageMarketDemand(language),
       }));
@@ -547,7 +547,7 @@ export class AIService {
 
   private generateFallbackLeadershipSkill(
     userProfile: UserProfile,
-    repositories: GitHubRepo[]
+    repositories: GitHubRepo[],
   ): SkillAssessment['leadership'] {
     const ownedRepos = repositories.filter(r => !r.isFork).length;
     const popularRepos = repositories.filter(r => r.stargazerCount > 5).length;
@@ -714,7 +714,7 @@ export class AIService {
       insights.push('Polyvalence technique remarquable');
     }
 
-    return insights.join('. ') + '.';
+    return `${insights.join('. ')  }.`;
   }
 
   private calculateSustainabilityScore(analytics: AnalyticsOverview): number {
@@ -797,7 +797,7 @@ export class AIService {
             title: 'Guide des tests unitaires',
             type: 'article' as const,
             priority: 1,
-          }
+          },
         ],
       });
     }
@@ -814,7 +814,7 @@ export class AIService {
             title: 'Documentation GitHub Actions',
             type: 'documentation' as const,
             priority: 1,
-          }
+          },
         ],
       });
     }
@@ -829,7 +829,7 @@ export class AIService {
         timeframe: '3-6 mois',
         steps: ['Tests unitaires', 'Code review', 'Outils de qualité'],
         metrics: ['Couverture de tests', 'Temps de review'],
-      }
+      },
     ];
   }
 
@@ -840,7 +840,7 @@ export class AIService {
         milestones: ['Contributions open source', 'Conférences techniques', 'Mentoring'],
         skills: ['Leadership technique', 'Communication'],
         experience: ['Projets d\'envergure', 'Équipes diverses'],
-      }
+      },
     ];
   }
 
@@ -941,7 +941,7 @@ export class AIService {
         purpose: 'Accélération du développement technique',
         findingStrategy: ['Communautés techniques', 'Conférences', 'Projets open source'],
         value: 'Guidance et conseils stratégiques',
-      }
+      },
     ];
   }
 
@@ -950,7 +950,7 @@ export class AIService {
   private generateFallbackCareerInsights(
     userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview
+    analytics: AnalyticsOverview,
   ): CareerInsights {
     return {
       currentLevel: 'mid_level',
@@ -1036,7 +1036,7 @@ export class AIService {
           manifestation: ['Développement régulier'],
           evidence: [`Score consistance: ${analytics.productivity.breakdown.consistency}/100`],
           leverageOpportunities: ['Projets long terme'],
-        }
+        },
       ],
       emerging: [],
       unique: [],
@@ -1053,7 +1053,7 @@ export class AIService {
           learningPath: ['Mentorat', 'Projets d\'équipe', 'Communication'],
           timeToCompetency: '6-12 mois',
           careerImpact: 'Évolution vers des rôles senior',
-        }
+        },
       ],
       experiences: [
         {
@@ -1062,7 +1062,7 @@ export class AIService {
           benefit: 'Développement du leadership',
           acquiringStrategy: ['Volontariat interne', 'Projets pilotes'],
           prerequisites: ['Expertise technique reconnue'],
-        }
+        },
       ],
       relationships: [
         {
@@ -1070,7 +1070,7 @@ export class AIService {
           purpose: 'Échange de bonnes pratiques',
           findingStrategy: ['Communautés de développeurs'],
           value: 'Apprentissage collaboratif',
-        }
+        },
       ],
     };
   }
@@ -1197,4 +1197,4 @@ export class AIService {
 }
 
 // Export de l'instance singleton
-export const aiService = new AIService(); 
+export const aiService = new AIService();

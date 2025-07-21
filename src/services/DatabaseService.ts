@@ -3,10 +3,10 @@
  * Couche d'abstraction pour toutes les interactions avec MongoDB via les modèles
  */
 
-import { UserProfile, GitHubRepo, DatasetMetadata } from '@/types/github';
+import { DatasetMetadata, GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsExtension } from '@/types/analytics';
 import { InsightsExtension } from '@/types/insights';
-import { UserModel, RepositoryModel, DatasetModel, PrismaUser, PrismaRepository, PrismaDataset } from '@/models';
+import { DatasetModel, PrismaDataset, PrismaRepository, PrismaUser, RepositoryModel, UserModel } from '@/models';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 
@@ -19,7 +19,7 @@ export class DatabaseService {
     repositories: GitHubRepo[],
     metadata: DatasetMetadata,
     analytics?: AnalyticsExtension,
-    insights?: InsightsExtension
+    insights?: InsightsExtension,
   ): Promise<{
     user: PrismaUser;
     repositories: PrismaRepository[];
@@ -161,7 +161,7 @@ export class DatabaseService {
   public async updateDatasetAnalyses(
     datasetId: string,
     analytics?: AnalyticsExtension,
-    insights?: InsightsExtension
+    insights?: InsightsExtension,
   ): Promise<PrismaDataset> {
     try {
       let dataset = await DatasetModel.findById(datasetId);
@@ -205,7 +205,7 @@ export class DatabaseService {
       branchProtection?: any;
       community?: any;
       traffic?: any;
-    }>
+    }>,
   ): Promise<PrismaRepository[]> {
     try {
       const enrichedRepositories: PrismaRepository[] = [];
@@ -276,7 +276,7 @@ export class DatabaseService {
             ...user,
             stats,
           };
-        })
+        }),
       );
 
       return {
@@ -323,7 +323,7 @@ export class DatabaseService {
       const enrichedRepositories = await Promise.all(
         repositories.map(async (repo) => {
           const user = await UserModel.findById(repo.userId);
-          
+
           return {
             ...repo,
             user: {
@@ -332,7 +332,7 @@ export class DatabaseService {
               avatarUrl: user?.avatarUrl || '',
             },
           };
-        })
+        }),
       );
 
       return {
@@ -421,7 +421,7 @@ export class DatabaseService {
    */
   public async areUserAnalyticsUpToDate(
     username: string,
-    maxAgeMinutes: number = 60
+    maxAgeMinutes = 60,
   ): Promise<{
     hasDataset: boolean;
     hasAnalytics: boolean;
@@ -432,7 +432,7 @@ export class DatabaseService {
   }> {
     try {
       const latestDataset = await this.getLatestUserDataset(username);
-      
+
       if (!latestDataset) {
         return {
           hasDataset: false,
@@ -445,7 +445,7 @@ export class DatabaseService {
 
       const freshness = await DatasetModel.isAnalyticsUpToDate(
         latestDataset.dataset.id,
-        maxAgeMinutes
+        maxAgeMinutes,
       );
 
       return {
@@ -592,7 +592,7 @@ export class DatabaseService {
     try {
       // Test de connectivité
       const health = await databaseConfig.healthCheck();
-      
+
       if (!health.overall) {
         issues.push('Connexion base de données instable');
       }
@@ -630,7 +630,7 @@ export class DatabaseService {
 
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         connected: false,
         responseTime,
@@ -644,14 +644,14 @@ export class DatabaseService {
 
   private async getRepositoriesByIds(repositoryIds: string[]): Promise<PrismaRepository[]> {
     const repositories: PrismaRepository[] = [];
-    
+
     for (const id of repositoryIds) {
       const repo = await databaseConfig.findUnique('repository', { id });
       if (repo) {
         repositories.push(repo as PrismaRepository);
       }
     }
-    
+
     return repositories;
   }
 
@@ -726,7 +726,7 @@ export class DatabaseService {
 
   private async deleteInactiveUsers(inactiveIds: string[]): Promise<number> {
     let deletedCount = 0;
-    
+
     for (const userId of inactiveIds) {
       try {
         await UserModel.delete(userId);
@@ -756,7 +756,7 @@ export class DatabaseService {
       return 0;
     }
   }
-} 
+}
 
 // Export de l'instance singleton pour utilisation dans les controllers
-export const databaseService = new DatabaseService(); 
+export const databaseService = new DatabaseService();

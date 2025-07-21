@@ -336,7 +336,7 @@ export interface DatasetGenerationResponse {
 }
 
 // GraphQL Query Types
-export interface GraphQLResponse<T = any> {
+export interface GraphQLResponse<T = Record<string, unknown>> {
   data?: T;
   errors?: Array<{
     message: string;
@@ -388,6 +388,6 @@ export interface RateLimitInfo {
 export interface APIError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   stack?: string;
-} 
+}

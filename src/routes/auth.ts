@@ -1,10 +1,9 @@
 import { Router } from 'express';
 import { AuthController } from '@/controllers';
 import {
-    validateAuth,
-    validateGitHubToken,
-    authenticateJWT,
-    optionalJWT
+  authenticateJWT,
+  validateAuth,
+  validateGitHubToken,
 } from '@/middleware';
 
 const router = Router();
@@ -16,9 +15,9 @@ const router = Router();
  * @body    { username: string, fullName: string, githubToken: string }
  */
 router.post('/login',
-    validateAuth,
-    validateGitHubToken,
-    AuthController.login
+  validateAuth,
+  validateGitHubToken,
+  AuthController.login,
 );
 
 /**
@@ -27,8 +26,8 @@ router.post('/login',
  * @access  Private (JWT requis)
  */
 router.post('/refresh',
-    authenticateJWT,
-    AuthController.refresh
+  authenticateJWT,
+  AuthController.refresh,
 );
 
 /**
@@ -37,8 +36,8 @@ router.post('/refresh',
  * @access  Private (JWT requis)
  */
 router.delete('/logout',
-    authenticateJWT,
-    AuthController.logout
+  authenticateJWT,
+  AuthController.logout,
 );
 
 /**
@@ -47,8 +46,8 @@ router.delete('/logout',
  * @access  Private (JWT requis)
  */
 router.get('/validate',
-    authenticateJWT,
-    AuthController.validateToken
+  authenticateJWT,
+  AuthController.validateToken,
 );
 
 /**
@@ -57,8 +56,8 @@ router.get('/validate',
  * @access  Private (JWT requis)
  */
 router.get('/me',
-    authenticateJWT,
-    AuthController.getCurrentUser
+  authenticateJWT,
+  AuthController.getCurrentUser,
 );
 
-export default router; 
+export default router;

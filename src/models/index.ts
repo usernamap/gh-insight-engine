@@ -9,7 +9,7 @@ export { DatasetModel } from './Dataset';
 
 // Re-export des types Prisma pour commodité
 export type {
-    User as PrismaUser,
-    Repository as PrismaRepository,
-    Dataset as PrismaDataset
+  User as PrismaUser,
+  Repository as PrismaRepository,
+  Dataset as PrismaDataset,
 } from '@/generated/prisma';

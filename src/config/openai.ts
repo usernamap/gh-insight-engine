@@ -4,7 +4,7 @@
  */
 
 import OpenAI from 'openai';
-import { PromptTemplate, AIAnalysisPrompt } from '@/types/insights';
+import { AIAnalysisPrompt, PromptTemplate } from '@/types/insights';
 import logger from '@/utils/logger';
 
 export class OpenAIConfig {
@@ -24,7 +24,7 @@ export class OpenAIConfig {
 
     // Test de connexion
     await this.testConnection();
-    
+
     logger.info('Configuration OpenAI initialisée avec succès');
   }
 
@@ -58,9 +58,9 @@ export class OpenAIConfig {
    */
   public async executeAnalysis(
     prompt: AIAnalysisPrompt,
-    model: string = 'gpt-4',
-    maxTokens: number = 2000,
-    temperature: number = 0.7
+    model = 'gpt-4',
+    maxTokens = 2000,
+    temperature = 0.7,
   ): Promise<any> {
     if (!this.client) {
       throw new Error('Client OpenAI non initialisé');
@@ -83,7 +83,7 @@ export class OpenAIConfig {
             content: prompt.systemPrompt,
           },
           {
-            role: 'user', 
+            role: 'user',
             content: this.buildUserPrompt(prompt),
           },
         ],
@@ -118,7 +118,7 @@ export class OpenAIConfig {
 
     } catch (error: any) {
       const processingTime = (Date.now() - startTime) / 1000;
-      
+
       logger.error('Erreur lors de l\'analyse IA', {
         analysisType: prompt.analysisType,
         error: error.message,
@@ -134,7 +134,7 @@ export class OpenAIConfig {
    */
   private buildUserPrompt(prompt: AIAnalysisPrompt): string {
     const { userProfile, repositories, analytics } = prompt.dataContext;
-    
+
     const contextData = {
       userProfile: this.sanitizeDataForPrompt(userProfile),
       repositoriesCount: repositories.length,
@@ -161,20 +161,20 @@ export class OpenAIConfig {
     if (!data) return null;
 
     const sensitiveFields = ['email', 'token', 'apiKey', '_id', 'password'];
-    
+
     if (Array.isArray(data)) {
       return data.map(item => this.sanitizeDataForPrompt(item));
     }
 
     if (typeof data === 'object' && data !== null) {
       const sanitized: any = {};
-      
+
       for (const [key, value] of Object.entries(data)) {
         if (!sensitiveFields.includes(key.toLowerCase())) {
           sanitized[key] = this.sanitizeDataForPrompt(value);
         }
       }
-      
+
       return sanitized;
     }
 
@@ -187,7 +187,7 @@ export class OpenAIConfig {
   public async generateDeveloperSummary(
     userProfile: any,
     repositories: any[],
-    analytics: any
+    analytics: any,
   ): Promise<any> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('developer-summary').systemPrompt,
@@ -205,7 +205,7 @@ export class OpenAIConfig {
   public async assessTechnicalSkills(
     userProfile: any,
     repositories: any[],
-    analytics: any
+    analytics: any,
   ): Promise<any> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('skills-assessment').systemPrompt,
@@ -223,7 +223,7 @@ export class OpenAIConfig {
   public async analyzeCareerInsights(
     userProfile: any,
     repositories: any[],
-    analytics: any
+    analytics: any,
   ): Promise<any> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('career-insights').systemPrompt,
@@ -241,7 +241,7 @@ export class OpenAIConfig {
   public async generateRecommendations(
     userProfile: any,
     repositories: any[],
-    analytics: any
+    analytics: any,
   ): Promise<any> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('recommendations').systemPrompt,
@@ -261,8 +261,8 @@ export class OpenAIConfig {
       'developer-summary': {
         name: 'developer-summary',
         version: '1.0.0',
-        systemPrompt: `Tu es un expert en analyse de profils de développeurs. Analyse les données GitHub fournies pour créer un résumé de personnalité développeur. Retourne un JSON avec les champs: archetype, description, strengths, workingStyle, motivations, potentialChallenges.`,
-        userPromptTemplate: `Analyse ce profil de développeur et détermine son archétype principal, son style de travail, ses forces et défis potentiels. Base ton analyse sur les repositories, langages, patterns de commits et collaboration.`,
+        systemPrompt: 'Tu es un expert en analyse de profils de développeurs. Analyse les données GitHub fournies pour créer un résumé de personnalité développeur. Retourne un JSON avec les champs: archetype, description, strengths, workingStyle, motivations, potentialChallenges.',
+        userPromptTemplate: 'Analyse ce profil de développeur et détermine son archétype principal, son style de travail, ses forces et défis potentiels. Base ton analyse sur les repositories, langages, patterns de commits et collaboration.',
         variables: ['userProfile', 'repositories', 'analytics'],
         outputFormat: 'json',
         maxTokens: 1500,
@@ -271,8 +271,8 @@ export class OpenAIConfig {
       'skills-assessment': {
         name: 'skills-assessment',
         version: '1.0.0',
-        systemPrompt: `Tu es un expert en évaluation des compétences techniques. Analyse les données GitHub pour évaluer les compétences techniques et soft skills. Retourne un JSON avec les champs: technical, soft, leadership.`,
-        userPromptTemplate: `Évalue les compétences techniques de ce développeur basé sur ses repositories, langages utilisés, types de projets, et patterns de collaboration. Inclus le niveau de maîtrise et les preuves pour chaque compétence.`,
+        systemPrompt: 'Tu es un expert en évaluation des compétences techniques. Analyse les données GitHub pour évaluer les compétences techniques et soft skills. Retourne un JSON avec les champs: technical, soft, leadership.',
+        userPromptTemplate: 'Évalue les compétences techniques de ce développeur basé sur ses repositories, langages utilisés, types de projets, et patterns de collaboration. Inclus le niveau de maîtrise et les preuves pour chaque compétence.',
         variables: ['userProfile', 'repositories', 'analytics'],
         outputFormat: 'json',
         maxTokens: 2000,
@@ -281,8 +281,8 @@ export class OpenAIConfig {
       'career-insights': {
         name: 'career-insights',
         version: '1.0.0',
-        systemPrompt: `Tu es un conseiller en carrière spécialisé en développement logiciel. Analyse le profil pour fournir des insights sur le niveau actuel, la trajectoire et les opportunités de carrière. Retourne un JSON avec les champs: currentLevel, trajectory, suitableRoles, marketPosition.`,
-        userPromptTemplate: `Analyse la trajectoire de carrière de ce développeur. Détermine son niveau actuel, sa direction de croissance, les rôles qui lui conviendraient et sa position sur le marché.`,
+        systemPrompt: 'Tu es un conseiller en carrière spécialisé en développement logiciel. Analyse le profil pour fournir des insights sur le niveau actuel, la trajectoire et les opportunités de carrière. Retourne un JSON avec les champs: currentLevel, trajectory, suitableRoles, marketPosition.',
+        userPromptTemplate: 'Analyse la trajectoire de carrière de ce développeur. Détermine son niveau actuel, sa direction de croissance, les rôles qui lui conviendraient et sa position sur le marché.',
         variables: ['userProfile', 'repositories', 'analytics'],
         outputFormat: 'json',
         maxTokens: 1800,
@@ -291,8 +291,8 @@ export class OpenAIConfig {
       'recommendations': {
         name: 'recommendations',
         version: '1.0.0',
-        systemPrompt: `Tu es un mentor technique expérimenté. Génère des recommandations personnalisées pour améliorer les compétences et la carrière. Retourne un JSON avec les champs: immediate, shortTerm, longTerm.`,
-        userPromptTemplate: `Génère des recommandations concrètes et actionnables pour ce développeur. Inclus des suggestions immédiates, à court terme et à long terme avec des ressources spécifiques.`,
+        systemPrompt: 'Tu es un mentor technique expérimenté. Génère des recommandations personnalisées pour améliorer les compétences et la carrière. Retourne un JSON avec les champs: immediate, shortTerm, longTerm.',
+        userPromptTemplate: 'Génère des recommandations concrètes et actionnables pour ce développeur. Inclus des suggestions immédiates, à court terme et à long terme avec des ressources spécifiques.',
         variables: ['userProfile', 'repositories', 'analytics'],
         outputFormat: 'json',
         maxTokens: 2000,
@@ -327,4 +327,4 @@ export class OpenAIConfig {
 
 // Instance singleton
 export const openaiConfig = new OpenAIConfig();
-export default openaiConfig; 
+export default openaiConfig;

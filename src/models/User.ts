@@ -4,7 +4,7 @@
  */
 
 import { User as PrismaUser } from '@/generated/prisma';
-import { UserProfile, GitHubOrganization } from '@/types/github';
+import { GitHubOrganization, UserProfile } from '@/types/github';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 
@@ -437,4 +437,4 @@ export class UserModel {
       throw new Error(`Upsert utilisateur échoué: ${error.message}`);
     }
   }
-} 
+}

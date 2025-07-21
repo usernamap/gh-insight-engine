@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { RepoController } from '@/controllers';
-import { 
+import {
+  authenticateJWT,
+  optionalJWT,
   validateRepoParams,
   validateRepoSearch,
-  authenticateJWT,
-  optionalJWT
 } from '@/middleware';
 
 const router = Router();
@@ -18,7 +18,7 @@ const router = Router();
 router.get('/search',
   optionalJWT,
   validateRepoSearch,
-  RepoController.searchRepositories
+  RepoController.searchRepositories,
 );
 
 /**
@@ -28,7 +28,7 @@ router.get('/search',
  */
 router.get('/languages/stats',
   optionalJWT,
-  RepoController.getLanguagesStats
+  RepoController.getLanguagesStats,
 );
 
 /**
@@ -39,7 +39,7 @@ router.get('/languages/stats',
  */
 router.get('/trending',
   optionalJWT,
-  RepoController.getTrendingRepositories
+  RepoController.getTrendingRepositories,
 );
 
 /**
@@ -50,7 +50,7 @@ router.get('/trending',
 router.get('/:owner/:repo',
   optionalJWT,
   validateRepoParams,
-  RepoController.getRepository
+  RepoController.getRepository,
 );
 
 /**
@@ -61,7 +61,7 @@ router.get('/:owner/:repo',
 router.post('/:owner/:repo/enrich',
   authenticateJWT,
   validateRepoParams,
-  RepoController.enrichRepository
+  RepoController.enrichRepository,
 );
 
-export default router; 
+export default router;

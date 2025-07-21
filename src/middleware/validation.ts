@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { z, ZodSchema, ZodError } from 'zod';
+import { NextFunction, Request, Response } from 'express';
+import { ZodError, ZodSchema, z } from 'zod';
 import { logWithContext } from '@/utils/logger';
 
 /**
@@ -346,11 +346,11 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
   // Fonction de sanitisation récursive
   const sanitizeObject = (obj: any): any => {
     if (obj === null || obj === undefined) return obj;
-    
+
     if (typeof obj === 'string') {
       // Nettoyer les espaces en début/fin
       obj = obj.trim();
-      
+
       // Échapper les caractères HTML potentiellement dangereux
       obj = obj
         .replace(/&/g, '&amp;')
@@ -359,14 +359,14 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#x27;')
         .replace(/\//g, '&#x2F;');
-        
+
       return obj;
     }
-    
+
     if (Array.isArray(obj)) {
       return obj.map(item => sanitizeObject(item));
     }
-    
+
     if (typeof obj === 'object') {
       const sanitized: any = {};
       for (const key in obj) {
@@ -376,7 +376,7 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
       }
       return sanitized;
     }
-    
+
     return obj;
   };
 
@@ -385,11 +385,11 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
     if (req.body) {
       req.body = sanitizeObject(req.body);
     }
-    
+
     if (req.query) {
       req.query = sanitizeObject(req.query);
     }
-    
+
     if (req.params) {
       req.params = sanitizeObject(req.params);
     }
@@ -414,4 +414,4 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
       timestamp: new Date().toISOString(),
     });
   }
-}; 
+};

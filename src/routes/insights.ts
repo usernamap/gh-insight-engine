@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { InsightsController } from '@/controllers';
 import {
-    validateUserParams,
-    authenticateJWT,
-    optionalJWT,
-    requireOwnership
+  authenticateJWT,
+  optionalJWT,
+  requireOwnership,
+  validateUserParams,
 } from '@/middleware';
 
 const router = Router();
@@ -15,19 +15,19 @@ const router = Router();
  * @access  Private (JWT requis + ownership + rate limit IA)
  */
 router.post('/:username/generate',
-    // Rate limiting spécialisé pour les analyses IA (très coûteuses)
-    (req: any, res: any, next: any) => {
-        const analysisLimiter = req.app.get('analysisLimiter');
-        if (analysisLimiter) {
-            analysisLimiter(req, res, next);
-        } else {
-            next();
-        }
-    },
-    authenticateJWT,
-    validateUserParams,
-    requireOwnership,
-    InsightsController.generateInsights
+  // Rate limiting spécialisé pour les analyses IA (très coûteuses)
+  (req: Request, res: Response, next: NextFunction) => {
+    const analysisLimiter = req.app.get('analysisLimiter');
+    if (analysisLimiter) {
+      analysisLimiter(req, res, next);
+    } else {
+      next();
+    }
+  },
+  authenticateJWT,
+  validateUserParams,
+  requireOwnership,
+  InsightsController.generateInsights,
 );
 
 /**
@@ -36,9 +36,9 @@ router.post('/:username/generate',
  * @access  Public
  */
 router.get('/:username/summary',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getInsightsSummary
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getInsightsSummary,
 );
 
 /**
@@ -47,9 +47,9 @@ router.get('/:username/summary',
  * @access  Public
  */
 router.get('/:username/personality',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getDeveloperPersonality
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getDeveloperPersonality,
 );
 
 /**
@@ -59,9 +59,9 @@ router.get('/:username/personality',
  * @query   { category?: 'immediate'|'shortTerm'|'longTerm' }
  */
 router.get('/:username/recommendations',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getRecommendations
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getRecommendations,
 );
 
 /**
@@ -70,9 +70,9 @@ router.get('/:username/recommendations',
  * @access  Public
  */
 router.get('/:username/strengths',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getStrengths
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getStrengths,
 );
 
 /**
@@ -81,9 +81,9 @@ router.get('/:username/strengths',
  * @access  Public
  */
 router.get('/:username/growth',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getGrowthOpportunities
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getGrowthOpportunities,
 );
 
 /**
@@ -92,9 +92,9 @@ router.get('/:username/growth',
  * @access  Public
  */
 router.get('/:username/skills',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getSkillAssessment
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getSkillAssessment,
 );
 
 /**
@@ -103,9 +103,9 @@ router.get('/:username/skills',
  * @access  Public
  */
 router.get('/:username/career',
-    optionalJWT,
-    validateUserParams,
-    InsightsController.getCareerInsights
+  optionalJWT,
+  validateUserParams,
+  InsightsController.getCareerInsights,
 );
 
-export default router; 
+export default router;

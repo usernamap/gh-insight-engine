@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { MongooseError } from 'mongoose';
-import { logger, logWithContext } from '@/utils/logger';
+import { logWithContext, logger } from '@/utils/logger';
 
 /**
  * Interface pour les erreurs API personnalisées
@@ -34,7 +34,7 @@ export class AuthenticationError extends Error implements APIError {
   code = 'AUTHENTICATION_ERROR';
   isOperational = true;
 
-  constructor(message: string = 'Non authentifié') {
+  constructor(message = 'Non authentifié') {
     super(message);
     this.name = 'AuthenticationError';
     Object.setPrototypeOf(this, AuthenticationError.prototype);
@@ -46,7 +46,7 @@ export class AuthorizationError extends Error implements APIError {
   code = 'AUTHORIZATION_ERROR';
   isOperational = true;
 
-  constructor(message: string = 'Accès refusé') {
+  constructor(message = 'Accès refusé') {
     super(message);
     this.name = 'AuthorizationError';
     Object.setPrototypeOf(this, AuthorizationError.prototype);
@@ -58,7 +58,7 @@ export class NotFoundError extends Error implements APIError {
   code = 'NOT_FOUND_ERROR';
   isOperational = true;
 
-  constructor(resource: string = 'Ressource') {
+  constructor(resource = 'Ressource') {
     super(`${resource} introuvable`);
     this.name = 'NotFoundError';
     Object.setPrototypeOf(this, NotFoundError.prototype);
@@ -82,7 +82,7 @@ export class RateLimitError extends Error implements APIError {
   code = 'RATE_LIMIT_ERROR';
   isOperational = true;
 
-  constructor(message: string = 'Trop de requêtes', public retryAfter?: number) {
+  constructor(message = 'Trop de requêtes', public retryAfter?: number) {
     super(message);
     this.name = 'RateLimitError';
     Object.setPrototypeOf(this, RateLimitError.prototype);
@@ -140,24 +140,24 @@ const classifyError = (error: Error): APIError => {
   // Erreurs Prisma
   if (error instanceof PrismaClientKnownRequestError) {
     switch (error.code) {
-      case 'P2002': // Unique constraint violation
-        return new ConflictError(`Contrainte d'unicité violée: ${error.meta?.target || 'champ'}`);
-      case 'P2025': // Record not found
-        return new NotFoundError('Enregistrement');
-      case 'P2003': // Foreign key constraint
-        return new ValidationError('Contrainte de clé étrangère violée', { 
-          field: error.meta?.field_name 
-        });
-      case 'P2016': // Query interpretation error
-        return new ValidationError('Erreur dans les paramètres de requête');
-      default:
-        return new DatabaseError(`Erreur Prisma ${error.code}`, error);
+    case 'P2002': // Unique constraint violation
+      return new ConflictError(`Contrainte d'unicité violée: ${error.meta?.target || 'champ'}`);
+    case 'P2025': // Record not found
+      return new NotFoundError('Enregistrement');
+    case 'P2003': // Foreign key constraint
+      return new ValidationError('Contrainte de clé étrangère violée', {
+        field: error.meta?.field_name,
+      });
+    case 'P2016': // Query interpretation error
+      return new ValidationError('Erreur dans les paramètres de requête');
+    default:
+      return new DatabaseError(`Erreur Prisma ${error.code}`, error);
     }
   }
 
   if (error instanceof PrismaClientValidationError) {
-    return new ValidationError('Erreur de validation Prisma', { 
-      originalMessage: error.message 
+    return new ValidationError('Erreur de validation Prisma', {
+      originalMessage: error.message,
     });
   }
 
@@ -173,9 +173,9 @@ const classifyError = (error: Error): APIError => {
         })),
       });
     }
-    
+
     if (error.name === 'CastError') {
-      return new ValidationError('Format de données invalide', { 
+      return new ValidationError('Format de données invalide', {
         field: (error as any).path,
         value: (error as any).value,
       });
@@ -188,13 +188,13 @@ const classifyError = (error: Error): APIError => {
   if ((error as any).response?.status) {
     const status = (error as any).response.status;
     switch (true) {
-      case status >= 400 && status < 500:
-        return new ValidationError('Erreur dans la requête externe', {
-          status,
-          data: (error as any).response.data,
-        });
-      case status >= 500:
-        return new ExternalServiceError('Service externe', error);
+    case status >= 400 && status < 500:
+      return new ValidationError('Erreur dans la requête externe', {
+        status,
+        data: (error as any).response.data,
+      });
+    case status >= 500:
+      return new ExternalServiceError('Service externe', error);
     }
   }
 
@@ -219,7 +219,7 @@ const classifyError = (error: Error): APIError => {
  */
 const formatErrorResponse = (error: APIError, req: Request) => {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   const baseResponse = {
     error: error.code || 'UNKNOWN_ERROR',
     message: error.message,
@@ -240,7 +240,7 @@ const formatErrorResponse = (error: APIError, req: Request) => {
 
   // En production, limiter les informations sensibles
   const response: any = { ...baseResponse };
-  
+
   // Ajouter les détails seulement pour les erreurs opérationnelles
   if (error.isOperational && error.details) {
     response.details = error.details;
@@ -256,7 +256,7 @@ export const errorHandler: ErrorRequestHandler = (
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   // Classifier et normaliser l'erreur
   const classifiedError = classifyError(error);
@@ -328,7 +328,7 @@ export const errorHandler: ErrorRequestHandler = (
  */
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
   const error = new NotFoundError('Endpoint');
-  
+
   logWithContext.api('endpoint_not_found', req.path, false, {
     method: req.method,
     ip: req.ip,
@@ -369,12 +369,12 @@ export const setupGlobalErrorHandlers = (): void => {
   // Signaux de terminaison
   const gracefulShutdown = (signal: string) => {
     logger.info(`Signal ${signal} reçu, arrêt en cours...`);
-    
+
     // Ici, ajouter la logique pour fermer proprement:
     // - Connexions DB
     // - Serveur HTTP
     // - Tâches en cours
-    
+
     process.exit(0);
   };
 
@@ -403,4 +403,4 @@ export const createError = {
   rateLimit: (message?: string, retryAfter?: number) => new RateLimitError(message, retryAfter),
   externalService: (service: string, originalError?: Error) => new ExternalServiceError(service, originalError),
   database: (message: string, originalError?: Error) => new DatabaseError(message, originalError),
-}; 
+};

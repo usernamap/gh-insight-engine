@@ -4,7 +4,7 @@
  * Toutes les requêtes GraphQL et REST API avec gestion d'erreurs
  */
 
-import { GitHubRepo, UserProfile, GitHubOrganization, GraphQLResponse } from '@/types/github';
+import { GitHubOrganization, GitHubRepo, GraphQLResponse, UserProfile } from '@/types/github';
 import githubConfig from '@/config/github';
 import logger from '@/utils/logger';
 
@@ -151,8 +151,8 @@ export class GitHubService {
             name: org.name,
             description: org.description,
             avatarUrl: org.avatarUrl,
-          })) || []
-        }
+          })) || [],
+        },
       };
 
       logger.info('Profil utilisateur récupéré', {
@@ -276,7 +276,7 @@ export class GitHubService {
         const languageNodes = repo.languages?.edges?.map((edge: any) => ({
           name: edge.node.name,
           size: edge.size,
-          percentage: Math.round((edge.size / repo.languages.totalSize) * 100)
+          percentage: Math.round((edge.size / repo.languages.totalSize) * 100),
         })) || [];
 
         // Transformation des topics
@@ -298,7 +298,7 @@ export class GitHubService {
             additions: commit.additions,
             deletions: commit.deletions,
             changedFiles: commit.changedFiles,
-          })) || []
+          })) || [],
         };
 
         return {
@@ -506,7 +506,7 @@ export class GitHubService {
         const languageNodes = repo.languages?.edges?.map((edge: any) => ({
           name: edge.node.name,
           size: edge.size,
-          percentage: Math.round((edge.size / repo.languages.totalSize) * 100)
+          percentage: Math.round((edge.size / repo.languages.totalSize) * 100),
         })) || [];
 
         const topics = repo.repositoryTopics?.nodes?.map((node: any) => node.topic.name) || [];
@@ -526,7 +526,7 @@ export class GitHubService {
             additions: commit.additions,
             deletions: commit.deletions,
             changedFiles: commit.changedFiles,
-          })) || []
+          })) || [],
         };
 
         return {
@@ -718,7 +718,7 @@ export class GitHubService {
       ];
 
       const responses = await Promise.allSettled(
-        endpoints.map(endpoint => githubConfig.executeRestRequest(endpoint))
+        endpoints.map(endpoint => githubConfig.executeRestRequest(endpoint)),
       );
 
       const dependabotAlerts = responses[0].status === 'fulfilled' ? responses[0].value : [];
@@ -786,7 +786,7 @@ export class GitHubService {
 
       // Filtrer les packages liés au repo (approximation par nom)
       const repoPackages = packages.filter((pkg: any) =>
-        pkg.repository?.name === repo || pkg.name.includes(repo)
+        pkg.repository?.name === repo || pkg.name.includes(repo),
       );
 
       const packageTypes = [...new Set(repoPackages.map((pkg: any) => pkg.package_type))];
@@ -826,7 +826,7 @@ export class GitHubService {
     try {
       const branch = defaultBranch || 'main';
       const response = await githubConfig.executeRestRequest(
-        `GET /repos/${owner}/${repo}/branches/${branch}/protection`
+        `GET /repos/${owner}/${repo}/branches/${branch}/protection`,
       );
 
       const branchProtectionData = {
@@ -869,7 +869,7 @@ export class GitHubService {
   public async getCommunityHealthData(owner: string, repo: string): Promise<any> {
     try {
       const response = await githubConfig.executeRestRequest(
-        `GET /repos/${owner}/${repo}/community/profile`
+        `GET /repos/${owner}/${repo}/community/profile`,
       );
 
       const files = response.files || {};
@@ -988,7 +988,7 @@ export class GitHubService {
         packages,
         branchProtection,
         community,
-        traffic
+        traffic,
       ] = await Promise.allSettled([
         this.getGitHubActionsData(owner, repoName),
         this.getSecurityData(owner, repoName),
@@ -1046,4 +1046,4 @@ export class GitHubService {
 }
 
 // Export de l'instance singleton
-export const githubService = new GitHubService(); 
+export const githubService = new GitHubService();

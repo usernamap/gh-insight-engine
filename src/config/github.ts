@@ -11,14 +11,14 @@ import logger from '@/utils/logger';
 // Permissions requises pour le token GitHub Classic
 export const REQUIRED_SCOPES = [
   'repo',
-  'user:email', 
+  'user:email',
   'read:user',
   'read:org',
   'read:packages',
   'security_events',
   'actions:read',
   'admin:repo_hook',
-  'repo:status'
+  'repo:status',
 ] as const;
 
 export class GitHubConfig {
@@ -57,17 +57,17 @@ export class GitHubConfig {
    */
   public async validateToken(token?: string): Promise<GitHubTokenValidationResult> {
     const authToken = token || this.token;
-    
+
     if (!authToken) {
       return {
         valid: false,
-        error: 'Aucun token GitHub fourni'
+        error: 'Aucun token GitHub fourni',
       };
     }
 
     try {
       const tempOctokit = new Octokit({ auth: authToken });
-      
+
       // Récupération des informations utilisateur et scopes
       const [userResponse, rateLimitResponse] = await Promise.all([
         tempOctokit.rest.users.getAuthenticated(),
@@ -82,7 +82,7 @@ export class GitHubConfig {
           valid: false,
           username: userResponse.data.login,
           scopes,
-          error: `Permissions manquantes: ${missingScopes.join(', ')}`
+          error: `Permissions manquantes: ${missingScopes.join(', ')}`,
         };
       }
 
@@ -102,10 +102,10 @@ export class GitHubConfig {
 
     } catch (error: any) {
       logger.error('Erreur validation token GitHub', { error: error.message });
-      
+
       return {
         valid: false,
-        error: error.message || 'Token invalide ou expiré'
+        error: error.message || 'Token invalide ou expiré',
       };
     }
   }
@@ -116,7 +116,7 @@ export class GitHubConfig {
   private extractScopesFromHeaders(headers: Record<string, string>): string[] {
     const scopesHeader = headers['x-oauth-scopes'] || headers['X-OAuth-Scopes'];
     if (!scopesHeader) return [];
-    
+
     return scopesHeader
       .split(',')
       .map(scope => scope.trim())
@@ -131,8 +131,8 @@ export class GitHubConfig {
       // Logique spéciale pour les scopes avec préfixes
       if (requiredScope.includes(':')) {
         const [prefix] = requiredScope.split(':');
-        return !userScopes.some(scope => 
-          scope === requiredScope || scope.startsWith(`${prefix}:`)
+        return !userScopes.some(scope =>
+          scope === requiredScope || scope.startsWith(`${prefix}:`),
         );
       }
       return !userScopes.includes(requiredScope);
@@ -145,7 +145,7 @@ export class GitHubConfig {
   public async executeGraphQLQuery<T = any>(
     query: string,
     variables: Record<string, any> = {},
-    maxRetries: number = 2
+    maxRetries = 2,
   ): Promise<T> {
     if (!this.octokit) {
       throw new Error('GitHub client non initialisé');
@@ -156,11 +156,11 @@ export class GitHubConfig {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         await this.checkRateLimit();
-        
+
         const response = await this.octokit.graphql<T>(query, variables);
-        
+
         logger.debug('Requête GraphQL exécutée avec succès', {
-          query: query.substring(0, 100) + '...',
+          query: `${query.substring(0, 100)  }...`,
           attempt: attempt + 1,
         });
 
@@ -168,14 +168,14 @@ export class GitHubConfig {
 
       } catch (error: any) {
         lastError = error;
-        
+
         if (this.isRateLimitError(error) && attempt < maxRetries) {
           const waitTime = this.calculateWaitTime(error);
           logger.warn(`Rate limit atteinte, attente de ${waitTime}ms`, {
             attempt: attempt + 1,
             maxRetries,
           });
-          
+
           await this.wait(waitTime);
           continue;
         }
@@ -202,7 +202,7 @@ export class GitHubConfig {
   public async executeRestRequest<T = any>(
     endpoint: string,
     options: any = {},
-    maxRetries: number = 2
+    maxRetries = 2,
   ): Promise<T> {
     if (!this.octokit) {
       throw new Error('GitHub client non initialisé');
@@ -213,9 +213,9 @@ export class GitHubConfig {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         await this.checkRateLimit();
-        
+
         const response = await this.octokit.request(endpoint, options);
-        
+
         logger.debug('Requête REST exécutée avec succès', {
           endpoint,
           attempt: attempt + 1,
@@ -225,14 +225,14 @@ export class GitHubConfig {
 
       } catch (error: any) {
         lastError = error;
-        
+
         if (this.isRateLimitError(error) && attempt < maxRetries) {
           const waitTime = this.calculateWaitTime(error);
           logger.warn(`Rate limit atteinte, attente de ${waitTime}ms`, {
             endpoint,
             attempt: attempt + 1,
           });
-          
+
           await this.wait(waitTime);
           continue;
         }
@@ -262,13 +262,13 @@ export class GitHubConfig {
     // Si moins de 100 requêtes restantes, attendre
     if (this.rateLimitInfo.remaining < 100) {
       const waitTime = (this.rateLimitInfo.reset - Date.now() / 1000) * 1000;
-      
+
       if (waitTime > 0) {
         logger.warn('Rate limit faible, attente avant prochaine requête', {
           remaining: this.rateLimitInfo.remaining,
           waitTime,
         });
-        
+
         await this.wait(Math.min(waitTime, 60000)); // Max 1 minute
       }
     }
@@ -278,8 +278,8 @@ export class GitHubConfig {
    * Vérifie si l'erreur est liée au rate limiting
    */
   private isRateLimitError(error: any): boolean {
-    return error.status === 403 && 
-           (error.message?.includes('rate limit') || 
+    return error.status === 403 &&
+           (error.message?.includes('rate limit') ||
             error.message?.includes('API rate limit'));
   }
 
@@ -292,7 +292,7 @@ export class GitHubConfig {
       const resetTime = parseInt(error.response.headers['x-ratelimit-reset']) * 1000;
       return Math.max(resetTime - Date.now(), 60000); // Minimum 1 minute
     }
-    
+
     return 60000; // Défaut: 1 minute
   }
 
@@ -331,4 +331,4 @@ export class GitHubConfig {
 
 // Instance singleton
 export const githubConfig = new GitHubConfig();
-export default githubConfig; 
+export default githubConfig;

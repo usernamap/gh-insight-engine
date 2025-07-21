@@ -3,6 +3,9 @@
  * Extension du Dataset avec analyses OpenAI GPT-4
  */
 
+import type { GitHubRepo, UserProfile } from './github';
+import type { AnalyticsOverview } from './analytics';
+
 export interface DeveloperPersonality {
   archetype: 'innovator' | 'builder' | 'optimizer' | 'maintainer' | 'explorer' | 'teacher';
   description: string;
@@ -168,9 +171,9 @@ export interface AIAnalysisPrompt {
   systemPrompt: string;
   userPrompt: string;
   dataContext: {
-    userProfile: any;
-    repositories: any[];
-    analytics: any;
+    userProfile: UserProfile;
+    repositories: GitHubRepo[];
+    analytics: AnalyticsOverview;
   };
   analysisType: 'personality' | 'skills' | 'career' | 'productivity' | 'recommendations' | 'strengths' | 'growth';
 }
@@ -257,4 +260,4 @@ export interface InsightsExtension {
     commonThemes: string[];
   };
   updatedAt: Date;
-} 
+}

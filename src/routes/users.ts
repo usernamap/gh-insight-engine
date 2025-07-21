@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { UserController } from '@/controllers';
 import {
-    validateUserParams,
-    validateUserSearch,
-    validateUserWithPagination,
-    validatePagination,
-    authenticateJWT,
-    optionalJWT,
-    requireOwnership
+  authenticateJWT,
+  optionalJWT,
+  requireOwnership,
+  validateUserParams,
+  validateUserSearch,
+  validateUserWithPagination,
 } from '@/middleware';
 
 const router = Router();
@@ -19,9 +18,9 @@ const router = Router();
  * @query   { query?: string, location?: string, language?: string, minFollowers?: number, minRepos?: number, page?: number, limit?: number, sortBy?: string, sortOrder?: 'asc'|'desc' }
  */
 router.get('/search',
-    optionalJWT,
-    validateUserSearch,
-    UserController.searchUsers
+  optionalJWT,
+  validateUserSearch,
+  UserController.searchUsers,
 );
 
 /**
@@ -30,8 +29,8 @@ router.get('/search',
  * @access  Public
  */
 router.get('/stats',
-    optionalJWT,
-    UserController.getUsersStats
+  optionalJWT,
+  UserController.getUsersStats,
 );
 
 /**
@@ -40,9 +39,9 @@ router.get('/stats',
  * @access  Public
  */
 router.get('/:username',
-    optionalJWT,
-    validateUserParams,
-    UserController.getUserProfile
+  optionalJWT,
+  validateUserParams,
+  UserController.getUserProfile,
 );
 
 /**
@@ -52,9 +51,9 @@ router.get('/:username',
  * @query   { page?: number, limit?: number, sortBy?: string, sortOrder?: 'asc'|'desc' }
  */
 router.get('/:username/repositories',
-    optionalJWT,
-    validateUserWithPagination,
-    UserController.getUserRepositories
+  optionalJWT,
+  validateUserWithPagination,
+  UserController.getUserRepositories,
 );
 
 /**
@@ -63,9 +62,9 @@ router.get('/:username/repositories',
  * @access  Public
  */
 router.get('/:username/status',
-    optionalJWT,
-    validateUserParams,
-    UserController.getUserAnalysisStatus
+  optionalJWT,
+  validateUserParams,
+  UserController.getUserAnalysisStatus,
 );
 
 /**
@@ -74,10 +73,10 @@ router.get('/:username/status',
  * @access  Private (JWT requis + ownership)
  */
 router.delete('/:username',
-    authenticateJWT,
-    validateUserParams,
-    requireOwnership,
-    UserController.deleteUserData
+  authenticateJWT,
+  validateUserParams,
+  requireOwnership,
+  UserController.deleteUserData,
 );
 
-export default router; 
+export default router;

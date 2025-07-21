@@ -1,4 +1,4 @@
-import { Router, Express } from 'express';
+import { Express, Router } from 'express';
 import authRoutes from './auth';
 import userRoutes from './users';
 import repositoryRoutes from './repositories';
@@ -17,10 +17,10 @@ export const setupRoutes = (app: Express): void => {
     res.status(200).json({
       status: 'healthy',
       service: 'GitHub Insight Engine API',
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env.npm_package_version ?? '1.0.0',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env.NODE_ENV ?? 'development',
     });
   });
 
@@ -31,18 +31,18 @@ export const setupRoutes = (app: Express): void => {
 
   // Routes d'authentification
   apiRouter.use('/auth', authRoutes);
-  
-  // Routes utilisateurs 
+
+  // Routes utilisateurs
   apiRouter.use('/users', userRoutes);
-  
+
   // Routes repositories
   apiRouter.use('/repositories', repositoryRoutes);
-  
+
   // Routes analytics (métriques quantitatives)
-  // Note: Les routes d'analyse utilisateur sont dans analytics 
+  // Note: Les routes d'analyse utilisateur sont dans analytics
   // car elles génèrent les données analytiques
   apiRouter.use('/analytics', analyticsRoutes);
-  
+
   // Routes insights (analyses IA qualitatives)
   apiRouter.use('/insights', insightsRoutes);
 
@@ -54,7 +54,7 @@ export const setupRoutes = (app: Express): void => {
     res.status(200).json({
       name: 'GitHub Insight Engine API',
       description: 'API REST pour l\'analyse en profondeur des données GitHub avec insights IA',
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env.npm_package_version ?? '1.0.0',
       documentation: {
         endpoints: {
           '/api/health': 'Health check du service',
@@ -76,7 +76,7 @@ export const setupRoutes = (app: Express): void => {
           analysis: '10 analyses par heure par IP',
         },
         support: {
-          github: process.env.GITHUB_REPOSITORY_URL || 'https://github.com/org/gh-insight-engine',
+          github: process.env.GITHUB_REPOSITORY_URL ?? 'https://github.com/org/gh-insight-engine',
           documentation: '/docs (à venir)',
         },
       },
@@ -88,7 +88,7 @@ export const setupRoutes = (app: Express): void => {
   logger.info('Routes API configurées', {
     routes: [
       '/api/health',
-      '/api/ping', 
+      '/api/ping',
       '/api/auth/*',
       '/api/users/*',
       '/api/repositories/*',

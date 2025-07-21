@@ -17,7 +17,7 @@ export class DatasetModel {
   static async create(
     userProfileId: string,
     metadata: DatasetMetadata,
-    repositories: string[]
+    repositories: string[],
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
@@ -91,7 +91,7 @@ export class DatasetModel {
       offset?: number;
       includeAnalytics?: boolean;
       includeInsights?: boolean;
-    } = {}
+    } = {},
   ): Promise<{ datasets: PrismaDataset[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
@@ -293,7 +293,7 @@ export class DatasetModel {
    */
   static async isAnalyticsUpToDate(
     id: string,
-    maxAgeMinutes: number = 60
+    maxAgeMinutes = 60,
   ): Promise<{
     hasAnalytics: boolean;
     hasInsights: boolean;
@@ -382,7 +382,7 @@ export class DatasetModel {
         allDatasets,
         activity24h,
         activityWeek,
-        activityMonth
+        activityMonth,
       ] = await Promise.all([
         prisma.dataset.count(),
         prisma.dataset.count({ where: { analytics: { not: null } } }),
@@ -393,10 +393,10 @@ export class DatasetModel {
         prisma.dataset.count({ where: { updatedAt: { gte: lastMonth } } }),
       ]);
 
-      const totalRepositories = allDatasets.reduce((sum, dataset) => 
-        sum + dataset.repositories.length, 0
+      const totalRepositories = allDatasets.reduce((sum, dataset) =>
+        sum + dataset.repositories.length, 0,
       );
-      const averageRepositoriesPerDataset = totalDatasets > 0 ? 
+      const averageRepositoriesPerDataset = totalDatasets > 0 ?
         Math.round(totalRepositories / totalDatasets) : 0;
 
       return {
@@ -479,19 +479,19 @@ export class DatasetModel {
 
       // Filtrage post-requête pour les critères sur les repositories
       let filteredDatasets = datasets;
-      
+
       if (filters.minRepositories !== undefined || filters.maxRepositories !== undefined) {
         filteredDatasets = datasets.filter(dataset => {
           const repoCount = dataset.repositories.length;
-          
+
           if (filters.minRepositories !== undefined && repoCount < filters.minRepositories) {
             return false;
           }
-          
+
           if (filters.maxRepositories !== undefined && repoCount > filters.maxRepositories) {
             return false;
           }
-          
+
           return true;
         });
       }
@@ -502,9 +502,9 @@ export class DatasetModel {
         total,
       });
 
-      return { 
-        datasets: filteredDatasets, 
-        total: filteredDatasets.length 
+      return {
+        datasets: filteredDatasets,
+        total: filteredDatasets.length,
       };
     } catch (error: any) {
       logger.error('Erreur lors de la recherche avancée datasets', {
@@ -519,8 +519,8 @@ export class DatasetModel {
    * Clone un dataset (pour créer une nouvelle version)
    */
   static async clone(
-    sourceId: string, 
-    newUserProfileId?: string
+    sourceId: string,
+    newUserProfileId?: string,
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
@@ -564,7 +564,7 @@ export class DatasetModel {
   /**
    * Nettoyage des datasets obsolètes
    */
-  static async cleanupOldDatasets(olderThanDays: number = 90): Promise<number> {
+  static async cleanupOldDatasets(olderThanDays = 90): Promise<number> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -594,4 +594,4 @@ export class DatasetModel {
       throw error;
     }
   }
-} 
+}

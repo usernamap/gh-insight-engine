@@ -1,12 +1,11 @@
-import { Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { AnalyticsController } from '@/controllers';
 import {
-    validateUserParams,
-    validateAnalysisParams,
-    validateUserAnalysis,
-    authenticateJWT,
-    optionalJWT,
-    requireOwnership
+  authenticateJWT,
+  optionalJWT,
+  requireOwnership,
+  validateUserAnalysis,
+  validateUserParams,
 } from '@/middleware';
 
 const router = Router();
@@ -18,19 +17,19 @@ const router = Router();
  * @query   { includePrivate?: boolean, forceRefresh?: boolean, maxAge?: number }
  */
 router.post('/:username/analyze',
-    // Rate limiting spécialisé pour les analyses (coûteuses)
-    (req: any, res: any, next: any) => {
-        const analysisLimiter = req.app.get('analysisLimiter');
-        if (analysisLimiter) {
-            analysisLimiter(req, res, next);
-        } else {
-            next();
-        }
-    },
-    authenticateJWT,
-    validateUserAnalysis,
-    requireOwnership,
-    AnalyticsController.analyzeUser
+  // Rate limiting spécialisé pour les analyses (coûteuses)
+  (req: Request, res: Response, next: NextFunction) => {
+    const analysisLimiter = req.app.get('analysisLimiter');
+    if (analysisLimiter) {
+      analysisLimiter(req, res, next);
+    } else {
+      next();
+    }
+  },
+  authenticateJWT,
+  validateUserAnalysis,
+  requireOwnership,
+  AnalyticsController.analyzeUser,
 );
 
 /**
@@ -39,9 +38,9 @@ router.post('/:username/analyze',
  * @access  Public (mais données limitées sans auth)
  */
 router.get('/:username/overview',
-    optionalJWT,
-    validateUserParams,
-    AnalyticsController.getAnalyticsOverview
+  optionalJWT,
+  validateUserParams,
+  AnalyticsController.getAnalyticsOverview,
 );
 
 /**
@@ -50,9 +49,9 @@ router.get('/:username/overview',
  * @access  Public
  */
 router.get('/:username/performance',
-    optionalJWT,
-    validateUserParams,
-    AnalyticsController.getPerformanceMetrics
+  optionalJWT,
+  validateUserParams,
+  AnalyticsController.getPerformanceMetrics,
 );
 
 /**
@@ -61,9 +60,9 @@ router.get('/:username/performance',
  * @access  Public
  */
 router.get('/:username/languages',
-    optionalJWT,
-    validateUserParams,
-    AnalyticsController.getLanguageAnalytics
+  optionalJWT,
+  validateUserParams,
+  AnalyticsController.getLanguageAnalytics,
 );
 
 /**
@@ -72,9 +71,9 @@ router.get('/:username/languages',
  * @access  Public
  */
 router.get('/:username/activity',
-    optionalJWT,
-    validateUserParams,
-    AnalyticsController.getActivityPatterns
+  optionalJWT,
+  validateUserParams,
+  AnalyticsController.getActivityPatterns,
 );
 
 /**
@@ -83,9 +82,9 @@ router.get('/:username/activity',
  * @access  Public
  */
 router.get('/:username/productivity',
-    optionalJWT,
-    validateUserParams,
-    AnalyticsController.getProductivityScore
+  optionalJWT,
+  validateUserParams,
+  AnalyticsController.getProductivityScore,
 );
 
 /**
@@ -94,9 +93,9 @@ router.get('/:username/productivity',
  * @access  Public
  */
 router.get('/:username/devops',
-    optionalJWT,
-    validateUserParams,
-    AnalyticsController.getDevOpsMaturity
+  optionalJWT,
+  validateUserParams,
+  AnalyticsController.getDevOpsMaturity,
 );
 
-export default router; 
+export default router;
