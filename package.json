@@ -1,5 +1,19 @@
 {
+  "name": "gh-insight-engine",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx server.ts"
+  },
   "devDependencies": {
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "install": "^0.13.0",
+    "npm": "^11.4.2",
+    "openai": "^5.10.1",
+    "tsx": "^4.20.3"
   }
 }
