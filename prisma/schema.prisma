@@ -13,3 +13,120 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
+// Collection: users
+model User {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  login           String   @unique
+  name            String
+  email           String
+  avatarUrl       String
+  bio             String?
+  company         String?
+  location        String?
+  blog            String?
+  twitterUsername String?
+  followers       Int
+  following       Int
+  publicRepos     Int
+  publicGists     Int
+  privateRepos    Int?
+  ownedPrivateRepos Int?
+  totalPrivateRepos Int?
+  collaborators   Int?
+  createdAt       DateTime
+  updatedAt       DateTime
+  type            String
+  siteAdmin       Boolean
+  hireable        Boolean?
+  organizations   Json // { totalCount, nodes: [{ login, name, description, avatarUrl }] }
+  
+  // Relations
+  repositories    Repository[]
+  datasets        Dataset[]
+  
+  @@map("users")
+}
+
+// Collection: repositories  
+model Repository {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  nameWithOwner     String   @unique
+  name              String
+  description       String?
+  isPrivate         Boolean
+  isArchived        Boolean
+  isFork            Boolean
+  isTemplate        Boolean
+  stargazerCount    Int
+  forkCount         Int
+  watchersCount     Int
+  subscriberCount   Int?
+  networkCount      Int?
+  openIssuesCount   Int
+  primaryLanguage   String?
+  languages         Json // { totalSize, nodes: [{ name, size, percentage }] }
+  topics            String[]
+  pushedAt          DateTime?
+  updatedAt         DateTime
+  createdAt         DateTime
+  homepageUrl       String?
+  size              Int
+  defaultBranchRef  String?
+  license           Json? // { name, spdxId, url }
+  hasIssuesEnabled  Boolean
+  hasProjectsEnabled Boolean
+  hasWikiEnabled    Boolean
+  hasPages          Boolean?
+  hasDownloads      Boolean?
+  hasDiscussions    Boolean?
+  vulnerabilityAlertsEnabled Boolean?
+  securityPolicyEnabled Boolean?
+  codeOfConductEnabled Boolean?
+  contributingGuidelinesEnabled Boolean?
+  readmeEnabled     Boolean?
+  deployments       Json // { totalCount }
+  environments      Json // { totalCount }
+  commits           Json // { totalCount, recent: [{ oid, message, committedDate, author, additions, deletions, changedFiles }] }
+  releases          Json // { totalCount, latestRelease: { name, tagName, publishedAt, isLatest } | null }
+  issues            Json // { totalCount, openCount, closedCount }
+  pullRequests      Json // { totalCount, openCount, closedCount, mergedCount }
+  branchProtectionRules Json // { totalCount }
+  collaborators     Json // { totalCount }
+  
+  // Champs optionnels - DevOps enrichment
+  githubActions     Json? // GitHubActions type
+  security          Json? // GitHubSecurity type  
+  packages          Json? // GitHubPackages type
+  branchProtection  Json? // GitHubBranchProtection type
+  community         Json? // GitHubCommunity type
+  traffic           Json? // GitHubTraffic type
+  
+  diskUsage         Int?
+  owner             Json // { login, type, avatarUrl }
+  
+  // Relations
+  userId            String @db.ObjectId
+  user              User   @relation(fields: [userId], references: [id])
+  
+  @@map("repositories")
+}
+
+// Collection: datasets
+model Dataset {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userProfileId String   @db.ObjectId
+  metadata     Json     // DatasetMetadata type selon spécifications
+  repositories String[] @db.ObjectId // References to repositories collection
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Extensions pour analyses
+  aiInsights   Json?    // AIInsightsSummary type - Extension pour analyses IA
+  analytics    Json?    // AnalyticsExtension type - Extension pour analyses quantitatives
+  
+  // Relation
+  userProfile  User     @relation(fields: [userProfileId], references: [id])
+  
+  @@map("datasets")
+}
