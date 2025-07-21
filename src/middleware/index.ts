@@ -39,19 +39,19 @@ export const setupSecurityMiddlewares = (app: Express): void => {
 
   // CORS configuration
   app.use(cors({
-    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+    origin: (origin: string | undefined, callback: (_error: Error | null, allow?: boolean) => void) => {
       // Permettre les requêtes sans origin (mobile apps, etc.)
       if (!origin) return callback(null, true);
 
       // En développement, permettre localhost
       if (process.env.NODE_ENV === 'development') {
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        if (origin.includes('localhost') ?? origin.includes('127.0.0.1')) {
           return callback(null, true);
         }
       }
 
       // En production, vérifier les domaines autorisés
-      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [];
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -65,7 +65,7 @@ export const setupSecurityMiddlewares = (app: Express): void => {
 
   // Compression des réponses
   app.use(compression({
-    filter: (req, res) => {
+    filter: () => void = () => {
       if (req.headers['x-no-compression']) {
         return false;
       }
@@ -86,16 +86,16 @@ export const setupLoggingMiddleware = (app: Express): void => {
 
   // Stream personnalisé vers Winston
   const morganStream = {
-    write: (message: string) => {
+    write: () => void = () => {
       logger.http(message.trim());
     },
   };
 
   app.use(morgan(morganFormat, {
     stream: morganStream,
-    skip: (req, res) => {
+    skip: () => void = () => {
       // Ne pas logger les health checks
-      return req.path === '/health' || req.path === '/ping';
+      return req.path === '/health' ?? req.path === '/ping';
     },
   }));
 };
@@ -106,17 +106,17 @@ export const setupLoggingMiddleware = (app: Express): void => {
 export const setupRateLimiting = (app: Express): void => {
   // Rate limiting global
   const globalLimiter = rateLimit({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // 100 requêtes par IP
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000'), // 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS ?? '100'), // 100 requêtes par IP
     message: {
-      error: 'RATE_LIMIT_EXCEEDED',
+      _error: 'RATE_LIMIT_EXCEEDED',
       message: 'Trop de requêtes depuis cette IP, réessayez plus tard',
-      retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000') / 1000),
+      retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000),
       timestamp: new Date().toISOString(),
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req, res) => {
+    handler: () => void = () => {
       logger.warn('Rate limit dépassé', {
         ip: req.ip,
         path: req.path,
@@ -125,9 +125,9 @@ export const setupRateLimiting = (app: Express): void => {
       });
 
       res.status(429).json({
-        error: 'RATE_LIMIT_EXCEEDED',
+        _error: 'RATE_LIMIT_EXCEEDED',
         message: 'Trop de requêtes depuis cette IP, réessayez plus tard',
-        retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000') / 1000),
+        retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000),
         timestamp: new Date().toISOString(),
       });
     },
@@ -138,7 +138,7 @@ export const setupRateLimiting = (app: Express): void => {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // 5 tentatives de connexion par IP
     message: {
-      error: 'AUTH_RATE_LIMIT_EXCEEDED',
+      _error: 'AUTH_RATE_LIMIT_EXCEEDED',
       message: 'Trop de tentatives de connexion, réessayez dans 15 minutes',
       retryAfter: 900,
       timestamp: new Date().toISOString(),
@@ -151,7 +151,7 @@ export const setupRateLimiting = (app: Express): void => {
     windowMs: 60 * 60 * 1000, // 1 heure
     max: 10, // 10 analyses par heure par IP
     message: {
-      error: 'ANALYSIS_RATE_LIMIT_EXCEEDED',
+      _error: 'ANALYSIS_RATE_LIMIT_EXCEEDED',
       message: 'Limite d\'analyses atteinte, réessayez dans 1 heure',
       retryAfter: 3600,
       timestamp: new Date().toISOString(),
@@ -173,11 +173,11 @@ export const setupDataProcessingMiddlewares = (app: Express): void => {
   // Parsing JSON avec limite de taille
   app.use(express.json({
     limit: '10mb',
-    verify: (req, res, buf) => {
+    verify: () => void = () => {
       // Vérification de la validité JSON
       try {
         JSON.parse(buf.toString());
-      } catch (e) {
+      } catch (_e) {
         throw new Error('JSON invalide');
       }
     },

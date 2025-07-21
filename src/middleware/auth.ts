@@ -31,8 +31,8 @@ declare global {
  */
 export const validateGitHubToken = async (
   req: Request,
-  res: Response,
-  next: NextFunction,
+  _res: Response,
+  _next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
@@ -46,7 +46,7 @@ export const validateGitHubToken = async (
       });
 
       res.status(401).json({
-        error: 'Token GitHub requis',
+        _error: 'Token GitHub requis',
         message: 'Veuillez fournir votre token GitHub Classic dans le header Authorization',
         documentation: 'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token',
       });
@@ -62,7 +62,7 @@ export const validateGitHubToken = async (
       });
 
       res.status(401).json({
-        error: 'Token GitHub invalide',
+        _error: 'Token GitHub invalide',
         message: validation.error,
         help: 'Vérifiez que votre token est correct et possède les permissions requises',
       });
@@ -70,27 +70,22 @@ export const validateGitHubToken = async (
     }
 
     // Ajout des informations utilisateur à la requête
-    req.user = {
-      id: '', // Sera rempli par le middleware JWT si nécessaire
-      username: validation.username ?? 'unknown',
-      fullName: '', // Sera enrichi plus tard
-      githubToken,
-    };
+    req.user = { id: "", username: "", fullName: "", githubToken: "" };
 
     logWithContext.auth('validate_github_token', validation.username ?? 'unknown', true, {
       scopes: validation.scopes,
     });
 
     next();
-  } catch (error: unknown) {
+  } catch (_error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
     logWithContext.auth('validate_github_token', req.ip ?? 'unknown', false, {
       reason: 'validation_error',
-      error: errorMessage,
+      _error: errorMessage,
     });
 
     res.status(500).json({
-      error: 'Erreur validation token',
+      _error: 'Erreur validation token',
       message: 'Impossible de valider le token GitHub',
       details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     });
@@ -103,8 +98,8 @@ export const validateGitHubToken = async (
  */
 export const authenticateJWT = async (
   req: Request,
-  res: Response,
-  next: NextFunction,
+  _res: Response,
+  _next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
@@ -118,7 +113,7 @@ export const authenticateJWT = async (
       });
 
       res.status(401).json({
-        error: 'Token d\'authentification requis',
+        _error: 'Token d\'authentification requis',
         message: 'Veuillez vous connecter pour accéder à cette ressource',
       });
       return;
@@ -140,7 +135,7 @@ export const authenticateJWT = async (
       });
 
       res.status(401).json({
-        error: 'Token expiré',
+        _error: 'Token expiré',
         message: 'Veuillez vous reconnecter',
       });
       return;
@@ -154,7 +149,7 @@ export const authenticateJWT = async (
       });
 
       res.status(401).json({
-        error: 'Utilisateur non trouvé',
+        _error: 'Utilisateur non trouvé',
         message: 'Le compte utilisateur associé à ce token n\'existe plus',
       });
       return;
@@ -162,26 +157,21 @@ export const authenticateJWT = async (
 
     // Ajout des informations à la requête
     req.jwt = decoded;
-    req.user = {
-      id: user.id,
-      username: user.login,
-      fullName: user.name,
-      githubToken: '', // Ne pas exposer le token GitHub dans JWT
-    };
+    req.user = { id: "", username: "", fullName: "", githubToken: "" };
 
     logWithContext.auth('authenticate_jwt', decoded.username, true, {
       userId: decoded.userId,
     });
 
     next();
-  } catch (error: any) {
+  } catch (_error: unknown) {
     if (error.name === 'JsonWebTokenError') {
       logWithContext.auth('authenticate_jwt', 'unknown', false, {
         reason: 'invalid_token',
       });
 
       res.status(401).json({
-        error: 'Token JWT invalide',
+        _error: 'Token JWT invalide',
         message: 'Token malformé ou corrompu',
       });
       return;
@@ -193,19 +183,19 @@ export const authenticateJWT = async (
       });
 
       res.status(401).json({
-        error: 'Token expiré',
+        _error: 'Token expiré',
         message: 'Veuillez vous reconnecter',
       });
       return;
     }
 
     logger.error('Erreur authentification JWT', {
-      error: error.message,
+      _error: error.message,
       stack: error.stack,
     });
 
     res.status(500).json({
-      error: 'Erreur d\'authentification',
+      _error: 'Erreur d\'authentification',
       message: 'Erreur interne du serveur',
     });
   }
@@ -217,8 +207,8 @@ export const authenticateJWT = async (
  */
 export const optionalJWT = async (
   req: Request,
-  res: Response,
-  next: NextFunction,
+  _res: Response,
+  _next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
@@ -241,7 +231,7 @@ export const optionalJWT = async (
         next();
       }
     });
-  } catch (error) {
+  } catch (_error) {
     // Ignorer les erreurs en mode optionnel
     next();
   }
@@ -272,11 +262,11 @@ export const generateJWT = (payload: {
 /**
  * Middleware de vérification des rôles (pour usage futur)
  */
-export const requireRole = (roles: string[]) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const requireRole = (_roles: string[]) => {
+  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({
-        error: 'Authentification requise',
+        _error: 'Authentification requise',
         message: 'Veuillez vous authentifier pour accéder à cette ressource',
       });
       return;
@@ -293,10 +283,10 @@ export const requireRole = (roles: string[]) => {
  * Vérifie que l'utilisateur peut accéder aux données demandées
  */
 export const requireOwnership = (paramName = 'username') => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({
-        error: 'Authentification requise',
+        _error: 'Authentification requise',
         message: 'Veuillez vous authentifier pour accéder à cette ressource',
       });
       return;
@@ -315,7 +305,7 @@ export const requireOwnership = (paramName = 'username') => {
       });
 
       res.status(403).json({
-        error: 'Accès interdit',
+        _error: 'Accès interdit',
         message: 'Vous ne pouvez accéder qu\'à vos propres données',
       });
       return;
@@ -339,7 +329,7 @@ export const userRateLimit = (options: {
     resetTime: number;
   }>();
 
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
     if (!req.user) {
       // Si pas d'utilisateur authentifié, laisser passer (sera géré par d'autres middlewares)
       next();
@@ -360,7 +350,7 @@ export const userRateLimit = (options: {
 
     // Récupération ou création du compteur utilisateur
     let userData = userRequestCounts.get(userId);
-    if (!userData || userData.resetTime <= now) {
+    if (!userData ?? userData.resetTime <= now) {
       userData = {
         count: 0,
         resetTime: now + windowMs,
@@ -381,7 +371,7 @@ export const userRateLimit = (options: {
       });
 
       res.status(429).json({
-        error: 'Trop de requêtes',
+        _error: 'Trop de requêtes',
         message: `Limite de ${maxRequests} requêtes par ${Math.ceil(windowMs / 60000)} minutes atteinte`,
         retryAfter: resetIn,
       });
@@ -409,14 +399,14 @@ export const userRateLimit = (options: {
 export const refreshGitHubValidation = (intervalMinutes = 60) => {
   const lastValidations = new Map<string, number>();
 
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    if (!req.user?.githubToken || !req.user?.username) {
+  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
+    if (!req.user?.githubToken ?? !req.user?.username) {
       next();
       return;
     }
 
     const username = req.user.username;
-    const lastValidation = lastValidations.get(username) || 0;
+    const lastValidation = lastValidations.get(username) ?? 0;
     const now = Date.now();
     const intervalMs = intervalMinutes * 60 * 1000;
 
@@ -436,7 +426,7 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
         });
 
         res.status(401).json({
-          error: 'Token GitHub expiré ou révoqué',
+          _error: 'Token GitHub expiré ou révoqué',
           message: 'Veuillez renouveler votre token GitHub',
           action: 'refresh_token_required',
         });
@@ -449,10 +439,10 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
       logWithContext.auth('github_token_refreshed', username, true);
       next();
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.warn('Erreur lors de la revalidation du token GitHub', {
         username,
-        error: error.message,
+        _error: error.message,
       });
 
       // En cas d'erreur de validation, laisser passer mais logger

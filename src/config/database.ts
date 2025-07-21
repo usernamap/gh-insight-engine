@@ -36,7 +36,7 @@ export class DatabaseConfig {
         url: this.sanitizeUrl(databaseUrl),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Échec de l\'initialisation de la base de données', {
         error: error.message,
         stack: error.stack,
@@ -64,7 +64,7 @@ export class DatabaseConfig {
     });
 
     // Configuration des event listeners pour logs
-    this.prismaClient.$on('query', (e: any) => {
+    this.prismaClient.$on('query', (e: unknown) => {
       logger.debug('Prisma Query', {
         query: e.query,
         duration: `${e.duration}ms`,
@@ -72,7 +72,7 @@ export class DatabaseConfig {
       });
     });
 
-    this.prismaClient.$on('error', (e: any) => {
+    this.prismaClient.$on('error', (e: unknown) => {
       logger.error('Prisma Error', {
         message: e.message,
         target: e.target,
@@ -134,7 +134,7 @@ export class DatabaseConfig {
         await this.prismaClient.$queryRaw`SELECT 1`;
         health.prisma = true;
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Health check Prisma échoué', { error });
     }
 
@@ -143,7 +143,7 @@ export class DatabaseConfig {
       if (this.mongooseConnection && this.mongooseConnection.readyState === 1) {
         health.mongoose = true;
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Health check Mongoose échoué', { error });
     }
 
@@ -173,7 +173,7 @@ export class DatabaseConfig {
       logger.debug('Transaction Prisma terminée', { duration: `${duration}ms` });
 
       return result;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       const duration = Date.now() - startTime;
       logger.error('Transaction Prisma échouée', {
         duration: `${duration}ms`,
@@ -196,7 +196,7 @@ export class DatabaseConfig {
       // Cette méthode peut être utilisée pour créer des indexes complexes si nécessaire
 
       logger.info('Indexes de base de données créés avec succès');
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la création des indexes', { error: error.message });
       throw error;
     }
@@ -221,7 +221,7 @@ export class DatabaseConfig {
 
       this.isConnected = false;
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la fermeture des connexions', { error: error.message });
     }
   }
@@ -245,7 +245,7 @@ export class DatabaseConfig {
       await this.prismaClient.$executeRaw`DELETE FROM users`;
 
       logger.info('Données de test nettoyées');
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors du nettoyage des données de test', { error: error.message });
       throw error;
     }
@@ -286,7 +286,7 @@ export class DatabaseConfig {
      */
   public async findMany<T>(
     model: string,
-    options: any = {},
+    options: unknown = {},
   ): Promise<T[]> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -306,7 +306,7 @@ export class DatabaseConfig {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Find many operation failed', {
         model,
         error: error.message,
@@ -317,7 +317,7 @@ export class DatabaseConfig {
 
   public async findUnique<T>(
     model: string,
-    where: any,
+    where: unknown,
   ): Promise<T | null> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -337,7 +337,7 @@ export class DatabaseConfig {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Find unique operation failed', {
         model,
         error: error.message,
@@ -348,7 +348,7 @@ export class DatabaseConfig {
 
   public async create<T>(
     model: string,
-    data: any,
+    data: Record<string, unknown>,
   ): Promise<T> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -367,7 +367,7 @@ export class DatabaseConfig {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Create operation failed', {
         model,
         error: error.message,
@@ -378,8 +378,8 @@ export class DatabaseConfig {
 
   public async update<T>(
     model: string,
-    where: any,
-    data: any,
+    where: unknown,
+    data: Record<string, unknown>,
   ): Promise<T> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -398,7 +398,7 @@ export class DatabaseConfig {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Update operation failed', {
         model,
         error: error.message,
@@ -409,7 +409,7 @@ export class DatabaseConfig {
 
   public async delete<T>(
     model: string,
-    where: any,
+    where: unknown,
   ): Promise<T> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -428,7 +428,7 @@ export class DatabaseConfig {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Delete operation failed', {
         model,
         error: error.message,

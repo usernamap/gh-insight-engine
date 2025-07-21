@@ -13,7 +13,7 @@ import {
   PerformanceMetrics,
   ProductivityScore,
   ProjectComplexity,
-  TrendAnalysis,
+  _,_TrendAnalysis,
 } from '@/types/analytics';
 import logger from '@/utils/logger';
 
@@ -22,7 +22,7 @@ export class AnalyticsService {
    * Génère une analyse complète des performances d'un utilisateur
    */
   public async generateAnalyticsOverview(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
     timeframe?: { start: Date; end: Date },
   ): Promise<AnalyticsOverview> {
@@ -53,10 +53,10 @@ export class AnalyticsService {
         this.analyzeCollaborationMetrics(userProfile, repositories),
       ]);
 
-      const analytics: AnalyticsOverview = {
-        userId: userProfile._id || '',
+      const _analytics: AnalyticsOverview = {
+        userId: userProfile._id ?? '',
         generatedAt: new Date(),
-        timeframe: timeframe || {
+        _timeframe: timeframe ?? {
           start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
           end: new Date(),
           totalDays: 365,
@@ -77,10 +77,10 @@ export class AnalyticsService {
       });
 
       return analytics;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur génération analytics', {
         username: userProfile.login,
-        error: error.message,
+        _error: error.message,
       });
       throw new Error(`Génération analytics échouée: ${error.message}`);
     }
@@ -90,7 +90,7 @@ export class AnalyticsService {
    * Calcule les métriques de performance
    */
   private async calculatePerformanceMetrics(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
     timeframe?: { start: Date; end: Date },
   ): Promise<PerformanceMetrics> {
@@ -106,7 +106,7 @@ export class AnalyticsService {
         }) : allCommits;
 
       // Calcul de la fréquence des commits
-      const now = new Date();
+      _now = new Date();
       const commitFrequency = {
         daily: this.calculateCommitFrequency(relevantCommits, 1),
         weekly: this.calculateCommitFrequency(relevantCommits, 7),
@@ -117,7 +117,7 @@ export class AnalyticsService {
       // Analyse de la qualité du code
       const averageCommitSize = relevantCommits.length > 0 ?
         relevantCommits.reduce((sum, commit) =>
-          sum + (commit.additions || 0) + (commit.deletions || 0), 0,
+          sum + (commit.additions ?? 0) + (commit.deletions ?? 0), 0,
         ) / relevantCommits.length : 0;
 
       const commitMessageQuality = this.analyzeCommitMessageQuality(relevantCommits);
@@ -141,8 +141,8 @@ export class AnalyticsService {
           issueResolutionTime,
         },
       };
-    } catch (error: any) {
-      logger.error('Erreur calcul métriques performance', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur calcul métriques performance', { _error: error.message });
       throw error;
     }
   }
@@ -151,7 +151,7 @@ export class AnalyticsService {
    * Calcule le score de productivité global
    */
   private async calculateProductivityScore(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
     timeframe?: { start: Date; end: Date },
   ): Promise<ProductivityScore> {
@@ -206,8 +206,8 @@ export class AnalyticsService {
         trend,
         benchmarkPercentile,
       };
-    } catch (error: any) {
-      logger.error('Erreur calcul score productivité', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur calcul score productivité', { _error: error.message });
       throw error;
     }
   }
@@ -266,7 +266,7 @@ export class AnalyticsService {
         .sort((a, b) => b.percentage - a.percentage);
 
       // Détection du langage principal
-      const primary = distribution[0]?.language || 'Unknown';
+      const primary = distribution[0]?.language ?? 'Unknown';
 
       // Analyse des tendances (simulation basée sur l'activité récente)
       const trends = this.analyzeLanguageTrends(repositories);
@@ -280,8 +280,8 @@ export class AnalyticsService {
         trends,
         expertise,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse langages', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse langages', { _error: error.message });
       throw error;
     }
   }
@@ -314,8 +314,8 @@ export class AnalyticsService {
         monthlyDistribution,
         seasonality,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse patterns d\'activité', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse patterns d\'activité', { _error: error.message });
       throw error;
     }
   }
@@ -343,7 +343,7 @@ export class AnalyticsService {
         const languageCount = repo.languages.nodes.length;
         const hasCI = !!repo.githubActions?.workflowsCount;
         const hasSecurity = !!repo.security;
-        const isTeamProject = repo.forkCount > 5 || repo.stargazerCount > 20;
+        const isTeamProject = repo.forkCount > 5 ?? repo.stargazerCount > 20;
 
         if (commitCount < 10 && languageCount <= 1) {
           simple++;
@@ -351,7 +351,7 @@ export class AnalyticsService {
           moderate++;
         } else if (commitCount < 1000 && languageCount > 3) {
           complex++;
-        } else if (commitCount >= 1000 && (hasCI || hasSecurity || isTeamProject)) {
+        } else if (commitCount >= 1000 && (hasCI ?? hasSecurity ?? isTeamProject)) {
           enterprise++;
         } else {
           complex++;
@@ -370,8 +370,8 @@ export class AnalyticsService {
         averageComplexity,
         maintainedProjects,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse complexité projets', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse complexité projets', { _error: error.message });
       throw error;
     }
   }
@@ -400,33 +400,26 @@ export class AnalyticsService {
       // Culture de tests (approximation basée sur les workflows)
       const reposWithTests = repositories.filter(repo =>
         repo.githubActions?.workflows?.some(workflow =>
-          workflow.name.toLowerCase().includes('test') ||
-          workflow.name.toLowerCase().includes('ci'),
+          workflow.name.toLowerCase().includes('test') ??           workflow.name.toLowerCase().includes('ci'),
         ),
       ).length;
       const testingCulture = Math.round((reposWithTests / totalRepos) * 100);
 
       // Pratiques de sécurité
       const reposWithSecurity = repositories.filter(repo =>
-        repo.security?.dependabotAlerts.totalCount > 0 ||
-        repo.security?.hasSecurityPolicy ||
-        repo.branchProtection?.rules.length > 0,
+        repo.security?.dependabotAlerts.totalCount > 0 ??         repo.security?.hasSecurityPolicy ??         repo.branchProtection?.rules.length > 0,
       ).length;
       const securityPractices = Math.round((reposWithSecurity / totalRepos) * 100);
 
       // Qualité de la documentation
       const reposWithDocs = repositories.filter(repo =>
-        repo.community?.hasReadme ||
-        repo.community?.hasContributing ||
-        repo.hasWikiEnabled,
+        repo.community?.hasReadme ??         repo.community?.hasContributing ??         repo.hasWikiEnabled,
       ).length;
       const documentationQuality = Math.round((reposWithDocs / totalRepos) * 100);
 
       // Engagement communautaire
       const reposWithEngagement = repositories.filter(repo =>
-        repo.stargazerCount > 0 ||
-        repo.forkCount > 0 ||
-        repo.issues.totalCount > 0,
+        repo.stargazerCount > 0 ??         repo.forkCount > 0 ??         repo.issues.totalCount > 0,
       ).length;
       const communityEngagement = Math.round((reposWithEngagement / totalRepos) * 100);
 
@@ -448,8 +441,8 @@ export class AnalyticsService {
         communityEngagement,
         overallMaturity,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse maturité DevOps', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse maturité DevOps', { _error: error.message });
       throw error;
     }
   }
@@ -458,13 +451,13 @@ export class AnalyticsService {
    * Analyse les métriques de collaboration
    */
   private async analyzeCollaborationMetrics(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
   ): Promise<CollaborationMetrics> {
     try {
       // Classification des projets
       const teamProjects = repositories.filter(repo =>
-        repo.forkCount > 0 || repo.stargazerCount > 5 || repo.collaborators.totalCount > 1,
+        repo.forkCount > 0 ?? repo.stargazerCount > 5 ?? repo.collaborators.totalCount > 1,
       ).length;
       const soloProjects = repositories.length - teamProjects;
 
@@ -494,18 +487,18 @@ export class AnalyticsService {
         mentorshipActivity,
         leadershipScore,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse métriques collaboration', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse métriques collaboration', { _error: error.message });
       throw error;
     }
   }
 
   // Méthodes utilitaires privées
 
-  private calculateCommitFrequency(commits: any[], days: number): number {
+  private calculateCommitFrequency(commits: Record<string, unknown>[], days: number): number {
     if (commits.length === 0) return 0;
 
-    const now = new Date();
+    _now = new Date();
     const startDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
 
     const recentCommits = commits.filter(commit => {
@@ -516,11 +509,11 @@ export class AnalyticsService {
     return Math.round((recentCommits.length / days) * 10) / 10;
   }
 
-  private analyzeCommitMessageQuality(commits: any[]): number {
+  private analyzeCommitMessageQuality(commits: Record<string, unknown>[]): number {
     if (commits.length === 0) return 0;
 
     const qualityScore = commits.reduce((score, commit) => {
-      const message = commit.message || '';
+      const message = commit.message ?? '';
       let points = 0;
 
       // Longueur appropriée (entre 20 et 100 caractères)
@@ -553,11 +546,11 @@ export class AnalyticsService {
     );
 
     if (hasDevelop) return 'gitflow';
-    if (hasMain || hasMaster) return 'feature';
+    if (hasMain ?? hasMaster) return 'feature';
     return 'mixed';
   }
 
-  private calculatePullRequestRatio(repositories: GitHubRepo[], commits: any[]): number {
+  private calculatePullRequestRatio(repositories: GitHubRepo[], commits: Record<string, unknown>[]): number {
     const totalPRs = repositories.reduce((sum, repo) => sum + repo.pullRequests.totalCount, 0);
     const totalCommits = commits.length;
 
@@ -593,7 +586,7 @@ export class AnalyticsService {
     if (repositories.length === 0) return 0;
 
     // Basé sur la régularité des dernières activités
-    const now = new Date();
+    _now = new Date();
     const recentlyActive = repositories.filter(repo => {
       const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
       const monthsAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
@@ -605,7 +598,7 @@ export class AnalyticsService {
 
   private detectProductivityTrend(repositories: GitHubRepo[]): 'increasing' | 'stable' | 'decreasing' {
     // Analyse basée sur l'activité récente vs historique
-    const now = new Date();
+    _now = new Date();
     const sixMonthsAgo = new Date(now.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
     const oneYearAgo = new Date(now.getTime() - (12 * 30 * 24 * 60 * 60 * 1000));
 
@@ -706,7 +699,7 @@ export class AnalyticsService {
       .slice(0, 10);
   }
 
-  private classifyLanguageExpertise(distribution: any[]): {
+  private classifyLanguageExpertise(distribution: Record<string, unknown>[]): {
     beginner: string[];
     intermediate: string[];
     advanced: string[];
@@ -734,7 +727,7 @@ export class AnalyticsService {
     return expertise;
   }
 
-  private calculateHourlyDistribution(commits: any[]): Array<{
+  private calculateHourlyDistribution(commits: Record<string, unknown>[]): Array<{
     hour: number;
     commits: number;
     intensity: 'low' | 'medium' | 'high';
@@ -757,7 +750,7 @@ export class AnalyticsService {
     }));
   }
 
-  private calculateDailyDistribution(commits: any[]): Array<{
+  private calculateDailyDistribution(commits: Record<string, unknown>[]): Array<{
     day: string;
     commits: number;
     intensity: 'low' | 'medium' | 'high';
@@ -801,7 +794,7 @@ export class AnalyticsService {
     }));
   }
 
-  private analyzeSeasonality(commits: any[]): {
+  private analyzeSeasonality(commits: Record<string, unknown>[]): {
     mostActiveQuarter: string;
     consistency: number;
     vacationPeriods: Array<{
@@ -835,18 +828,18 @@ export class AnalyticsService {
     };
   }
 
-  private calculateMentorshipScore(userProfile: UserProfile, repositories: GitHubRepo[]): number {
+  private calculateMentorshipScore(_userProfile: UserProfile, repositories: GitHubRepo[]): number {
     // Score basé sur l'aide apportée à la communauté
     const publicRepos = repositories.filter(repo => !repo.isPrivate).length;
     const docsRepos = repositories.filter(repo =>
-      repo.community?.hasReadme || repo.community?.hasContributing,
+      repo.community?.hasReadme ?? repo.community?.hasContributing,
     ).length;
     const starredRepos = repositories.filter(repo => repo.stargazerCount > 0).length;
 
     return Math.min(100, Math.round((publicRepos * 10 + docsRepos * 20 + starredRepos * 15) / 3));
   }
 
-  private calculateLeadershipScore(userProfile: UserProfile, repositories: GitHubRepo[]): number {
+  private calculateLeadershipScore(_userProfile: UserProfile, repositories: GitHubRepo[]): number {
     // Score basé sur l'ownership et l'influence
     const ownedRepos = repositories.filter(repo => !repo.isFork).length;
     const popularRepos = repositories.filter(repo => repo.stargazerCount > 5).length;

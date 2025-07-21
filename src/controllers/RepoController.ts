@@ -40,7 +40,7 @@ export class RepoController {
    * Récupération des détails d'un repository
    * GET /api/repositories/:owner/:repo
    */
-  static getRepository = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getRepository = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { owner, repo } = req.params;
     const nameWithOwner = `${owner}/${repo}`;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
@@ -63,7 +63,7 @@ export class RepoController {
             // Note: Cette implémentation nécessiterait d'étendre GitHubService
             // pour récupérer un repository spécifique
             throw createError.notFound('Repository');
-          } catch (error) {
+          } catch (_error) {
             throw createError.notFound('Repository');
           }
         } else {
@@ -121,7 +121,7 @@ export class RepoController {
           collaborators: repositoryData.collaborators,
           branchProtectionRules: repositoryData.branchProtectionRules,
         },
-        devops: repositoryData.githubActions || repositoryData.security || repositoryData.packages || repositoryData.branchProtection ? {
+        devops: repositoryData.githubActions ?? repositoryData.security ?? repositoryData.packages ?? repositoryData.branchProtection ? {
           githubActions: repositoryData.githubActions,
           security: repositoryData.security,
           packages: repositoryData.packages,
@@ -139,10 +139,10 @@ export class RepoController {
 
       res.status(200).json(responseData);
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_repository', req.path, false, {
         nameWithOwner,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -153,7 +153,7 @@ export class RepoController {
    * Recherche de repositories
    * GET /api/repositories/search
    */
-  static searchRepositories = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static searchRepositories = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const searchParams = req.query as unknown as RepoSearchQuery;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -173,7 +173,7 @@ export class RepoController {
 
     try {
       // Construction des filtres de recherche
-      const searchFilters: any = {};
+      const searchFilters: unknown = {};
 
       if (searchParams.query) {
         searchFilters.$or = [
@@ -186,7 +186,7 @@ export class RepoController {
 
       if (searchParams.language) {
         searchFilters.$or = [
-          ...(searchFilters.$or || []),
+          ...(searchFilters.$or ?? []),
           { primaryLanguage: { $regex: searchParams.language, $options: 'i' } },
           { 'languages.nodes.name': { $regex: searchParams.language, $options: 'i' } },
         ];
@@ -276,9 +276,9 @@ export class RepoController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('search_repositories', req.path, false, {
-        error: error.message,
+        _error: error.message,
         searchQuery: searchParams.query,
       });
 
@@ -290,7 +290,7 @@ export class RepoController {
    * Enrichissement DevOps d'un repository
    * POST /api/repositories/:owner/:repo/enrich
    */
-  static enrichRepository = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static enrichRepository = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { owner, repo } = req.params;
     const nameWithOwner = `${owner}/${repo}`;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
@@ -324,7 +324,7 @@ export class RepoController {
       }
 
       // Mise à jour en base de données
-      const updatedRepo = await databaseService.enrichRepository(nameWithOwner, {
+      const _updatedRepo = await databaseService.enrichRepository(nameWithOwner, {
         githubActions: enrichedData.githubActions,
         security: enrichedData.security,
         packages: enrichedData.packages,
@@ -355,10 +355,10 @@ export class RepoController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('enrich_repository', req.path, false, {
         nameWithOwner,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -369,7 +369,7 @@ export class RepoController {
    * Statistiques des langages de programmation
    * GET /api/repositories/languages/stats
    */
-  static getLanguagesStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getLanguagesStats = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
     logWithContext.api('get_languages_stats', req.path, true, {
@@ -380,8 +380,8 @@ export class RepoController {
       const stats = await databaseService.getGlobalStats();
 
       // Traitement des statistiques de langages
-      const languageStats = stats.topLanguages.map((lang: any) => ({
-        language: lang._id || lang.language,
+      const languageStats = stats.topLanguages.map((lang: unknown) => ({
+        language: lang._id ?? lang.language,
         count: lang.count,
         percentage: ((lang.count / stats.totalRepositories) * 100).toFixed(2),
       }));
@@ -391,14 +391,14 @@ export class RepoController {
         summary: {
           totalRepositories: stats.totalRepositories,
           uniqueLanguages: languageStats.length,
-          topLanguage: languageStats[0]?.language || null,
+          topLanguage: languageStats[0]?.language ?? null,
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_languages_stats', req.path, false, {
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -409,7 +409,7 @@ export class RepoController {
    * Tendances des repositories (plus populaires, récents, etc.)
    * GET /api/repositories/trending
    */
-  static getTrendingRepositories = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getTrendingRepositories = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { period = '7d', limit = 10, language } = req.query;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -439,7 +439,7 @@ export class RepoController {
       }
 
       // Filtres pour les repositories tendance
-      const trendingFilters: any = {
+      const trendingFilters: unknown = {
         updatedAt: { $gte: sinceDate },
         isArchived: false,
         stargazerCount: { $gte: 1 }, // Au moins 1 star
@@ -502,9 +502,9 @@ export class RepoController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_trending_repositories', req.path, false, {
-        error: error.message,
+        _error: error.message,
         period,
         language,
       });

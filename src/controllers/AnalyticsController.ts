@@ -32,10 +32,10 @@ export class AnalyticsController {
      * Lancement d'une analyse complète d'un utilisateur
      * POST /api/users/:username/analyze
      */
-  static analyzeUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static analyzeUser = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const analysisParams = req.query as unknown as AnalysisQuery;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const analysisParams = req.query as AnalysisQuery;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     if (!authenticatedUser?.githubToken) {
       throw createError.authentication('Token GitHub requis pour l\'analyse');
@@ -163,7 +163,7 @@ export class AnalyticsController {
           hasAnalytics: true,
           hasAiInsights: false, // Sera mis à jour par InsightsController
         },
-        analytics: {
+        _analytics: {
           performance: {
             overallScore: analyticsOverview.performance.overallScore,
             codeQuality: analyticsOverview.performance.codeQualityScore,
@@ -183,10 +183,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('analyze_user_failed', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
         errorType: error.constructor.name,
       });
 
@@ -198,7 +198,7 @@ export class AnalyticsController {
      * Vue d'ensemble des métriques d'un utilisateur
      * GET /api/analytics/:username/overview
      */
-  static getAnalyticsOverview = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getAnalyticsOverview = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -233,7 +233,7 @@ export class AnalyticsController {
           name: userData.name,
           avatarUrl: userData.avatarUrl,
         },
-        analytics: {
+        _analytics: {
           performance: analytics.performance,
           productivity: analytics.productivity,
           languages: analytics.languages,
@@ -251,10 +251,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_analytics_overview', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -265,7 +265,7 @@ export class AnalyticsController {
      * Métriques de performance détaillées
      * GET /api/analytics/:username/performance
      */
-  static getPerformanceMetrics = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getPerformanceMetrics = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -304,7 +304,7 @@ export class AnalyticsController {
             score: performance.codeQualityScore,
             metrics: {
               documentationCoverage: performance.documentationCoverage,
-              testCoverage: performance.testCoverage || 0,
+              testCoverage: performance.testCoverage ?? 0,
               codeReusability: performance.codeReusability,
             },
           },
@@ -320,8 +320,8 @@ export class AnalyticsController {
             score: performance.efficiencyScore,
             metrics: {
               averageCommitSize: performance.averageCommitSize,
-              issueResolutionTime: performance.issueResolutionTime || 0,
-              pullRequestEfficiency: performance.pullRequestEfficiency || 0,
+              issueResolutionTime: performance.issueResolutionTime ?? 0,
+              pullRequestEfficiency: performance.pullRequestEfficiency ?? 0,
             },
           },
         },
@@ -332,10 +332,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_performance_metrics', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -346,7 +346,7 @@ export class AnalyticsController {
      * Analyse des langages de programmation
      * GET /api/analytics/:username/languages
      */
-  static getLanguageAnalytics = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getLanguageAnalytics = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -377,7 +377,7 @@ export class AnalyticsController {
         languages: {
           primary: languages.primaryLanguage,
           diversity: {
-            index: languages.diversityIndex,
+            _index: languages.diversityIndex,
             totalLanguages: languages.languages.length,
             description: languages.diversityIndex > 0.7 ? 'Très diversifié' :
               languages.diversityIndex > 0.5 ? 'Diversifié' :
@@ -386,9 +386,9 @@ export class AnalyticsController {
           distribution: languages.languages,
           trends: languages.trendAnalysis,
           experience: {
-            senior: languages.languages.filter((l: any) => l.experienceLevel === 'Senior').length,
-            intermediate: languages.languages.filter((l: any) => l.experienceLevel === 'Intermediate').length,
-            beginner: languages.languages.filter((l: any) => l.experienceLevel === 'Beginner').length,
+            senior: languages.languages.filter((l: unknown) => l.experienceLevel === 'Senior').length,
+            intermediate: languages.languages.filter((l: unknown) => l.experienceLevel === 'Intermediate').length,
+            beginner: languages.languages.filter((l: unknown) => l.experienceLevel === 'Beginner').length,
           },
           recommendations: languages.recommendations,
         },
@@ -399,10 +399,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_language_analytics', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -413,7 +413,7 @@ export class AnalyticsController {
      * Patterns d'activité
      * GET /api/analytics/:username/activity
      */
-  static getActivityPatterns = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActivityPatterns = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -472,10 +472,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_activity_patterns', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -486,7 +486,7 @@ export class AnalyticsController {
      * Score de productivité
      * GET /api/analytics/:username/productivity
      */
-  static getProductivityScore = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getProductivityScore = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -551,10 +551,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_productivity_score', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -565,7 +565,7 @@ export class AnalyticsController {
      * Maturité DevOps
      * GET /api/analytics/:username/devops
      */
-  static getDevOpsMaturity = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getDevOpsMaturity = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -629,10 +629,10 @@ export class AnalyticsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_devops_maturity', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;

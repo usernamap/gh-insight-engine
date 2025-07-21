@@ -33,14 +33,14 @@ export const createApp = async (): Promise<express.Application> => {
         setupErrorHandling(app);
 
         // 5. Configuration des variables d'environnement dans l'app
-        app.set('env', process.env.NODE_ENV || 'development');
+        app.set('env', process.env.NODE_ENV ?? 'development');
         app.set('trust proxy', true); // Pour les reverse proxies (nginx, etc.)
 
         logger.info('Application Express configurée avec succès');
 
         return app;
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
         logger.error('Erreur lors de l\'initialisation de l\'application', {
             error: error.message,
             stack: error.stack,
@@ -63,7 +63,7 @@ export const gracefulShutdown = async (): Promise<void> => {
         logger.info('Base de données déconnectée');
 
         logger.info('Arrêt gracieux terminé');
-    } catch (error: any) {
+    } catch (_error: unknown) {
         logger.error('Erreur lors de l\'arrêt gracieux', {
             error: error.message,
             stack: error.stack,

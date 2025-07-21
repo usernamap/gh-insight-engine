@@ -22,7 +22,7 @@ export class InsightsController {
    * Génération d'insights IA pour un utilisateur
    * POST /api/insights/:username/generate
    */
-  static generateInsights = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static generateInsights = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -114,9 +114,9 @@ export class InsightsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.ai('generate_insights_failed', username, false, {
-        error: error.message,
+        _error: error.message,
         errorType: error.constructor.name,
       });
 
@@ -128,7 +128,7 @@ export class InsightsController {
    * Résumé des insights IA d'un utilisateur
    * GET /api/insights/:username/summary
    */
-  static getInsightsSummary = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getInsightsSummary = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -166,23 +166,23 @@ export class InsightsController {
         },
         highlights: {
           bestQualities: aiInsights.developerPersonality.traits
-            .filter((t: any) => t.score > 0.7)
-            .map((t: any) => t.trait),
+            .filter((t: unknown) => t.score > 0.7)
+            .map((t: unknown) => t.trait),
           topRecommendations: aiInsights.recommendations.immediate.slice(0, 3),
           growthAreas: aiInsights.growth.areas.slice(0, 3),
         },
         metadata: {
           generatedAt: latestDataset.updatedAt,
-          confidence: aiInsights.confidence || 0.8,
+          confidence: aiInsights.confidence ?? 0.8,
           repositoriesAnalyzed: Array.isArray(latestDataset.repositories) ? latestDataset.repositories.length : 0,
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_insights_summary', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -193,7 +193,7 @@ export class InsightsController {
    * Personnalité de développeur analysée par IA
    * GET /api/insights/:username/personality
    */
-  static getDeveloperPersonality = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getDeveloperPersonality = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -240,15 +240,15 @@ export class InsightsController {
         },
         metadata: {
           analysisDate: latestDataset.updatedAt,
-          confidence: personality.confidence || 0.8,
+          confidence: personality.confidence ?? 0.8,
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_developer_personality', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -259,7 +259,7 @@ export class InsightsController {
    * Recommandations IA pour amélioration
    * GET /api/insights/:username/recommendations
    */
-  static getRecommendations = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getRecommendations = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const { category } = req.query; // 'immediate', 'shortTerm', 'longTerm'
     const authenticatedUser = (req as any).user as AuthenticatedUser;
@@ -298,20 +298,20 @@ export class InsightsController {
           name: userData.name,
         },
         recommendations: {
-          immediate: filteredRecommendations.immediate || [],
-          shortTerm: filteredRecommendations.shortTerm || [],
-          longTerm: filteredRecommendations.longTerm || [],
+          immediate: filteredRecommendations.immediate ?? [],
+          shortTerm: filteredRecommendations.shortTerm ?? [],
+          longTerm: filteredRecommendations.longTerm ?? [],
         },
         prioritized: {
-          topPriority: recommendations.immediate?.[0] || null,
-          skillDevelopment: recommendations.skillDevelopment || [],
-          careerAdvancement: recommendations.careerAdvancement || [],
-          technicalGrowth: recommendations.technicalGrowth || [],
+          topPriority: recommendations.immediate?.[0] ?? null,
+          skillDevelopment: recommendations.skillDevelopment ?? [],
+          careerAdvancement: recommendations.careerAdvancement ?? [],
+          technicalGrowth: recommendations.technicalGrowth ?? [],
         },
         actionPlan: {
-          nextSteps: recommendations.actionPlan?.nextSteps || [],
-          timeline: recommendations.actionPlan?.timeline || {},
-          resources: recommendations.actionPlan?.resources || [],
+          nextSteps: recommendations.actionPlan?.nextSteps ?? [],
+          timeline: recommendations.actionPlan?.timeline ?? {},
+          resources: recommendations.actionPlan?.resources ?? [],
         },
         metadata: {
           generatedAt: latestDataset.updatedAt,
@@ -320,10 +320,10 @@ export class InsightsController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_recommendations', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -334,7 +334,7 @@ export class InsightsController {
    * Forces et points forts identifiés par l'IA
    * GET /api/insights/:username/strengths
    */
-  static getStrengths = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getStrengths = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -370,28 +370,28 @@ export class InsightsController {
           innovation: strengths.innovationCapacity,
         },
         evidence: {
-          codeQuality: strengths.evidence?.codeQuality || [],
-          projectManagement: strengths.evidence?.projectManagement || [],
-          collaboration: strengths.evidence?.collaboration || [],
-          problemSolving: strengths.evidence?.problemSolving || [],
+          codeQuality: strengths.evidence?.codeQuality ?? [],
+          projectManagement: strengths.evidence?.projectManagement ?? [],
+          collaboration: strengths.evidence?.collaboration ?? [],
+          problemSolving: strengths.evidence?.problemSolving ?? [],
         },
         differentiators: {
-          uniqueSkills: strengths.uniqueSkills || [],
-          competitiveAdvantages: strengths.competitiveAdvantages || [],
-          marketValue: strengths.marketValue || {},
+          uniqueSkills: strengths.uniqueSkills ?? [],
+          competitiveAdvantages: strengths.competitiveAdvantages ?? [],
+          marketValue: strengths.marketValue ?? {},
         },
         metadata: {
           analysisDate: latestDataset.updatedAt,
-          confidence: strengths.confidence || 0.8,
-          strengthsCount: strengths.mainStrengths?.length || 0,
+          confidence: strengths.confidence ?? 0.8,
+          strengthsCount: strengths.mainStrengths?.length ?? 0,
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_strengths', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -402,7 +402,7 @@ export class InsightsController {
    * Opportunités de croissance identifiées par l'IA
    * GET /api/insights/:username/growth
    */
-  static getGrowthOpportunities = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getGrowthOpportunities = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -433,41 +433,41 @@ export class InsightsController {
         growth: {
           areas: growth.areas,
           priority: {
-            high: growth.areas?.filter((area: any) => area.priority === 'high') || [],
-            medium: growth.areas?.filter((area: any) => area.priority === 'medium') || [],
-            low: growth.areas?.filter((area: any) => area.priority === 'low') || [],
+            high: growth.areas?.filter((area: unknown) => area.priority === 'high') ?? [],
+            medium: growth.areas?.filter((area: unknown) => area.priority === 'medium') ?? [],
+            low: growth.areas?.filter((area: unknown) => area.priority === 'low') ?? [],
           },
-          skillGaps: growth.skillGaps || [],
-          learningPath: growth.suggestedLearningPath || [],
+          skillGaps: growth.skillGaps ?? [],
+          learningPath: growth.suggestedLearningPath ?? [],
         },
         opportunities: {
-          immediate: growth.immediateOpportunities || [],
-          emerging: growth.emergingTechnologies || [],
-          career: growth.careerProgression || [],
-          specialization: growth.specializationAreas || [],
+          immediate: growth.immediateOpportunities ?? [],
+          emerging: growth.emergingTechnologies ?? [],
+          career: growth.careerProgression ?? [],
+          specialization: growth.specializationAreas ?? [],
         },
         roadmap: {
-          nextThreeMonths: growth.roadmap?.nextThreeMonths || [],
-          nextSixMonths: growth.roadmap?.nextSixMonths || [],
-          nextYear: growth.roadmap?.nextYear || [],
+          nextThreeMonths: growth.roadmap?.nextThreeMonths ?? [],
+          nextSixMonths: growth.roadmap?.nextSixMonths ?? [],
+          nextYear: growth.roadmap?.nextYear ?? [],
         },
         resources: {
-          learningResources: growth.resources?.learning || [],
-          practiceProjects: growth.resources?.projects || [],
-          communities: growth.resources?.communities || [],
+          learningResources: growth.resources?.learning ?? [],
+          practiceProjects: growth.resources?.projects ?? [],
+          communities: growth.resources?.communities ?? [],
         },
         metadata: {
           analysisDate: latestDataset.updatedAt,
-          potentialImpact: growth.potentialImpact || 'medium',
-          timeToImpact: growth.timeToImpact || '3-6 months',
+          potentialImpact: growth.potentialImpact ?? 'medium',
+          timeToImpact: growth.timeToImpact ?? '3-6 months',
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_growth_opportunities', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -478,7 +478,7 @@ export class InsightsController {
    * Évaluation des compétences par l'IA
    * GET /api/insights/:username/skills
    */
-  static getSkillAssessment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getSkillAssessment = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -507,46 +507,46 @@ export class InsightsController {
           name: userData.name,
         },
         skills: {
-          technical: skills.technical.map((skill: any) => ({
+          technical: skills.technical.map((skill: unknown) => ({
             ...skill,
             level: skill.proficiency > 0.8 ? 'Expert' :
               skill.proficiency > 0.6 ? 'Advanced' :
                 skill.proficiency > 0.4 ? 'Intermediate' : 'Beginner',
           })),
-          frameworks: skills.frameworks || [],
-          tools: skills.tools || [],
-          methodologies: skills.methodologies || [],
+          frameworks: skills.frameworks ?? [],
+          tools: skills.tools ?? [],
+          methodologies: skills.methodologies ?? [],
         },
         assessment: {
           overallLevel: skills.overallLevel,
           seniorityLevel: skills.seniorityLevel,
-          specializations: skills.specializations || [],
-          versatility: skills.versatilityScore || 0,
+          specializations: skills.specializations ?? [],
+          versatility: skills.versatilityScore ?? 0,
         },
         marketability: {
-          inDemandSkills: skills.inDemandSkills || [],
-          emergingSkills: skills.emergingSkills || [],
-          rareCombinations: skills.rareCombinations || [],
-          marketValue: skills.marketValue || 'medium',
+          inDemandSkills: skills.inDemandSkills ?? [],
+          emergingSkills: skills.emergingSkills ?? [],
+          rareCombinations: skills.rareCombinations ?? [],
+          marketValue: skills.marketValue ?? 'medium',
         },
         progression: {
-          recentGrowth: skills.recentGrowth || [],
-          stagnantAreas: skills.stagnantAreas || [],
-          trendingUp: skills.trendingUp || [],
-          recommendations: skills.skillRecommendations || [],
+          recentGrowth: skills.recentGrowth ?? [],
+          stagnantAreas: skills.stagnantAreas ?? [],
+          trendingUp: skills.trendingUp ?? [],
+          recommendations: skills.skillRecommendations ?? [],
         },
         metadata: {
           analysisDate: latestDataset.updatedAt,
-          skillsEvaluated: skills.technical?.length || 0,
-          confidence: skills.confidence || 0.8,
+          skillsEvaluated: skills.technical?.length ?? 0,
+          confidence: skills.confidence ?? 0.8,
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_skill_assessment', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -557,7 +557,7 @@ export class InsightsController {
    * Insights de carrière par l'IA
    * GET /api/insights/:username/career
    */
-  static getCareerInsights = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getCareerInsights = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -593,41 +593,41 @@ export class InsightsController {
             phase: career.careerPhase,
           },
           readiness: {
-            promotion: career.promotionReadiness || {},
-            leadership: career.leadershipReadiness || {},
-            specialization: career.specializationReadiness || {},
+            promotion: career.promotionReadiness ?? {},
+            leadership: career.leadershipReadiness ?? {},
+            specialization: career.specializationReadiness ?? {},
           },
           opportunities: {
-            nextRoles: career.suggestedRoles || [],
-            industries: career.suitableIndustries || [],
-            companies: career.companyTypes || [],
-            transitions: career.careerTransitions || [],
+            nextRoles: career.suggestedRoles ?? [],
+            industries: career.suitableIndustries ?? [],
+            companies: career.companyTypes ?? [],
+            transitions: career.careerTransitions ?? [],
           },
           development: {
-            skillsForNextLevel: career.skillsForNextLevel || [],
-            experienceGaps: career.experienceGaps || [],
-            networkingNeeds: career.networkingNeeds || [],
-            certifications: career.recommendedCertifications || [],
+            skillsForNextLevel: career.skillsForNextLevel ?? [],
+            experienceGaps: career.experienceGaps ?? [],
+            networkingNeeds: career.networkingNeeds ?? [],
+            certifications: career.recommendedCertifications ?? [],
           },
         },
         insights: {
-          strengths: career.careerStrengths || [],
-          blockers: career.potentialBlockers || [],
-          timeline: career.progressionTimeline || {},
-          salary: career.salaryInsights || {},
+          strengths: career.careerStrengths ?? [],
+          blockers: career.potentialBlockers ?? [],
+          timeline: career.progressionTimeline ?? {},
+          salary: career.salaryInsights ?? {},
         },
         metadata: {
           analysisDate: latestDataset.updatedAt,
-          confidence: career.confidence || 0.8,
-          basedOnYears: career.analysisYears || 1,
+          confidence: career.confidence ?? 0.8,
+          basedOnYears: career.analysisYears ?? 1,
         },
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_career_insights', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;

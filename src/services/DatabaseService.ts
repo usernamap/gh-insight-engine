@@ -74,7 +74,7 @@ export class DatabaseService {
         };
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur sauvegarde dataset complet', {
         username: userProfile.login,
         error: error.message,
@@ -111,7 +111,7 @@ export class DatabaseService {
         user,
         repositories,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération dataset complet', {
         datasetId,
         error: error.message,
@@ -146,7 +146,7 @@ export class DatabaseService {
         user,
         repositories,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération dernier dataset utilisateur', {
         username,
         error: error.message,
@@ -184,7 +184,7 @@ export class DatabaseService {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur mise à jour analyses dataset', {
         datasetId,
         error: error.message,
@@ -199,12 +199,12 @@ export class DatabaseService {
   public async enrichRepositoriesWithDevOpsData(
     repositoryIds: string[],
     devOpsDataMap: Record<string, {
-      githubActions?: any;
-      security?: any;
-      packages?: any;
-      branchProtection?: any;
-      community?: any;
-      traffic?: any;
+      githubActions?: unknown;
+      security?: unknown;
+      packages?: unknown;
+      branchProtection?: unknown;
+      community?: unknown;
+      traffic?: unknown;
     }>,
   ): Promise<PrismaRepository[]> {
     try {
@@ -224,7 +224,7 @@ export class DatabaseService {
       });
 
       return enrichedRepositories;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur enrichissement repositories DevOps', {
         error: error.message,
       });
@@ -269,7 +269,7 @@ export class DatabaseService {
           const stats = {
             repositoriesCount: repositoriesResult.total,
             datasetsCount: datasetsResult.total,
-            lastActivity: repositoriesResult.repositories[0]?.pushedAt || undefined,
+            lastActivity: repositoriesResult.repositories[0]?.pushedAt ?? undefined,
           };
 
           return {
@@ -283,7 +283,7 @@ export class DatabaseService {
         users: enrichedUsers,
         total,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur recherche utilisateurs avec stats', {
         filters,
         error: error.message,
@@ -327,9 +327,9 @@ export class DatabaseService {
           return {
             ...repo,
             user: {
-              login: user?.login || 'Unknown',
-              name: user?.name || 'Unknown',
-              avatarUrl: user?.avatarUrl || '',
+              login: user?.login ?? 'Unknown',
+              name: user?.name ?? 'Unknown',
+              avatarUrl: user?.avatarUrl ?? '',
             },
           };
         }),
@@ -339,7 +339,7 @@ export class DatabaseService {
         repositories: enrichedRepositories,
         total,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur recherche repositories avec info utilisateur', {
         filters,
         error: error.message,
@@ -408,7 +408,7 @@ export class DatabaseService {
         },
         datasets: datasetStats,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération statistiques plateforme', {
         error: error.message,
       });
@@ -456,7 +456,7 @@ export class DatabaseService {
         insightsUpToDate: freshness.insightsUpToDate,
         lastUpdate: latestDataset.dataset.updatedAt,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur vérification fraîcheur analyses', {
         username,
         error: error.message,
@@ -505,7 +505,7 @@ export class DatabaseService {
         return stats;
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur suppression données utilisateur', {
         username,
         error: error.message,
@@ -565,7 +565,7 @@ export class DatabaseService {
       });
 
       return stats;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur nettoyage données', {
         error: error.message,
       });
@@ -628,7 +628,7 @@ export class DatabaseService {
         issues,
       };
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       const responseTime = Date.now() - startTime;
 
       return {
@@ -666,8 +666,8 @@ export class DatabaseService {
         select: { id: true },
       });
 
-      return usersWithDatasets?.length || 0;
-    } catch (error) {
+      return usersWithDatasets?.length ?? 0;
+    } catch (_error) {
       logger.warn('Erreur comptage utilisateurs avec datasets', { error });
       return 0;
     }
@@ -682,8 +682,8 @@ export class DatabaseService {
         select: { id: true },
       });
 
-      return orphaned?.map(repo => repo.id) || [];
-    } catch (error) {
+      return orphaned?.map(repo => repo.id) ?? [];
+    } catch (_error) {
       logger.warn('Erreur recherche repositories orphelins', { error });
       return [];
     }
@@ -697,8 +697,8 @@ export class DatabaseService {
         },
       });
 
-      return result?.count || 0;
-    } catch (error) {
+      return result?.count ?? 0;
+    } catch (_error) {
       logger.error('Erreur suppression repositories orphelins', { error });
       return 0;
     }
@@ -717,8 +717,8 @@ export class DatabaseService {
         select: { id: true },
       });
 
-      return inactive?.map(user => user.id) || [];
-    } catch (error) {
+      return inactive?.map(user => user.id) ?? [];
+    } catch (_error) {
       logger.warn('Erreur recherche utilisateurs inactifs', { error });
       return [];
     }
@@ -731,7 +731,7 @@ export class DatabaseService {
       try {
         await UserModel.delete(userId);
         deletedCount++;
-      } catch (error) {
+      } catch (_error) {
         logger.warn('Erreur suppression utilisateur inactif', { userId, error });
       }
     }
@@ -750,8 +750,8 @@ export class DatabaseService {
         },
       });
 
-      return count || 0;
-    } catch (error) {
+      return count ?? 0;
+    } catch (_error) {
       logger.warn('Erreur comptage datasets obsolètes', { error });
       return 0;
     }

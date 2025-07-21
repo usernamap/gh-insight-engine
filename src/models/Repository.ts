@@ -23,7 +23,7 @@ export class RepositoryModel {
         data: {
           nameWithOwner: repoData.nameWithOwner,
           name: repoData.name,
-          description: repoData.description || null,
+          description: repoData.description ?? null,
           isPrivate: repoData.isPrivate,
           isArchived: repoData.isArchived,
           isFork: repoData.isFork,
@@ -31,30 +31,30 @@ export class RepositoryModel {
           stargazerCount: repoData.stargazerCount,
           forkCount: repoData.forkCount,
           watchersCount: repoData.watchersCount,
-          subscriberCount: repoData.subscriberCount || null,
-          networkCount: repoData.networkCount || null,
+          subscriberCount: repoData.subscriberCount ?? null,
+          networkCount: repoData.networkCount ?? null,
           openIssuesCount: repoData.openIssuesCount,
-          primaryLanguage: repoData.primaryLanguage || null,
+          primaryLanguage: repoData.primaryLanguage ?? null,
           languages: repoData.languages,
           topics: repoData.topics,
-          pushedAt: repoData.pushedAt || null,
+          pushedAt: repoData.pushedAt ?? null,
           updatedAt: repoData.updatedAt,
           createdAt: repoData.createdAt,
-          homepageUrl: repoData.homepageUrl || null,
+          homepageUrl: repoData.homepageUrl ?? null,
           size: repoData.size,
-          defaultBranchRef: repoData.defaultBranchRef || null,
-          license: repoData.license || null,
+          defaultBranchRef: repoData.defaultBranchRef ?? null,
+          license: repoData.license ?? null,
           hasIssuesEnabled: repoData.hasIssuesEnabled,
           hasProjectsEnabled: repoData.hasProjectsEnabled,
           hasWikiEnabled: repoData.hasWikiEnabled,
-          hasPages: repoData.hasPages || null,
-          hasDownloads: repoData.hasDownloads || null,
-          hasDiscussions: repoData.hasDiscussions || null,
-          vulnerabilityAlertsEnabled: repoData.vulnerabilityAlertsEnabled || null,
-          securityPolicyEnabled: repoData.securityPolicyEnabled || null,
-          codeOfConductEnabled: repoData.codeOfConductEnabled || null,
-          contributingGuidelinesEnabled: repoData.contributingGuidelinesEnabled || null,
-          readmeEnabled: repoData.readmeEnabled || null,
+          hasPages: repoData.hasPages ?? null,
+          hasDownloads: repoData.hasDownloads ?? null,
+          hasDiscussions: repoData.hasDiscussions ?? null,
+          vulnerabilityAlertsEnabled: repoData.vulnerabilityAlertsEnabled ?? null,
+          securityPolicyEnabled: repoData.securityPolicyEnabled ?? null,
+          codeOfConductEnabled: repoData.codeOfConductEnabled ?? null,
+          contributingGuidelinesEnabled: repoData.contributingGuidelinesEnabled ?? null,
+          readmeEnabled: repoData.readmeEnabled ?? null,
           deployments: repoData.deployments,
           environments: repoData.environments,
           commits: repoData.commits,
@@ -64,13 +64,13 @@ export class RepositoryModel {
           branchProtectionRules: repoData.branchProtectionRules,
           collaborators: repoData.collaborators,
           // DevOps data (optionnel)
-          githubActions: repoData.githubActions || null,
-          security: repoData.security || null,
-          packages: repoData.packages || null,
-          branchProtection: repoData.branchProtection || null,
-          community: repoData.community || null,
-          traffic: repoData.traffic || null,
-          diskUsage: repoData.diskUsage || null,
+          githubActions: repoData.githubActions ?? null,
+          security: repoData.security ?? null,
+          packages: repoData.packages ?? null,
+          branchProtection: repoData.branchProtection ?? null,
+          community: repoData.community ?? null,
+          traffic: repoData.traffic ?? null,
+          diskUsage: repoData.diskUsage ?? null,
           owner: repoData.owner,
           userId,
         },
@@ -83,7 +83,7 @@ export class RepositoryModel {
       });
 
       return repository;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la création du repository', {
         nameWithOwner: repoData.nameWithOwner,
         error: error.message,
@@ -115,7 +115,7 @@ export class RepositoryModel {
       });
 
       return repository;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche repository', {
         nameWithOwner,
         error: error.message,
@@ -151,14 +151,14 @@ export class RepositoryModel {
         sortOrder = 'desc',
       } = options;
 
-      const where: any = { userId };
+      const where: unknown = { userId };
 
       if (!includePrivate) {
         where.isPrivate = false;
       }
 
       // Configuration du tri
-      let orderBy: any;
+      let orderBy: unknown;
       switch (sortBy) {
       case 'stars':
         orderBy = { stargazerCount: sortOrder };
@@ -191,7 +191,7 @@ export class RepositoryModel {
       });
 
       return { repositories, total };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche repositories par utilisateur', {
         userId,
         error: error.message,
@@ -211,7 +211,7 @@ export class RepositoryModel {
 
     try {
       // Construction dynamique de l'objet data
-      const data: any = { updatedAt: new Date() };
+      const data: Record<string, unknown> = { updatedAt: new Date() };
 
       // Mise à jour sélective des champs
       const fieldMappings = [
@@ -241,7 +241,7 @@ export class RepositoryModel {
       });
 
       return repository;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour repository', {
         id,
         error: error.message,
@@ -256,12 +256,12 @@ export class RepositoryModel {
   static async enrichWithDevOpsData(
     id: string,
     devOpsData: {
-            githubActions?: any;
-            security?: any;
-            packages?: any;
-            branchProtection?: any;
-            community?: any;
-            traffic?: any;
+            githubActions?: unknown;
+            security?: unknown;
+            packages?: unknown;
+            branchProtection?: unknown;
+            community?: unknown;
+            traffic?: unknown;
         },
   ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
@@ -285,7 +285,7 @@ export class RepositoryModel {
       });
 
       return repository;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de l\'enrichissement DevOps', {
         id,
         error: error.message,
@@ -309,7 +309,7 @@ export class RepositoryModel {
       });
 
       logger.info('Repository supprimé avec succès', { repositoryId: id });
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la suppression repository', {
         id,
         error: error.message,
@@ -339,7 +339,7 @@ export class RepositoryModel {
     }
 
     try {
-      const where: any = {};
+      const where: unknown = {};
 
       if (filters.search) {
         where.OR = [
@@ -357,7 +357,7 @@ export class RepositoryModel {
         where.topics = { hasEvery: filters.topics };
       }
 
-      if (filters.minStars !== undefined || filters.maxStars !== undefined) {
+      if (filters.minStars !== undefined ?? filters.maxStars !== undefined) {
         where.stargazerCount = {};
         if (filters.minStars !== undefined) {
           where.stargazerCount.gte = filters.minStars;
@@ -382,8 +382,8 @@ export class RepositoryModel {
       const [repositories, total] = await Promise.all([
         prisma.repository.findMany({
           where,
-          take: filters.limit || 10,
-          skip: filters.offset || 0,
+          take: filters.limit ?? 10,
+          skip: filters.offset ?? 0,
           orderBy: { stargazerCount: 'desc' },
           include: {
             user: { select: { login: true, avatarUrl: true } },
@@ -399,7 +399,7 @@ export class RepositoryModel {
       });
 
       return { repositories, total };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche avancée repositories', {
         filters,
         error: error.message,
@@ -458,14 +458,14 @@ export class RepositoryModel {
       ]);
 
       const topLanguages = languageStats.map(stat => ({
-        language: stat.primaryLanguage || 'Unknown',
+        language: stat.primaryLanguage ?? 'Unknown',
         count: stat._count.primaryLanguage,
       }));
 
       return {
         totalRepositories,
-        totalStars: aggregates._sum.stargazerCount || 0,
-        totalForks: aggregates._sum.forkCount || 0,
+        totalStars: aggregates._sum.stargazerCount ?? 0,
+        totalForks: aggregates._sum.forkCount ?? 0,
         topLanguages,
         devOpsAdoption: {
           githubActions: devOpsStats[0],
@@ -474,7 +474,7 @@ export class RepositoryModel {
           branchProtection: devOpsStats[3],
         },
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors du calcul des statistiques repositories', {
         error: error.message,
       });
@@ -495,17 +495,17 @@ export class RepositoryModel {
       const repository = await prisma.repository.upsert({
         where: { nameWithOwner: repoData.nameWithOwner },
         update: {
-          description: repoData.description || null,
+          description: repoData.description ?? null,
           stargazerCount: repoData.stargazerCount,
           forkCount: repoData.forkCount,
           watchersCount: repoData.watchersCount,
           openIssuesCount: repoData.openIssuesCount,
-          primaryLanguage: repoData.primaryLanguage || null,
+          primaryLanguage: repoData.primaryLanguage ?? null,
           languages: repoData.languages,
           topics: repoData.topics,
-          pushedAt: repoData.pushedAt || null,
+          pushedAt: repoData.pushedAt ?? null,
           updatedAt: new Date(),
-          homepageUrl: repoData.homepageUrl || null,
+          homepageUrl: repoData.homepageUrl ?? null,
           size: repoData.size,
           commits: repoData.commits,
           releases: repoData.releases,
@@ -522,7 +522,7 @@ export class RepositoryModel {
         create: {
           nameWithOwner: repoData.nameWithOwner,
           name: repoData.name,
-          description: repoData.description || null,
+          description: repoData.description ?? null,
           isPrivate: repoData.isPrivate,
           isArchived: repoData.isArchived,
           isFork: repoData.isFork,
@@ -530,30 +530,30 @@ export class RepositoryModel {
           stargazerCount: repoData.stargazerCount,
           forkCount: repoData.forkCount,
           watchersCount: repoData.watchersCount,
-          subscriberCount: repoData.subscriberCount || null,
-          networkCount: repoData.networkCount || null,
+          subscriberCount: repoData.subscriberCount ?? null,
+          networkCount: repoData.networkCount ?? null,
           openIssuesCount: repoData.openIssuesCount,
-          primaryLanguage: repoData.primaryLanguage || null,
+          primaryLanguage: repoData.primaryLanguage ?? null,
           languages: repoData.languages,
           topics: repoData.topics,
-          pushedAt: repoData.pushedAt || null,
+          pushedAt: repoData.pushedAt ?? null,
           updatedAt: repoData.updatedAt,
           createdAt: repoData.createdAt,
-          homepageUrl: repoData.homepageUrl || null,
+          homepageUrl: repoData.homepageUrl ?? null,
           size: repoData.size,
-          defaultBranchRef: repoData.defaultBranchRef || null,
-          license: repoData.license || null,
+          defaultBranchRef: repoData.defaultBranchRef ?? null,
+          license: repoData.license ?? null,
           hasIssuesEnabled: repoData.hasIssuesEnabled,
           hasProjectsEnabled: repoData.hasProjectsEnabled,
           hasWikiEnabled: repoData.hasWikiEnabled,
-          hasPages: repoData.hasPages || null,
-          hasDownloads: repoData.hasDownloads || null,
-          hasDiscussions: repoData.hasDiscussions || null,
-          vulnerabilityAlertsEnabled: repoData.vulnerabilityAlertsEnabled || null,
-          securityPolicyEnabled: repoData.securityPolicyEnabled || null,
-          codeOfConductEnabled: repoData.codeOfConductEnabled || null,
-          contributingGuidelinesEnabled: repoData.contributingGuidelinesEnabled || null,
-          readmeEnabled: repoData.readmeEnabled || null,
+          hasPages: repoData.hasPages ?? null,
+          hasDownloads: repoData.hasDownloads ?? null,
+          hasDiscussions: repoData.hasDiscussions ?? null,
+          vulnerabilityAlertsEnabled: repoData.vulnerabilityAlertsEnabled ?? null,
+          securityPolicyEnabled: repoData.securityPolicyEnabled ?? null,
+          codeOfConductEnabled: repoData.codeOfConductEnabled ?? null,
+          contributingGuidelinesEnabled: repoData.contributingGuidelinesEnabled ?? null,
+          readmeEnabled: repoData.readmeEnabled ?? null,
           deployments: repoData.deployments,
           environments: repoData.environments,
           commits: repoData.commits,
@@ -562,13 +562,13 @@ export class RepositoryModel {
           pullRequests: repoData.pullRequests,
           branchProtectionRules: repoData.branchProtectionRules,
           collaborators: repoData.collaborators,
-          githubActions: repoData.githubActions || null,
-          security: repoData.security || null,
-          packages: repoData.packages || null,
-          branchProtection: repoData.branchProtection || null,
-          community: repoData.community || null,
-          traffic: repoData.traffic || null,
-          diskUsage: repoData.diskUsage || null,
+          githubActions: repoData.githubActions ?? null,
+          security: repoData.security ?? null,
+          packages: repoData.packages ?? null,
+          branchProtection: repoData.branchProtection ?? null,
+          community: repoData.community ?? null,
+          traffic: repoData.traffic ?? null,
+          diskUsage: repoData.diskUsage ?? null,
           owner: repoData.owner,
           userId,
         },
@@ -581,7 +581,7 @@ export class RepositoryModel {
       });
 
       return repository;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de l\'upsert repository', {
         nameWithOwner: repoData.nameWithOwner,
         error: error.message,

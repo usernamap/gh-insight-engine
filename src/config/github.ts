@@ -4,7 +4,7 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { GraphQLError } from '@octokit/graphql/dist-types/error';
+import { __GraphQLError } from '@octokit/graphql/dist-types/error';
 import { GitHubTokenValidationResult, RateLimitInfo } from '@/types/github';
 import logger from '@/utils/logger';
 
@@ -56,12 +56,12 @@ export class GitHubConfig {
    * Valide un token GitHub et vérifie les permissions
    */
   public async validateToken(token?: string): Promise<GitHubTokenValidationResult> {
-    const authToken = token || this.token;
+    const authToken = token ?? this.token;
 
     if (!authToken) {
       return {
         valid: false,
-        error: 'Aucun token GitHub fourni',
+        _error: 'Aucun token GitHub fourni',
       };
     }
 
@@ -82,7 +82,7 @@ export class GitHubConfig {
           valid: false,
           username: userResponse.data.login,
           scopes,
-          error: `Permissions manquantes: ${missingScopes.join(', ')}`,
+          _error: `Permissions manquantes: ${missingScopes.join(', ')}`,
         };
       }
 
@@ -100,12 +100,12 @@ export class GitHubConfig {
         scopes,
       };
 
-    } catch (error: any) {
-      logger.error('Erreur validation token GitHub', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur validation token GitHub', { _error: error.message });
 
       return {
         valid: false,
-        error: error.message || 'Token invalide ou expiré',
+        _error: error.message ?? 'Token invalide ou expiré',
       };
     }
   }
@@ -114,7 +114,7 @@ export class GitHubConfig {
    * Extraction des scopes depuis les headers de réponse
    */
   private extractScopesFromHeaders(headers: Record<string, string>): string[] {
-    const scopesHeader = headers['x-oauth-scopes'] || headers['X-OAuth-Scopes'];
+    const scopesHeader = headers['x-oauth-scopes'] ?? headers['X-OAuth-Scopes'];
     if (!scopesHeader) return [];
 
     return scopesHeader
@@ -132,7 +132,7 @@ export class GitHubConfig {
       if (requiredScope.includes(':')) {
         const [prefix] = requiredScope.split(':');
         return !userScopes.some(scope =>
-          scope === requiredScope || scope.startsWith(`${prefix}:`),
+          scope === requiredScope ?? scope.startsWith(`${prefix}:`),
         );
       }
       return !userScopes.includes(requiredScope);
@@ -144,7 +144,7 @@ export class GitHubConfig {
    */
   public async executeGraphQLQuery<T = any>(
     query: string,
-    variables: Record<string, any> = {},
+    variables: Record<string, unknown> = {},
     maxRetries = 2,
   ): Promise<T> {
     if (!this.octokit) {
@@ -166,7 +166,7 @@ export class GitHubConfig {
 
         return response;
 
-      } catch (error: any) {
+      } catch (_error: unknown) {
         lastError = error;
 
         if (this.isRateLimitError(error) && attempt < maxRetries) {
@@ -182,7 +182,7 @@ export class GitHubConfig {
 
         if (attempt === maxRetries) {
           logger.error('Requête GraphQL échouée après tous les essais', {
-            error: error.message,
+            _error: error.message,
             attempts: maxRetries + 1,
           });
           break;
@@ -201,7 +201,7 @@ export class GitHubConfig {
    */
   public async executeRestRequest<T = any>(
     endpoint: string,
-    options: any = {},
+    options: unknown = {},
     maxRetries = 2,
   ): Promise<T> {
     if (!this.octokit) {
@@ -223,7 +223,7 @@ export class GitHubConfig {
 
         return response.data;
 
-      } catch (error: any) {
+      } catch (_error: unknown) {
         lastError = error;
 
         if (this.isRateLimitError(error) && attempt < maxRetries) {
@@ -240,7 +240,7 @@ export class GitHubConfig {
         if (attempt === maxRetries) {
           logger.error('Requête REST échouée après tous les essais', {
             endpoint,
-            error: error.message,
+            _error: error.message,
             attempts: maxRetries + 1,
           });
           break;
@@ -277,16 +277,15 @@ export class GitHubConfig {
   /**
    * Vérifie si l'erreur est liée au rate limiting
    */
-  private isRateLimitError(error: any): boolean {
+  private isRateLimitError(_error: unknown): boolean {
     return error.status === 403 &&
-           (error.message?.includes('rate limit') ||
-            error.message?.includes('API rate limit'));
+           (error.message?.includes('rate limit') ??             error.message?.includes('API rate limit'));
   }
 
   /**
    * Calcule le temps d'attente basé sur l'erreur de rate limit
    */
-  private calculateWaitTime(error: any): number {
+  private calculateWaitTime(_error: unknown): number {
     // Essaie d'extraire le temps de reset des headers
     if (error.response?.headers?.['x-ratelimit-reset']) {
       const resetTime = parseInt(error.response.headers['x-ratelimit-reset']) * 1000;

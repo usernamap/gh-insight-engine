@@ -40,10 +40,10 @@ export class DatasetModel {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la création du dataset', {
         userProfileId,
-        error: error.message,
+        _error: error.message,
       });
       throw new Error(`Création dataset échouée: ${error.message}`);
     }
@@ -62,7 +62,7 @@ export class DatasetModel {
       const dataset = await prisma.dataset.findUnique({
         where: { id },
         include: {
-          userProfile: true,
+          _userProfile: true,
         },
       });
 
@@ -72,10 +72,10 @@ export class DatasetModel {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche dataset', {
         id,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -108,7 +108,7 @@ export class DatasetModel {
           skip: offset,
           orderBy: { updatedAt: 'desc' },
           include: {
-            userProfile: { select: { login: true, name: true } },
+            _userProfile: { select: { login: true, name: true } },
           },
         }),
         prisma.dataset.count({ where: { userProfileId } }),
@@ -121,10 +121,10 @@ export class DatasetModel {
       });
 
       return { datasets, total };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche datasets par utilisateur', {
         userProfileId,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -154,10 +154,10 @@ export class DatasetModel {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour métadonnées dataset', {
         id,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -166,7 +166,7 @@ export class DatasetModel {
   /**
    * Ajoute ou met à jour les analyses quantitatives
    */
-  static async updateAnalytics(id: string, analytics: AnalyticsExtension): Promise<PrismaDataset> {
+  static async updateAnalytics(id: string, _analytics: AnalyticsExtension): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -187,10 +187,10 @@ export class DatasetModel {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour analytics dataset', {
         id,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -221,10 +221,10 @@ export class DatasetModel {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour insights IA dataset', {
         id,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -245,10 +245,10 @@ export class DatasetModel {
       });
 
       logger.info('Dataset supprimé avec succès', { datasetId: id });
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la suppression dataset', {
         id,
-        error: error.message,
+        _error: error.message,
       });
       throw new Error(`Suppression dataset échouée: ${error.message}`);
     }
@@ -268,7 +268,7 @@ export class DatasetModel {
         where: { userProfileId },
         orderBy: { updatedAt: 'desc' },
         include: {
-          userProfile: { select: { login: true, name: true } },
+          _userProfile: { select: { login: true, name: true } },
         },
       });
 
@@ -279,10 +279,10 @@ export class DatasetModel {
       });
 
       return dataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche du dataset le plus récent', {
         userProfileId,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -308,7 +308,7 @@ export class DatasetModel {
     try {
       const dataset = await prisma.dataset.findUnique({
         where: { id },
-        select: { analytics: true, aiInsights: true, updatedAt: true },
+        select: { _analytics: true, aiInsights: true, updatedAt: true },
       });
 
       if (!dataset) {
@@ -325,13 +325,13 @@ export class DatasetModel {
 
       if (hasAnalytics) {
         const analyticsData = dataset.analytics as any;
-        const analyticsDate = new Date(analyticsData.analytics?.generatedAt || dataset.updatedAt);
+        const analyticsDate = new Date(analyticsData.analytics?.generatedAt ?? dataset.updatedAt);
         analyticsUpToDate = analyticsDate > cutoffTime;
       }
 
       if (hasInsights) {
         const insightsData = dataset.aiInsights as any;
-        const insightsDate = new Date(insightsData.aiInsights?.generatedAt || dataset.updatedAt);
+        const insightsDate = new Date(insightsData.aiInsights?.generatedAt ?? dataset.updatedAt);
         insightsUpToDate = insightsDate > cutoffTime;
       }
 
@@ -341,10 +341,10 @@ export class DatasetModel {
         analyticsUpToDate,
         insightsUpToDate,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la vérification de fraîcheur des analyses', {
         id,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -385,7 +385,7 @@ export class DatasetModel {
         activityMonth,
       ] = await Promise.all([
         prisma.dataset.count(),
-        prisma.dataset.count({ where: { analytics: { not: null } } }),
+        prisma.dataset.count({ where: { _analytics: { not: null } } }),
         prisma.dataset.count({ where: { aiInsights: { not: null } } }),
         prisma.dataset.findMany({ select: { repositories: true } }),
         prisma.dataset.count({ where: { updatedAt: { gte: last24h } } }),
@@ -410,9 +410,9 @@ export class DatasetModel {
           lastMonth: activityMonth,
         },
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors du calcul des statistiques datasets', {
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -439,7 +439,7 @@ export class DatasetModel {
     }
 
     try {
-      const where: any = {};
+      const where: unknown = {};
 
       if (filters.hasAnalytics !== undefined) {
         if (filters.hasAnalytics) {
@@ -467,11 +467,11 @@ export class DatasetModel {
       const [datasets, total] = await Promise.all([
         prisma.dataset.findMany({
           where,
-          take: filters.limit || 10,
-          skip: filters.offset || 0,
+          take: filters.limit ?? 10,
+          skip: filters.offset ?? 0,
           orderBy: { updatedAt: 'desc' },
           include: {
-            userProfile: { select: { login: true, name: true, avatarUrl: true } },
+            _userProfile: { select: { login: true, name: true, avatarUrl: true } },
           },
         }),
         prisma.dataset.count({ where }),
@@ -480,7 +480,7 @@ export class DatasetModel {
       // Filtrage post-requête pour les critères sur les repositories
       let filteredDatasets = datasets;
 
-      if (filters.minRepositories !== undefined || filters.maxRepositories !== undefined) {
+      if (filters.minRepositories !== filters.maxRepositories !== undefined) {
         filteredDatasets = datasets.filter(dataset => {
           const repoCount = dataset.repositories.length;
 
@@ -506,10 +506,10 @@ export class DatasetModel {
         datasets: filteredDatasets,
         total: filteredDatasets.length,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche avancée datasets', {
         filters,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }
@@ -538,7 +538,7 @@ export class DatasetModel {
 
       const clonedDataset = await prisma.dataset.create({
         data: {
-          userProfileId: newUserProfileId || sourceDataset.userProfileId,
+          userProfileId: newUserProfileId ?? sourceDataset.userProfileId,
           metadata: sourceDataset.metadata,
           repositories: sourceDataset.repositories,
           // Ne pas copier les analyses - elles devront être régénérées
@@ -552,10 +552,10 @@ export class DatasetModel {
       });
 
       return clonedDataset;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors du clonage dataset', {
         sourceId,
-        error: error.message,
+        _error: error.message,
       });
       throw new Error(`Clonage dataset échoué: ${error.message}`);
     }
@@ -586,10 +586,10 @@ export class DatasetModel {
       });
 
       return result.count;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors du nettoyage datasets', {
         olderThanDays,
-        error: error.message,
+        _error: error.message,
       });
       throw error;
     }

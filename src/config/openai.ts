@@ -47,7 +47,7 @@ export class OpenAIConfig {
         model: response.model,
         usage: response.usage,
       });
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Échec du test de connexion OpenAI', { error: error.message });
       throw new Error(`Connexion OpenAI échouée: ${error.message}`);
     }
@@ -61,7 +61,7 @@ export class OpenAIConfig {
     model = 'gpt-4',
     maxTokens = 2000,
     temperature = 0.7,
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     if (!this.client) {
       throw new Error('Client OpenAI non initialisé');
     }
@@ -93,7 +93,7 @@ export class OpenAIConfig {
       });
 
       const processingTime = (Date.now() - startTime) / 1000;
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = JSON.parse(response.choices[0].message.content ?? '{}');
 
       logger.info('Analyse IA terminée avec succès', {
         analysisType: prompt.analysisType,
@@ -109,14 +109,14 @@ export class OpenAIConfig {
           model: response.model,
           processingTime,
           tokens: {
-            input: response.usage?.prompt_tokens || 0,
-            output: response.usage?.completion_tokens || 0,
-            total: response.usage?.total_tokens || 0,
+            input: response.usage?.prompt_tokens ?? 0,
+            output: response.usage?.completion_tokens ?? 0,
+            total: response.usage?.total_tokens ?? 0,
           },
         },
       };
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       const processingTime = (Date.now() - startTime) / 1000;
 
       logger.error('Erreur lors de l\'analyse IA', {
@@ -157,7 +157,7 @@ export class OpenAIConfig {
   /**
    * Nettoie les données pour les prompts (retire les champs sensibles)
    */
-  private sanitizeDataForPrompt(data: any): any {
+  private sanitizeDataForPrompt(data: Record<string, unknown>): unknown {
     if (!data) return null;
 
     const sensitiveFields = ['email', 'token', 'apiKey', '_id', 'password'];
@@ -167,7 +167,7 @@ export class OpenAIConfig {
     }
 
     if (typeof data === 'object' && data !== null) {
-      const sanitized: any = {};
+      const sanitized: unknown = {};
 
       for (const [key, value] of Object.entries(data)) {
         if (!sensitiveFields.includes(key.toLowerCase())) {
@@ -185,10 +185,10 @@ export class OpenAIConfig {
    * Génère un résumé de profil développeur
    */
   public async generateDeveloperSummary(
-    userProfile: any,
-    repositories: any[],
-    analytics: any,
-  ): Promise<any> {
+    userProfile: unknown,
+    repositories: Record<string, unknown>[],
+    analytics: AnalyticsOverview,
+  ): Promise<Record<string, unknown>> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('developer-summary').systemPrompt,
       userPrompt: this.getPromptTemplate('developer-summary').userPromptTemplate,
@@ -203,10 +203,10 @@ export class OpenAIConfig {
    * Évalue les compétences techniques
    */
   public async assessTechnicalSkills(
-    userProfile: any,
-    repositories: any[],
-    analytics: any,
-  ): Promise<any> {
+    userProfile: unknown,
+    repositories: Record<string, unknown>[],
+    analytics: AnalyticsOverview,
+  ): Promise<Record<string, unknown>> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('skills-assessment').systemPrompt,
       userPrompt: this.getPromptTemplate('skills-assessment').userPromptTemplate,
@@ -221,10 +221,10 @@ export class OpenAIConfig {
    * Analyse les insights de carrière
    */
   public async analyzeCareerInsights(
-    userProfile: any,
-    repositories: any[],
-    analytics: any,
-  ): Promise<any> {
+    userProfile: unknown,
+    repositories: Record<string, unknown>[],
+    analytics: AnalyticsOverview,
+  ): Promise<Record<string, unknown>> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('career-insights').systemPrompt,
       userPrompt: this.getPromptTemplate('career-insights').userPromptTemplate,
@@ -239,10 +239,10 @@ export class OpenAIConfig {
    * Génère des recommandations personnalisées
    */
   public async generateRecommendations(
-    userProfile: any,
-    repositories: any[],
-    analytics: any,
-  ): Promise<any> {
+    userProfile: unknown,
+    repositories: Record<string, unknown>[],
+    analytics: AnalyticsOverview,
+  ): Promise<Record<string, unknown>> {
     const prompt: AIAnalysisPrompt = {
       systemPrompt: this.getPromptTemplate('recommendations').systemPrompt,
       userPrompt: this.getPromptTemplate('recommendations').userPromptTemplate,

@@ -29,7 +29,7 @@ export class AuthController {
      * Authentification et génération de JWT
      * POST /api/auth/login
      */
-  static login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static login = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username, fullName, githubToken }: LoginRequestBody = req.body;
 
     logWithContext.auth('login_attempt', username, true, {
@@ -78,11 +78,11 @@ export class AuthController {
           githubUsername: userProfile.login,
           fullName,
           scope: 'user_repositories',
-          totalRepositories: userProfile.publicRepos + (userProfile.privateRepos || 0),
+          totalRepositories: userProfile.publicRepos + (userProfile.privateRepos ?? 0),
           analysisVersion: '1.0.0',
           dataVersion: '1.0.0',
           settings: {
-            includePrivateRepos: tokenValidation.scopes?.includes('repo') || false,
+            includePrivateRepos: tokenValidation.scopes?.includes('repo') ?? false,
             includeForkedRepos: true,
             includeArchivedRepos: false,
             analysisDepth: 'standard',
@@ -118,7 +118,7 @@ export class AuthController {
           following: userProfile.following,
           createdAt: userProfile.createdAt,
           hasValidToken: true,
-          tokenScopes: tokenValidation.scopes || [],
+          tokenScopes: tokenValidation.scopes ?? [],
         },
         tokens: {
           accessToken,
@@ -126,9 +126,9 @@ export class AuthController {
           expiresIn: '24h',
         },
         permissions: {
-          canAccessPrivateRepos: tokenValidation.scopes?.includes('repo') || false,
-          canReadOrgs: tokenValidation.scopes?.includes('read:org') || false,
-          canReadUser: tokenValidation.scopes?.includes('user') || false,
+          canAccessPrivateRepos: tokenValidation.scopes?.includes('repo') ?? false,
+          canReadOrgs: tokenValidation.scopes?.includes('read:org') ?? false,
+          canReadUser: tokenValidation.scopes?.includes('user') ?? false,
         },
         timestamp: new Date().toISOString(),
       };
@@ -141,9 +141,9 @@ export class AuthController {
 
       res.status(200).json(responseData);
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.auth('login_failed', username, false, {
-        error: error.message,
+        _error: error.message,
         errorType: error.constructor.name,
       });
 
@@ -156,7 +156,7 @@ export class AuthController {
      * Rafraîchissement du token JWT
      * POST /api/auth/refresh
      */
-  static refresh = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static refresh = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const user = (req as any).user as JWTUser;
 
     if (!user) {
@@ -200,10 +200,10 @@ export class AuthController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.auth('token_refresh_failed', user.username, false, {
         userId: user.id,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -214,7 +214,7 @@ export class AuthController {
      * Déconnexion (invalidation côté client)
      * DELETE /api/auth/logout
      */
-  static logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static logout = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const user = (req as any).user as JWTUser;
 
     if (user) {
@@ -234,7 +234,7 @@ export class AuthController {
      * Validation du token GitHub actuel
      * GET /api/auth/validate
      */
-  static validateToken = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static validateToken = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const user = (req as any).user as JWTUser;
 
     if (!user) {
@@ -257,13 +257,13 @@ export class AuthController {
         },
         github: {
           tokenValid: tokenValidation.valid,
-          scopes: tokenValidation.scopes || [],
-          rateLimit: tokenValidation.rateLimit || null,
+          scopes: tokenValidation.scopes ?? [],
+          rateLimit: tokenValidation.rateLimit ?? null,
         },
         permissions: {
-          canAccessPrivateRepos: tokenValidation.scopes?.includes('repo') || false,
-          canReadOrgs: tokenValidation.scopes?.includes('read:org') || false,
-          canReadUser: tokenValidation.scopes?.includes('user') || false,
+          canAccessPrivateRepos: tokenValidation.scopes?.includes('repo') ?? false,
+          canReadOrgs: tokenValidation.scopes?.includes('read:org') ?? false,
+          canReadUser: tokenValidation.scopes?.includes('user') ?? false,
         },
         timestamp: new Date().toISOString(),
       };
@@ -276,7 +276,7 @@ export class AuthController {
 
         res.status(401).json({
           ...responseData,
-          error: tokenValidation.error,
+          _error: tokenValidation.error,
           message: 'Token GitHub invalide. Veuillez vous reconnecter',
           action: 'login_required',
         });
@@ -289,10 +289,10 @@ export class AuthController {
         res.status(200).json(responseData);
       }
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.auth('token_validation_error', user.username, false, {
         userId: user.id,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -303,7 +303,7 @@ export class AuthController {
      * Information sur l'utilisateur connecté
      * GET /api/auth/me
      */
-  static getCurrentUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getCurrentUser = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const user = (req as any).user as JWTUser;
 
     if (!user) {
@@ -323,7 +323,7 @@ export class AuthController {
       try {
         const tokenValidation = await githubConfig.validateToken(user.githubToken);
         tokenStatus = tokenValidation.valid ? 'valid' : 'invalid';
-      } catch (error) {
+      } catch (_error) {
         tokenStatus = 'error';
       }
 
@@ -361,10 +361,10 @@ export class AuthController {
 
       res.status(200).json(responseData);
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.auth('current_user_error', user.username, false, {
         userId: user.id,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;

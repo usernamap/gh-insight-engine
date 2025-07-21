@@ -10,7 +10,7 @@ import { logWithContext, logger } from '@/utils/logger';
 export interface APIError extends Error {
   statusCode?: number;
   code?: string;
-  details?: any;
+  details?: unknown;
   isOperational?: boolean;
 }
 
@@ -22,7 +22,7 @@ export class ValidationError extends Error implements APIError {
   code = 'VALIDATION_ERROR';
   isOperational = true;
 
-  constructor(message: string, public details?: any) {
+  constructor(message: string, public details?: unknown) {
     super(message);
     this.name = 'ValidationError';
     Object.setPrototypeOf(this, ValidationError.prototype);
@@ -124,7 +124,7 @@ export class DatabaseError extends Error implements APIError {
 /**
  * Classification et normalisation des erreurs
  */
-const classifyError = (error: Error): APIError => {
+const classifyError = (_error: Error): APIError => {
   // Erreurs Zod (validation)
   if (error instanceof ZodError) {
     return new ValidationError('Erreur de validation des données', {
@@ -141,7 +141,7 @@ const classifyError = (error: Error): APIError => {
   if (error instanceof PrismaClientKnownRequestError) {
     switch (error.code) {
     case 'P2002': // Unique constraint violation
-      return new ConflictError(`Contrainte d'unicité violée: ${error.meta?.target || 'champ'}`);
+      return new ConflictError(`Contrainte d'unicité violée: ${error.meta?.target ?? 'champ'}`);
     case 'P2025': // Record not found
       return new NotFoundError('Enregistrement');
     case 'P2003': // Foreign key constraint
@@ -165,7 +165,7 @@ const classifyError = (error: Error): APIError => {
   if (error instanceof MongooseError) {
     if (error.name === 'ValidationError') {
       return new ValidationError('Erreur de validation MongoDB', {
-        validationErrors: Object.entries((error as any).errors || {}).map(([field, err]: [string, any]) => ({
+        validationErrors: Object.entries((error as any).errors ?? {}).map(([field, err]: [string, any]) => ({
           field,
           message: err.message,
           kind: err.kind,
@@ -205,8 +205,8 @@ const classifyError = (error: Error): APIError => {
 
   // Erreur système non gérée
   return {
-    name: error.name || 'UnknownError',
-    message: error.message || 'Une erreur inattendue s\'est produite',
+    name: error.name ?? 'UnknownError',
+    message: error.message ?? 'Une erreur inattendue s\'est produite',
     statusCode: 500,
     code: 'INTERNAL_SERVER_ERROR',
     isOperational: false,
@@ -217,11 +217,11 @@ const classifyError = (error: Error): APIError => {
 /**
  * Formatage de la réponse d'erreur
  */
-const formatErrorResponse = (error: APIError, req: Request) => {
+const formatErrorResponse = (_error: APIError, req: Request) => {
   const isProduction = process.env.NODE_ENV === 'production';
 
   const baseResponse = {
-    error: error.code || 'UNKNOWN_ERROR',
+    _error: error.code ?? 'UNKNOWN_ERROR',
     message: error.message,
     timestamp: new Date().toISOString(),
     path: req.path,
@@ -239,7 +239,7 @@ const formatErrorResponse = (error: APIError, req: Request) => {
   }
 
   // En production, limiter les informations sensibles
-  const response: any = { ...baseResponse };
+  const response: unknown = { ...baseResponse };
 
   // Ajouter les détails seulement pour les erreurs opérationnelles
   if (error.isOperational && error.details) {
@@ -253,10 +253,10 @@ const formatErrorResponse = (error: APIError, req: Request) => {
  * Middleware de gestion d'erreurs principal
  */
 export const errorHandler: ErrorRequestHandler = (
-  error: Error,
+  _error: Error,
   req: Request,
-  res: Response,
-  next: NextFunction,
+  _res: Response,
+  _next: NextFunction,
 ): void => {
   // Classifier et normaliser l'erreur
   const classifiedError = classifyError(error);
@@ -289,7 +289,7 @@ export const errorHandler: ErrorRequestHandler = (
   };
 
   // Log selon la gravité
-  if (classifiedError.statusCode >= 500 || !classifiedError.isOperational) {
+  if (classifiedError.statusCode >= 500 ?? !classifiedError.isOperational) {
     logger.error('Erreur serveur critique', logData);
   } else if (classifiedError.statusCode >= 400) {
     logger.warn('Erreur client', logData);
@@ -320,13 +320,13 @@ export const errorHandler: ErrorRequestHandler = (
   }
 
   // Envoi de la réponse d'erreur
-  res.status(classifiedError.statusCode || 500).json(responseData);
+  res.status(classifiedError.statusCode ?? 500).json(responseData);
 };
 
 /**
  * Middleware pour les routes 404
  */
-export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
+export const notFoundHandler = (req: Request, _res: Response, _next: NextFunction): void => {
   const error = new NotFoundError('Endpoint');
 
   logWithContext.api('endpoint_not_found', req.path, false, {
@@ -343,9 +343,9 @@ export const notFoundHandler = (req: Request, res: Response, next: NextFunction)
  */
 export const setupGlobalErrorHandlers = (): void => {
   // Exceptions non capturées
-  process.on('uncaughtException', (error: Error) => {
+  process.on('uncaughtException', (_error: Error) => {
     logger.error('Exception non capturée', {
-      error: error.message,
+      _error: error.message,
       stack: error.stack,
       name: error.name,
     });
@@ -355,9 +355,9 @@ export const setupGlobalErrorHandlers = (): void => {
   });
 
   // Promesses rejetées non gérées
-  process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<Record<string, unknown>>) => {
     logger.error('Promesse rejetée non gérée', {
-      reason: reason?.message || reason,
+      reason: reason?.message ?? reason,
       stack: reason?.stack,
       promise: promise.toString(),
     });
@@ -385,8 +385,8 @@ export const setupGlobalErrorHandlers = (): void => {
 /**
  * Middleware d'asyncronous error catching pour les routes async
  */
-export const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+export const asyncHandler = (fn: (req: Request, _res: Response, _next: NextFunction) => Promise<Record<string, unknown>>) => {
+  return (req: Request, _res: Response, _next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
@@ -395,7 +395,7 @@ export const asyncHandler = (fn: (req: Request, res: Response, next: NextFunctio
  * Helper pour créer des erreurs facilement dans les controllers
  */
 export const createError = {
-  validation: (message: string, details?: any) => new ValidationError(message, details),
+  validation: (message: string, details?: unknown) => new ValidationError(message, details),
   authentication: (message?: string) => new AuthenticationError(message),
   authorization: (message?: string) => new AuthorizationError(message),
   notFound: (resource?: string) => new NotFoundError(resource),

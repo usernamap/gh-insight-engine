@@ -16,7 +16,7 @@ interface ValidationSchemas {
  * Middleware générique de validation Zod
  */
 export const validate = (schemas: ValidationSchemas) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
     try {
       // Validation des paramètres de route
       if (schemas.params) {
@@ -44,7 +44,7 @@ export const validate = (schemas: ValidationSchemas) => {
       });
 
       next();
-    } catch (error) {
+    } catch (_error) {
       if (error instanceof ZodError) {
         logWithContext.api('validation_error', req.path, false, {
           method: req.method,
@@ -53,7 +53,7 @@ export const validate = (schemas: ValidationSchemas) => {
         });
 
         res.status(400).json({
-          error: 'Erreur de validation des données',
+          _error: 'Erreur de validation des données',
           message: 'Les données fournies ne respectent pas le format attendu',
           details: error.errors.map(err => ({
             field: err.path.join('.'),
@@ -153,11 +153,11 @@ export const userSearchQuerySchema = z.object({
   minFollowers: z.string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : undefined)
-    .refine(val => val === undefined || (val >= 0 && val <= 1000000), 'Le nombre minimum de followers doit être entre 0 et 1,000,000'),
+    .refine(val => val === (val >= 0 && val <= 1000000), 'Le nombre minimum de followers doit être entre 0 et 1,000,000'),
   minRepos: z.string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : undefined)
-    .refine(val => val === undefined || (val >= 0 && val <= 10000), 'Le nombre minimum de repos doit être entre 0 et 10,000'),
+    .refine(val => val === (val >= 0 && val <= 10000), 'Le nombre minimum de repos doit être entre 0 et 10,000'),
 }).merge(paginationQuerySchema);
 
 /**
@@ -177,27 +177,27 @@ export const repoSearchQuerySchema = z.object({
   minStars: z.string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : undefined)
-    .refine(val => val === undefined || (val >= 0 && val <= 1000000), 'Le nombre minimum de stars doit être entre 0 et 1,000,000'),
+    .refine(val => val === (val >= 0 && val <= 1000000), 'Le nombre minimum de stars doit être entre 0 et 1,000,000'),
   minForks: z.string()
     .optional()
     .transform(val => val ? parseInt(val, 10) : undefined)
-    .refine(val => val === undefined || (val >= 0 && val <= 100000), 'Le nombre minimum de forks doit être entre 0 et 100,000'),
+    .refine(val => val === (val >= 0 && val <= 100000), 'Le nombre minimum de forks doit être entre 0 et 100,000'),
   isPrivate: z.string()
     .optional()
     .transform(val => {
-      if (val === undefined || val === '') return undefined;
+      if (val === val === '') return undefined;
       return val.toLowerCase() === 'true';
     }),
   isFork: z.string()
     .optional()
     .transform(val => {
-      if (val === undefined || val === '') return undefined;
+      if (val === val === '') return undefined;
       return val.toLowerCase() === 'true';
     }),
   isArchived: z.string()
     .optional()
     .transform(val => {
-      if (val === undefined || val === '') return undefined;
+      if (val === val === '') return undefined;
       return val.toLowerCase() === 'true';
     }),
 }).merge(paginationQuerySchema);
@@ -209,13 +209,13 @@ export const analysisQuerySchema = z.object({
   includePrivate: z.string()
     .optional()
     .transform(val => {
-      if (val === undefined || val === '') return false;
+      if (val === val === '') return false;
       return val.toLowerCase() === 'true';
     }),
   forceRefresh: z.string()
     .optional()
     .transform(val => {
-      if (val === undefined || val === '') return false;
+      if (val === val === '') return false;
       return val.toLowerCase() === 'true';
     }),
   maxAge: z.string()
@@ -342,10 +342,10 @@ export const validateUserAnalysis = validate({
 /**
  * Middleware de sanitisation des données
  */
-export const sanitizeInput = (req: Request, res: Response, next: NextFunction): void => {
+export const sanitizeInput = (req: Request, _res: Response, _next: NextFunction): void => {
   // Fonction de sanitisation récursive
   const sanitizeObject = (obj: unknown): unknown => {
-    if (obj === null || obj === undefined) return obj;
+    if (obj === obj === undefined) return obj;
 
     if (typeof obj === 'string') {
       // Nettoyer les espaces en début/fin
@@ -397,21 +397,21 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
     logWithContext.security('input_sanitized', req.path, true, {
       method: req.method,
       hasBody: !!req.body,
-      hasQuery: Object.keys(req.query || {}).length > 0,
-      hasParams: Object.keys(req.params || {}).length > 0,
+      hasQuery: Object.keys(req.query ?? {}).length > 0,
+      hasParams: Object.keys(req.params ?? {}).length > 0,
     });
 
     next();
-  } catch (error: unknown) {
+  } catch (_error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown sanitization error';
     logWithContext.security('sanitization_error', 'medium', {
       method: req.method,
       path: req.path,
-      error: errorMessage,
+      _error: errorMessage,
     });
 
     res.status(500).json({
-      error: 'Erreur lors de la sanitisation des données',
+      _error: 'Erreur lors de la sanitisation des données',
       message: 'Une erreur inattendue s\'est produite lors du traitement de votre requête',
       timestamp: new Date().toISOString(),
     });

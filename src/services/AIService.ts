@@ -23,9 +23,9 @@ export class AIService {
    * Génère une analyse IA complète d'un développeur
    */
   public async generateCompleteInsights(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<AIInsightsSummary> {
     const startTime = Date.now();
 
@@ -71,7 +71,7 @@ export class AIService {
       const confidence = this.calculateOverallConfidence(repositories.length, analytics);
 
       const insights: AIInsightsSummary = {
-        userId: userProfile._id || '',
+        userId: userProfile._id ?? '',
         generatedAt: new Date(),
         model: 'gpt-4',
         confidence,
@@ -102,10 +102,10 @@ export class AIService {
       });
 
       return insights;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur génération insights IA', {
         username: userProfile.login,
-        error: error.message,
+        _error: error.message,
       });
       throw new Error(`Génération insights IA échouée: ${error.message}`);
     }
@@ -115,9 +115,9 @@ export class AIService {
    * Analyse la personnalité du développeur
    */
   private async analyzeDeveloperPersonality(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<DeveloperPersonality> {
     try {
       const analysisResult = await openaiConfig.generateDeveloperSummary(
@@ -134,14 +134,14 @@ export class AIService {
 
       return {
         archetype,
-        description: result.description || 'Profil développeur polyvalent avec des compétences diversifiées.',
+        description: result.description ?? 'Profil développeur polyvalent avec des compétences diversifiées.',
         strengths: Array.isArray(result.strengths) ? result.strengths.slice(0, 5) : [],
         workingStyle,
         motivations: Array.isArray(result.motivations) ? result.motivations.slice(0, 4) : [],
         potentialChallenges: Array.isArray(result.potentialChallenges) ? result.potentialChallenges.slice(0, 3) : [],
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse personnalité', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse personnalité', { _error: error.message });
 
       // Fallback basé sur les données disponibles
       return this.generateFallbackPersonality(userProfile, repositories, analytics);
@@ -152,9 +152,9 @@ export class AIService {
    * Évalue les compétences techniques
    */
   private async assessTechnicalSkills(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<SkillAssessment> {
     try {
       const analysisResult = await openaiConfig.assessTechnicalSkills(
@@ -176,8 +176,8 @@ export class AIService {
           this.validateLeadershipSkill(result.leadership) :
           this.generateFallbackLeadershipSkill(userProfile, repositories),
       };
-    } catch (error: any) {
-      logger.error('Erreur évaluation compétences', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur évaluation compétences', { _error: error.message });
 
       return {
         technical: this.generateFallbackTechnicalSkills(repositories),
@@ -191,9 +191,9 @@ export class AIService {
    * Analyse les insights de carrière
    */
   private async analyzeCareerInsights(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<CareerInsights> {
     try {
       const analysisResult = await openaiConfig.analyzeCareerInsights(
@@ -220,8 +220,8 @@ export class AIService {
           this.validateMarketPosition(result.marketPosition) :
           this.generateFallbackMarketPosition(userProfile, analytics),
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse insights carrière', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse insights carrière', { _error: error.message });
 
       return this.generateFallbackCareerInsights(userProfile, repositories, analytics);
     }
@@ -231,9 +231,9 @@ export class AIService {
    * Analyse les patterns de productivité
    */
   private async analyzeProductivityPatterns(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<ProductivityAnalysis> {
     try {
       // Analyse basée sur les données quantitatives + IA
@@ -270,8 +270,8 @@ export class AIService {
         efficiency,
         workLifeBalance,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse productivité', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse productivité', { _error: error.message });
 
       return this.generateFallbackProductivityAnalysis(analytics);
     }
@@ -281,9 +281,9 @@ export class AIService {
    * Génère des recommandations techniques
    */
   private async generateTechnicalRecommendations(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<TechnicalRecommendations> {
     try {
       const analysisResult = await openaiConfig.generateRecommendations(
@@ -305,8 +305,8 @@ export class AIService {
           result.longTerm.map(vision => this.validateLongTermVision(vision)).slice(0, 3) :
           this.generateFallbackLongTermVisions(userProfile, analytics),
       };
-    } catch (error: any) {
-      logger.error('Erreur génération recommandations', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur génération recommandations', { _error: error.message });
 
       return {
         immediate: this.generateFallbackImmediateRecommendations(analytics),
@@ -320,9 +320,9 @@ export class AIService {
    * Analyse les forces du développeur
    */
   private async analyzeStrengths(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<StrengthsAnalysis> {
     try {
       // Analyse basée sur les métriques quantitatives
@@ -335,8 +335,8 @@ export class AIService {
         emerging: emergingStrengths,
         unique: uniqueStrengths,
       };
-    } catch (error: any) {
-      logger.error('Erreur analyse forces', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur analyse forces', { _error: error.message });
 
       return this.generateFallbackStrengths(analytics);
     }
@@ -346,9 +346,9 @@ export class AIService {
    * Identifie les opportunités de croissance
    */
   private async identifyGrowthOpportunities(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): Promise<GrowthOpportunities> {
     try {
       const skillGaps = this.identifySkillGaps(analytics);
@@ -360,8 +360,8 @@ export class AIService {
         experiences: experienceGaps,
         relationships: networkingOpportunities,
       };
-    } catch (error: any) {
-      logger.error('Erreur identification opportunités', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur identification opportunités', { _error: error.message });
 
       return this.generateFallbackGrowthOpportunities(analytics);
     }
@@ -398,8 +398,8 @@ export class AIService {
         primaryRecommendations,
         careerOutlook,
       };
-    } catch (error: any) {
-      logger.error('Erreur génération résumé exécutif', { error: error.message });
+    } catch (_error: unknown) {
+      logger.error('Erreur génération résumé exécutif', { _error: error.message });
 
       return {
         keyHighlights: ['Profil développeur complet avec potentiel de croissance'],
@@ -412,14 +412,14 @@ export class AIService {
 
   // Méthodes de validation et fallback
 
-  private validateArchetype(archetype: any): DeveloperPersonality['archetype'] {
+  private validateArchetype(archetype: unknown): DeveloperPersonality['archetype'] {
     const validArchetypes: DeveloperPersonality['archetype'][] = [
       'innovator', 'builder', 'optimizer', 'maintainer', 'explorer', 'teacher',
     ];
     return validArchetypes.includes(archetype) ? archetype : 'builder';
   }
 
-  private validateWorkingStyle(style: any): DeveloperPersonality['workingStyle'] {
+  private validateWorkingStyle(style: unknown): DeveloperPersonality['workingStyle'] {
     return {
       preferredProjectSize: ['small', 'medium', 'large', 'mixed'].includes(style?.preferredProjectSize) ?
         style.preferredProjectSize : 'medium',
@@ -432,14 +432,14 @@ export class AIService {
     };
   }
 
-  private validateCareerLevel(level: any): CareerInsights['currentLevel'] {
+  private validateCareerLevel(level: unknown): CareerInsights['currentLevel'] {
     const validLevels: CareerInsights['currentLevel'][] = [
       'junior', 'mid_level', 'senior', 'staff', 'principal', 'distinguished',
     ];
     return validLevels.includes(level) ? level : 'mid_level';
   }
 
-  private calculateOverallConfidence(repoCount: number, analytics: AnalyticsOverview): number {
+  private calculateOverallConfidence(repoCount: number, _analytics: AnalyticsOverview): number {
     let confidence = 50; // Base
 
     // Plus de données = plus de confiance
@@ -460,9 +460,9 @@ export class AIService {
   // Méthodes fallback (génération basée sur les données quantitatives)
 
   private generateFallbackPersonality(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): DeveloperPersonality {
     const archetype = this.inferArchetypeFromData(repositories, analytics);
 
@@ -481,7 +481,7 @@ export class AIService {
     };
   }
 
-  private inferArchetypeFromData(repositories: GitHubRepo[], analytics: AnalyticsOverview): DeveloperPersonality['archetype'] {
+  private inferArchetypeFromData(repositories: GitHubRepo[], _analytics: AnalyticsOverview): DeveloperPersonality['archetype'] {
     // Logique d'inférence basée sur les données
     const forkRatio = repositories.filter(r => r.isFork).length / repositories.length;
     const popularRepos = repositories.filter(r => r.stargazerCount > 5).length;
@@ -512,7 +512,7 @@ export class AIService {
       }));
   }
 
-  private generateFallbackSoftSkills(analytics: AnalyticsOverview): SkillAssessment['soft'] {
+  private generateFallbackSoftSkills(_analytics: AnalyticsOverview): SkillAssessment['soft'] {
     const skills = [];
 
     if (analytics.collaboration.teamProjects > 0) {
@@ -546,7 +546,7 @@ export class AIService {
   }
 
   private generateFallbackLeadershipSkill(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
   ): SkillAssessment['leadership'] {
     const ownedRepos = repositories.filter(r => !r.isFork).length;
@@ -635,7 +635,7 @@ export class AIService {
     return 'irregular';
   }
 
-  private identifyConsistencyFactors(analytics: AnalyticsOverview): string[] {
+  private identifyConsistencyFactors(_analytics: AnalyticsOverview): string[] {
     const factors = [];
 
     if (analytics.productivity.breakdown.consistency > 70) {
@@ -651,7 +651,7 @@ export class AIService {
     return factors;
   }
 
-  private generateConsistencyRecommendations(analytics: AnalyticsOverview): string[] {
+  private generateConsistencyRecommendations(_analytics: AnalyticsOverview): string[] {
     const recommendations = [];
 
     if (analytics.productivity.breakdown.consistency < 50) {
@@ -679,7 +679,7 @@ export class AIService {
     return 'low';
   }
 
-  private assessProblemSolvingSpeed(analytics: AnalyticsOverview): ProductivityAnalysis['efficiency']['problemSolvingSpeed'] {
+  private assessProblemSolvingSpeed(_analytics: AnalyticsOverview): ProductivityAnalysis['efficiency']['problemSolvingSpeed'] {
     // Basé sur la fréquence des commits et la complexité des projets
     const avgCommitFreq = analytics.performance.commitFrequency.daily;
 
@@ -689,7 +689,7 @@ export class AIService {
     return 'deliberate';
   }
 
-  private assessQualityConsistency(analytics: AnalyticsOverview): ProductivityAnalysis['efficiency']['qualityConsistency'] {
+  private assessQualityConsistency(_analytics: AnalyticsOverview): ProductivityAnalysis['efficiency']['qualityConsistency'] {
     // Basé sur les métriques de qualité du code
     const codeQuality = analytics.performance.codeQuality.commitMessageQuality;
 
@@ -699,7 +699,7 @@ export class AIService {
     return 'variable';
   }
 
-  private generateEfficiencyAnalysis(repositories: GitHubRepo[], analytics: AnalyticsOverview): string {
+  private generateEfficiencyAnalysis(repositories: GitHubRepo[], _analytics: AnalyticsOverview): string {
     const insights = [];
 
     if (analytics.productivity.overall > 75) {
@@ -717,7 +717,7 @@ export class AIService {
     return `${insights.join('. ')  }.`;
   }
 
-  private calculateSustainabilityScore(analytics: AnalyticsOverview): number {
+  private calculateSustainabilityScore(_analytics: AnalyticsOverview): number {
     let score = 70; // Base
 
     // Bonus pour la consistance
@@ -738,7 +738,7 @@ export class AIService {
     return Math.min(100, Math.max(30, Math.round(score)));
   }
 
-  private identifyWorkLifeRisks(analytics: AnalyticsOverview): string[] {
+  private identifyWorkLifeRisks(_analytics: AnalyticsOverview): string[] {
     const risks = [];
 
     if (analytics.performance.commitFrequency.daily > 4) {
@@ -752,7 +752,7 @@ export class AIService {
     return risks;
   }
 
-  private identifyWorkLifePositives(analytics: AnalyticsOverview): string[] {
+  private identifyWorkLifePositives(_analytics: AnalyticsOverview): string[] {
     const positives = [];
 
     if (analytics.productivity.breakdown.consistency > 70) {
@@ -766,7 +766,7 @@ export class AIService {
     return positives;
   }
 
-  private generateWorkLifeRecommendations(analytics: AnalyticsOverview): string[] {
+  private generateWorkLifeRecommendations(_analytics: AnalyticsOverview): string[] {
     const recommendations = [];
 
     if (analytics.performance.commitFrequency.daily > 3) {
@@ -782,7 +782,7 @@ export class AIService {
 
   // Méthodes fallback pour les recommandations
 
-  private generateFallbackImmediateRecommendations(analytics: AnalyticsOverview): TechnicalRecommendations['immediate'] {
+  private generateFallbackImmediateRecommendations(_analytics: AnalyticsOverview): TechnicalRecommendations['immediate'] {
     const recommendations = [];
 
     if (analytics.devops.testingCulture < 50) {
@@ -822,18 +822,18 @@ export class AIService {
     return recommendations.slice(0, 3);
   }
 
-  private generateFallbackShortTermGoals(analytics: AnalyticsOverview): TechnicalRecommendations['shortTerm'] {
+  private generateFallbackShortTermGoals(_analytics: AnalyticsOverview): TechnicalRecommendations['shortTerm'] {
     return [
       {
         goal: 'Améliorer la qualité du code',
-        timeframe: '3-6 mois',
+        _timeframe: '3-6 mois',
         steps: ['Tests unitaires', 'Code review', 'Outils de qualité'],
         metrics: ['Couverture de tests', 'Temps de review'],
       },
     ];
   }
 
-  private generateFallbackLongTermVisions(userProfile: UserProfile, analytics: AnalyticsOverview): TechnicalRecommendations['longTerm'] {
+  private generateFallbackLongTermVisions(_userProfile: UserProfile, _analytics: AnalyticsOverview): TechnicalRecommendations['longTerm'] {
     return [
       {
         vision: 'Devenir expert technique reconnu',
@@ -846,7 +846,7 @@ export class AIService {
 
   // Méthodes pour l'analyse des forces et opportunités
 
-  private identifyCoreStrengths(analytics: AnalyticsOverview): StrengthsAnalysis['core'] {
+  private identifyCoreStrengths(_analytics: AnalyticsOverview): StrengthsAnalysis['core'] {
     const strengths = [];
 
     if (analytics.productivity.overall > 70) {
@@ -870,7 +870,7 @@ export class AIService {
     return strengths.slice(0, 4);
   }
 
-  private identifyEmergingStrengths(repositories: GitHubRepo[], analytics: AnalyticsOverview): StrengthsAnalysis['emerging'] {
+  private identifyEmergingStrengths(repositories: GitHubRepo[], _analytics: AnalyticsOverview): StrengthsAnalysis['emerging'] {
     const strengths = [];
 
     if (analytics.devops.overallMaturity === 'intermediate') {
@@ -885,7 +885,7 @@ export class AIService {
     return strengths;
   }
 
-  private identifyUniqueStrengths(userProfile: UserProfile, repositories: GitHubRepo[], analytics: AnalyticsOverview): StrengthsAnalysis['unique'] {
+  private identifyUniqueStrengths(_userProfile: UserProfile, repositories: GitHubRepo[], _analytics: AnalyticsOverview): StrengthsAnalysis['unique'] {
     const strengths = [];
 
     const popularRepos = repositories.filter(r => r.stargazerCount > 10).length;
@@ -901,7 +901,7 @@ export class AIService {
     return strengths;
   }
 
-  private identifySkillGaps(analytics: AnalyticsOverview): GrowthOpportunities['skills'] {
+  private identifySkillGaps(_analytics: AnalyticsOverview): GrowthOpportunities['skills'] {
     const gaps = [];
 
     if (analytics.devops.testingCulture < 60) {
@@ -918,7 +918,7 @@ export class AIService {
     return gaps.slice(0, 5);
   }
 
-  private identifyExperienceGaps(repositories: GitHubRepo[], analytics: AnalyticsOverview): GrowthOpportunities['experiences'] {
+  private identifyExperienceGaps(repositories: GitHubRepo[], _analytics: AnalyticsOverview): GrowthOpportunities['experiences'] {
     const experiences = [];
 
     if (analytics.collaboration.teamProjects < repositories.length * 0.3) {
@@ -934,7 +934,7 @@ export class AIService {
     return experiences;
   }
 
-  private identifyNetworkingOpportunities(userProfile: UserProfile, analytics: AnalyticsOverview): GrowthOpportunities['relationships'] {
+  private identifyNetworkingOpportunities(_userProfile: UserProfile, _analytics: AnalyticsOverview): GrowthOpportunities['relationships'] {
     return [
       {
         type: 'mentor' as const,
@@ -948,9 +948,9 @@ export class AIService {
   // Méthodes fallback pour toutes les analyses
 
   private generateFallbackCareerInsights(
-    userProfile: UserProfile,
+    _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    analytics: AnalyticsOverview,
+    _analytics: AnalyticsOverview,
   ): CareerInsights {
     return {
       currentLevel: 'mid_level',
@@ -965,7 +965,7 @@ export class AIService {
     };
   }
 
-  private generateFallbackSuitableRoles(analytics: AnalyticsOverview): CareerInsights['suitableRoles'] {
+  private generateFallbackSuitableRoles(_analytics: AnalyticsOverview): CareerInsights['suitableRoles'] {
     const roles = [];
 
     if (analytics.devops.overallMaturity === 'advanced') {
@@ -989,7 +989,7 @@ export class AIService {
     return roles;
   }
 
-  private generateFallbackMarketPosition(userProfile: UserProfile, analytics: AnalyticsOverview): CareerInsights['marketPosition'] {
+  private generateFallbackMarketPosition(_userProfile: UserProfile, _analytics: AnalyticsOverview): CareerInsights['marketPosition'] {
     return {
       competitiveness: 'above_average',
       uniqueValueProposition: 'Développeur polyvalent avec bonnes pratiques techniques',
@@ -998,7 +998,7 @@ export class AIService {
     };
   }
 
-  private generateFallbackProductivityAnalysis(analytics: AnalyticsOverview): ProductivityAnalysis {
+  private generateFallbackProductivityAnalysis(_analytics: AnalyticsOverview): ProductivityAnalysis {
     return {
       patterns: {
         peakPerformance: {
@@ -1028,7 +1028,7 @@ export class AIService {
     };
   }
 
-  private generateFallbackStrengths(analytics: AnalyticsOverview): StrengthsAnalysis {
+  private generateFallbackStrengths(_analytics: AnalyticsOverview): StrengthsAnalysis {
     return {
       core: [
         {
@@ -1043,7 +1043,7 @@ export class AIService {
     };
   }
 
-  private generateFallbackGrowthOpportunities(analytics: AnalyticsOverview): GrowthOpportunities {
+  private generateFallbackGrowthOpportunities(_analytics: AnalyticsOverview): GrowthOpportunities {
     return {
       skills: [
         {
@@ -1091,12 +1091,12 @@ export class AIService {
 
   // Méthodes de validation supplémentaires
 
-  private validateTechnicalSkill(skill: any): SkillAssessment['technical'][0] {
+  private validateTechnicalSkill(skill: unknown): SkillAssessment['technical'][0] {
     return {
-      skill: skill.skill || 'Unknown',
+      skill: skill.skill ?? 'Unknown',
       proficiency: ['novice', 'advanced_beginner', 'competent', 'proficient', 'expert'].includes(skill.proficiency) ?
         skill.proficiency : 'competent',
-      confidence: Math.min(100, Math.max(0, skill.confidence || 70)),
+      confidence: Math.min(100, Math.max(0, skill.confidence ?? 70)),
       evidenceStrength: ['weak', 'moderate', 'strong', 'very_strong'].includes(skill.evidenceStrength) ?
         skill.evidenceStrength : 'moderate',
       evidence: Array.isArray(skill.evidence) ? skill.evidence.slice(0, 3) : ['Usage détecté'],
@@ -1107,9 +1107,9 @@ export class AIService {
     };
   }
 
-  private validateSoftSkill(skill: any): SkillAssessment['soft'][0] {
+  private validateSoftSkill(skill: unknown): SkillAssessment['soft'][0] {
     return {
-      skill: skill.skill || 'Unknown',
+      skill: skill.skill ?? 'Unknown',
       level: ['developing', 'competent', 'strong', 'exceptional'].includes(skill.level) ?
         skill.level : 'competent',
       indicators: Array.isArray(skill.indicators) ? skill.indicators.slice(0, 3) : [],
@@ -1118,7 +1118,7 @@ export class AIService {
     };
   }
 
-  private validateLeadershipSkill(leadership: any): SkillAssessment['leadership'] {
+  private validateLeadershipSkill(leadership: unknown): SkillAssessment['leadership'] {
     return {
       current: ['individual_contributor', 'informal_leader', 'team_lead', 'senior_leader'].includes(leadership.current) ?
         leadership.current : 'individual_contributor',
@@ -1128,67 +1128,67 @@ export class AIService {
     };
   }
 
-  private validateTrajectory(trajectory: any): CareerInsights['trajectory'] {
+  private validateTrajectory(trajectory: unknown): CareerInsights['trajectory'] {
     return {
       direction: ['ascending', 'stable', 'transitioning', 'exploring'].includes(trajectory.direction) ?
         trajectory.direction : 'stable',
       velocity: ['slow', 'steady', 'rapid', 'exponential'].includes(trajectory.velocity) ?
         trajectory.velocity : 'steady',
-      confidence: Math.min(100, Math.max(0, trajectory.confidence || 70)),
+      confidence: Math.min(100, Math.max(0, trajectory.confidence ?? 70)),
     };
   }
 
-  private validateSuitableRole(role: any): CareerInsights['suitableRoles'][0] {
+  private validateSuitableRole(role: unknown): CareerInsights['suitableRoles'][0] {
     return {
-      role: role.role || 'Software Developer',
-      fit: Math.min(100, Math.max(0, role.fit || 70)),
-      reasoning: role.reasoning || 'Compétences techniques adaptées',
+      role: role.role ?? 'Software Developer',
+      fit: Math.min(100, Math.max(0, role.fit ?? 70)),
+      reasoning: role.reasoning ?? 'Compétences techniques adaptées',
       requirements: Array.isArray(role.requirements) ? role.requirements.slice(0, 4) : [],
-      growthPath: role.growthPath || 'Évolution naturelle',
+      growthPath: role.growthPath ?? 'Évolution naturelle',
     };
   }
 
-  private validateMarketPosition(position: any): CareerInsights['marketPosition'] {
+  private validateMarketPosition(position: unknown): CareerInsights['marketPosition'] {
     return {
       competitiveness: ['below_average', 'average', 'above_average', 'exceptional'].includes(position.competitiveness) ?
         position.competitiveness : 'average',
-      uniqueValueProposition: position.uniqueValueProposition || 'Profil technique solide',
+      uniqueValueProposition: position.uniqueValueProposition ?? 'Profil technique solide',
       differentiators: Array.isArray(position.differentiators) ? position.differentiators.slice(0, 4) : [],
       gaps: Array.isArray(position.gaps) ? position.gaps.slice(0, 4) : [],
     };
   }
 
-  private validateRecommendation(rec: any): TechnicalRecommendations['immediate'][0] {
+  private validateRecommendation(rec: unknown): TechnicalRecommendations['immediate'][0] {
     return {
       category: ['skill', 'tool', 'practice', 'project'].includes(rec.category) ? rec.category : 'skill',
-      recommendation: rec.recommendation || 'Amélioration continue',
-      reasoning: rec.reasoning || 'Développement professionnel',
+      recommendation: rec.recommendation ?? 'Amélioration continue',
+      reasoning: rec.reasoning ?? 'Développement professionnel',
       expectedImpact: ['minor', 'moderate', 'significant', 'transformative'].includes(rec.expectedImpact) ?
         rec.expectedImpact : 'moderate',
       effort: ['low', 'medium', 'high'].includes(rec.effort) ? rec.effort : 'medium',
       resources: Array.isArray(rec.resources) ?
-        rec.resources.slice(0, 3).map((res: any) => ({
-          title: res.title || 'Ressource',
+        rec.resources.slice(0, 3).map((_res: Response) => ({
+          title: res.title ?? 'Ressource',
           type: ['course', 'book', 'project', 'certification', 'community'].includes(res.type) ?
             res.type : 'course',
           url: res.url,
-          priority: Math.min(10, Math.max(1, res.priority || 5)),
+          priority: Math.min(10, Math.max(1, res.priority ?? 5)),
         })) : [],
     };
   }
 
-  private validateShortTermGoal(goal: any): TechnicalRecommendations['shortTerm'][0] {
+  private validateShortTermGoal(goal: unknown): TechnicalRecommendations['shortTerm'][0] {
     return {
-      goal: goal.goal || 'Amélioration technique',
-      timeframe: goal.timeframe || '3-6 mois',
+      goal: goal.goal ?? 'Amélioration technique',
+      _timeframe: goal.timeframe ?? '3-6 mois',
       steps: Array.isArray(goal.steps) ? goal.steps.slice(0, 5) : [],
       metrics: Array.isArray(goal.metrics) ? goal.metrics.slice(0, 3) : [],
     };
   }
 
-  private validateLongTermVision(vision: any): TechnicalRecommendations['longTerm'][0] {
+  private validateLongTermVision(vision: unknown): TechnicalRecommendations['longTerm'][0] {
     return {
-      vision: vision.vision || 'Évolution professionnelle',
+      vision: vision.vision ?? 'Évolution professionnelle',
       milestones: Array.isArray(vision.milestones) ? vision.milestones.slice(0, 4) : [],
       skills: Array.isArray(vision.skills) ? vision.skills.slice(0, 4) : [],
       experience: Array.isArray(vision.experience) ? vision.experience.slice(0, 4) : [],

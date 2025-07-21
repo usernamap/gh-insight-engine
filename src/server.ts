@@ -6,8 +6,8 @@ import logger from '@/utils/logger';
 /**
  * Configuration du serveur HTTP
  */
-const PORT = parseInt(process.env.PORT || '3000', 10);
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = parseInt(process.env.PORT ?? '3000', 10);
+const HOST = process.env.HOST ?? '0.0.0.0';
 
 /**
  * Variables globales pour le serveur
@@ -86,7 +86,7 @@ const startServer = async (): Promise<void> => {
         // Démarrage du serveur
         server.listen(PORT, HOST);
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
         logger.error('Erreur fatale lors du démarrage du serveur', {
             error: error.message,
             stack: error.stack,
@@ -153,9 +153,9 @@ process.on('uncaughtException', (error: Error) => {
 /**
  * Gestion des promesses rejetées non gérées
  */
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+process.on('unhandledRejection', (reason: unknown, promise: Promise<Record<string, unknown>>) => {
     logger.error('Promesse rejetée non gérée', {
-        reason: reason?.message || reason,
+        reason: reason?.message ?? reason,
         stack: reason?.stack,
         promise: promise.toString(),
     });

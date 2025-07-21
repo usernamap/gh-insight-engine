@@ -36,7 +36,7 @@ export class UserController {
    * Récupération du profil d'un utilisateur
    * GET /api/users/:username
    */
-  static getUserProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUserProfile = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -102,10 +102,10 @@ export class UserController {
 
       res.status(200).json(responseData);
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_user_profile', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -116,7 +116,7 @@ export class UserController {
    * Recherche d'utilisateurs
    * GET /api/users/search
    */
-  static searchUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static searchUsers = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const searchParams = req.query as unknown as UserSearchQuery;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -133,7 +133,7 @@ export class UserController {
 
     try {
       // Construction des filtres de recherche
-      const searchFilters: any = {};
+      const searchFilters: unknown = {};
 
       if (searchParams.query) {
         searchFilters.$or = [
@@ -203,9 +203,9 @@ export class UserController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('search_users', req.path, false, {
-        error: error.message,
+        _error: error.message,
         searchQuery: searchParams.query,
       });
 
@@ -217,7 +217,7 @@ export class UserController {
    * Récupération des repositories d'un utilisateur
    * GET /api/users/:username/repositories
    */
-  static getUserRepositories = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUserRepositories = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const { page = 1, limit = 20, sortBy = 'updatedAt', sortOrder = 'desc' } = req.query;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
@@ -294,10 +294,10 @@ export class UserController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_user_repositories', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -308,7 +308,7 @@ export class UserController {
    * Statut de l'analyse d'un utilisateur
    * GET /api/users/:username/status
    */
-  static getUserAnalysisStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUserAnalysisStatus = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -349,10 +349,10 @@ export class UserController {
           needsUpdate: !analysisAge.isUpToDate,
         },
         repositories: {
-          total: latestDataset?.repositories?.length || 0,
+          total: latestDataset?.repositories?.length ?? 0,
           analyzed: latestDataset ? Array.isArray(latestDataset.repositories) ? latestDataset.repositories.length : 0 : 0,
         },
-        metadata: latestDataset?.metadata || null,
+        metadata: latestDataset?.metadata ?? null,
         timestamp: new Date().toISOString(),
       };
 
@@ -365,10 +365,10 @@ export class UserController {
 
       res.status(200).json(responseData);
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_user_analysis_status', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -379,7 +379,7 @@ export class UserController {
    * Suppression des données utilisateur (GDPR)
    * DELETE /api/users/:username
    */
-  static deleteUserData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static deleteUserData = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
@@ -415,10 +415,10 @@ export class UserController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('delete_user_data', req.path, false, {
         targetUsername: username,
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;
@@ -429,7 +429,7 @@ export class UserController {
    * Statistiques globales des utilisateurs
    * GET /api/users/stats
    */
-  static getUsersStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUsersStats = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const authenticatedUser = (req as any).user as AuthenticatedUser;
 
     logWithContext.api('get_users_stats', req.path, true, {
@@ -453,9 +453,9 @@ export class UserController {
         timestamp: new Date().toISOString(),
       });
 
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logWithContext.api('get_users_stats', req.path, false, {
-        error: error.message,
+        _error: error.message,
       });
 
       throw error;

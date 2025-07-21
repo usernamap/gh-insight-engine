@@ -4,7 +4,7 @@
  */
 
 import { User as PrismaUser } from '@/generated/prisma';
-import { GitHubOrganization, UserProfile } from '@/types/github';
+import { ,_GitHubOrganization, UserProfile } from '@/types/github';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 
@@ -22,28 +22,28 @@ export class UserModel {
       const user = await prisma.user.create({
         data: {
           login: userData.login,
-          name: userData.name || '',
-          email: userData.email || '',
-          avatarUrl: userData.avatarUrl || '',
-          bio: userData.bio || null,
-          company: userData.company || null,
-          location: userData.location || null,
-          blog: userData.blog || null,
-          twitterUsername: userData.twitterUsername || null,
-          followers: userData.followers || 0,
-          following: userData.following || 0,
-          publicRepos: userData.publicRepos || 0,
-          publicGists: userData.publicGists || 0,
-          privateRepos: userData.privateRepos || null,
-          ownedPrivateRepos: userData.ownedPrivateRepos || null,
-          totalPrivateRepos: userData.totalPrivateRepos || null,
-          collaborators: userData.collaborators || null,
+          name: userData.name ?? '',
+          email: userData.email ?? '',
+          avatarUrl: userData.avatarUrl ?? '',
+          bio: userData.bio ?? null,
+          company: userData.company ?? null,
+          location: userData.location ?? null,
+          blog: userData.blog ?? null,
+          twitterUsername: userData.twitterUsername ?? null,
+          followers: userData.followers ?? 0,
+          following: userData.following ?? 0,
+          publicRepos: userData.publicRepos ?? 0,
+          publicGists: userData.publicGists ?? 0,
+          privateRepos: userData.privateRepos ?? null,
+          ownedPrivateRepos: userData.ownedPrivateRepos ?? null,
+          totalPrivateRepos: userData.totalPrivateRepos ?? null,
+          collaborators: userData.collaborators ?? null,
           createdAt: userData.createdAt,
           updatedAt: userData.updatedAt,
           type: userData.type,
-          siteAdmin: userData.siteAdmin || false,
-          hireable: userData.hireable || null,
-          organizations: userData.organizations || { totalCount: 0, nodes: [] },
+          siteAdmin: userData.siteAdmin ?? false,
+          hireable: userData.hireable ?? null,
+          organizations: userData.organizations ?? { totalCount: 0, nodes: [] },
         },
       });
 
@@ -53,7 +53,7 @@ export class UserModel {
       });
 
       return user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la création de l\'utilisateur', {
         login: userData.login,
         error: error.message,
@@ -92,7 +92,7 @@ export class UserModel {
       });
 
       return user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche utilisateur', {
         login,
         error: error.message,
@@ -121,7 +121,7 @@ export class UserModel {
       });
 
       return user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche utilisateur par ID', {
         id,
         error: error.message,
@@ -168,7 +168,7 @@ export class UserModel {
       });
 
       return user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour utilisateur', {
         id,
         error: error.message,
@@ -205,7 +205,7 @@ export class UserModel {
       });
 
       logger.info('Utilisateur supprimé avec succès', { userId: id });
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la suppression utilisateur', {
         id,
         error: error.message,
@@ -232,7 +232,7 @@ export class UserModel {
     }
 
     try {
-      const where: any = {};
+      const where: unknown = {};
 
       if (filters.search) {
         where.OR = [
@@ -250,7 +250,7 @@ export class UserModel {
         where.company = { contains: filters.company, mode: 'insensitive' };
       }
 
-      if (filters.minFollowers !== undefined || filters.maxFollowers !== undefined) {
+      if (filters.minFollowers !== undefined ?? filters.maxFollowers !== undefined) {
         where.followers = {};
         if (filters.minFollowers !== undefined) {
           where.followers.gte = filters.minFollowers;
@@ -263,8 +263,8 @@ export class UserModel {
       const [users, total] = await Promise.all([
         prisma.user.findMany({
           where,
-          take: filters.limit || 10,
-          skip: filters.offset || 0,
+          take: filters.limit ?? 10,
+          skip: filters.offset ?? 0,
           orderBy: { followers: 'desc' },
         }),
         prisma.user.count({ where }),
@@ -277,7 +277,7 @@ export class UserModel {
       });
 
       return { users, total };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche d\'utilisateurs', {
         filters,
         error: error.message,
@@ -317,7 +317,7 @@ export class UserModel {
 
       const languageCount = repositories.reduce((acc: Record<string, number>, repo) => {
         if (repo.primaryLanguage) {
-          acc[repo.primaryLanguage] = (acc[repo.primaryLanguage] || 0) + 1;
+          acc[repo.primaryLanguage] = (acc[repo.primaryLanguage] ?? 0) + 1;
         }
         return acc;
       }, {});
@@ -330,10 +330,10 @@ export class UserModel {
       return {
         totalUsers,
         totalRepositories,
-        averageFollowers: Math.round(avgFollowers._avg.followers || 0),
+        averageFollowers: Math.round(avgFollowers._avg.followers ?? 0),
         topLanguages,
       };
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors du calcul des statistiques', {
         error: error.message,
       });
@@ -357,7 +357,7 @@ export class UserModel {
       });
 
       return !!user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de la vérification d\'existence utilisateur', {
         login,
         error: error.message,
@@ -379,47 +379,47 @@ export class UserModel {
       const user = await prisma.user.upsert({
         where: { login: userData.login },
         update: {
-          name: userData.name || '',
-          email: userData.email || '',
-          avatarUrl: userData.avatarUrl || '',
-          bio: userData.bio || null,
-          company: userData.company || null,
-          location: userData.location || null,
-          blog: userData.blog || null,
-          twitterUsername: userData.twitterUsername || null,
-          followers: userData.followers || 0,
-          following: userData.following || 0,
-          publicRepos: userData.publicRepos || 0,
-          publicGists: userData.publicGists || 0,
-          privateRepos: userData.privateRepos || null,
-          hireable: userData.hireable || null,
-          organizations: userData.organizations || { totalCount: 0, nodes: [] },
+          name: userData.name ?? '',
+          email: userData.email ?? '',
+          avatarUrl: userData.avatarUrl ?? '',
+          bio: userData.bio ?? null,
+          company: userData.company ?? null,
+          location: userData.location ?? null,
+          blog: userData.blog ?? null,
+          twitterUsername: userData.twitterUsername ?? null,
+          followers: userData.followers ?? 0,
+          following: userData.following ?? 0,
+          publicRepos: userData.publicRepos ?? 0,
+          publicGists: userData.publicGists ?? 0,
+          privateRepos: userData.privateRepos ?? null,
+          hireable: userData.hireable ?? null,
+          organizations: userData.organizations ?? { totalCount: 0, nodes: [] },
           updatedAt: new Date(),
         },
         create: {
           login: userData.login,
-          name: userData.name || '',
-          email: userData.email || '',
-          avatarUrl: userData.avatarUrl || '',
-          bio: userData.bio || null,
-          company: userData.company || null,
-          location: userData.location || null,
-          blog: userData.blog || null,
-          twitterUsername: userData.twitterUsername || null,
-          followers: userData.followers || 0,
-          following: userData.following || 0,
-          publicRepos: userData.publicRepos || 0,
-          publicGists: userData.publicGists || 0,
-          privateRepos: userData.privateRepos || null,
-          ownedPrivateRepos: userData.ownedPrivateRepos || null,
-          totalPrivateRepos: userData.totalPrivateRepos || null,
-          collaborators: userData.collaborators || null,
+          name: userData.name ?? '',
+          email: userData.email ?? '',
+          avatarUrl: userData.avatarUrl ?? '',
+          bio: userData.bio ?? null,
+          company: userData.company ?? null,
+          location: userData.location ?? null,
+          blog: userData.blog ?? null,
+          twitterUsername: userData.twitterUsername ?? null,
+          followers: userData.followers ?? 0,
+          following: userData.following ?? 0,
+          publicRepos: userData.publicRepos ?? 0,
+          publicGists: userData.publicGists ?? 0,
+          privateRepos: userData.privateRepos ?? null,
+          ownedPrivateRepos: userData.ownedPrivateRepos ?? null,
+          totalPrivateRepos: userData.totalPrivateRepos ?? null,
+          collaborators: userData.collaborators ?? null,
           createdAt: userData.createdAt,
           updatedAt: userData.updatedAt,
           type: userData.type,
-          siteAdmin: userData.siteAdmin || false,
-          hireable: userData.hireable || null,
-          organizations: userData.organizations || { totalCount: 0, nodes: [] },
+          siteAdmin: userData.siteAdmin ?? false,
+          hireable: userData.hireable ?? null,
+          organizations: userData.organizations ?? { totalCount: 0, nodes: [] },
         },
       });
 
@@ -429,7 +429,7 @@ export class UserModel {
       });
 
       return user;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur lors de l\'upsert utilisateur', {
         login: userData.login,
         error: error.message,

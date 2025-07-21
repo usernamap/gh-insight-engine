@@ -4,7 +4,7 @@
  * Toutes les requêtes GraphQL et REST API avec gestion d'erreurs
  */
 
-import { GitHubOrganization, GitHubRepo, GraphQLResponse, UserProfile } from '@/types/github';
+import { ,_GitHubOrganization, GitHubRepo, GraphQLResponse, UserProfile } from '@/types/github';
 import githubConfig from '@/config/github';
 import logger from '@/utils/logger';
 
@@ -33,13 +33,13 @@ export class GitHubService {
         throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
       }
 
-      const organizations = response.data?.viewer?.organizations?.nodes || [];
-      const orgNames = organizations.map((org: any) => org.login);
+      const organizations = response.data?.viewer?.organizations?.nodes ?? [];
+      const orgNames = organizations.map((org: unknown) => org.login);
 
       logger.info('Organisations récupérées', { count: orgNames.length });
 
       return orgNames;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération organisations', { error: error.message });
       throw new Error(`Récupération organisations échouée: ${error.message}`);
     }
@@ -117,9 +117,9 @@ export class GitHubService {
         }
       }
 
-      const basic = basicResponse.data?.viewer || {};
-      const counters = countersResponse.data?.viewer || {};
-      const orgs = orgsResponse.data?.viewer || {};
+      const basic = basicResponse.data?.viewer ?? {};
+      const counters = countersResponse.data?.viewer ?? {};
+      const orgs = orgsResponse.data?.viewer ?? {};
 
       const userProfile: UserProfile = {
         login: basic.login,
@@ -131,10 +131,10 @@ export class GitHubService {
         location: basic.location,
         blog: basic.websiteUrl,
         twitterUsername: basic.twitterUsername,
-        followers: counters.followers?.totalCount || 0,
-        following: counters.following?.totalCount || 0,
-        publicRepos: counters.repositories?.totalCount || 0,
-        publicGists: counters.gists?.totalCount || 0,
+        followers: counters.followers?.totalCount ?? 0,
+        following: counters.following?.totalCount ?? 0,
+        publicRepos: counters.repositories?.totalCount ?? 0,
+        publicGists: counters.gists?.totalCount ?? 0,
         privateRepos: 0,
         ownedPrivateRepos: 0,
         totalPrivateRepos: 0,
@@ -145,13 +145,13 @@ export class GitHubService {
         siteAdmin: basic.isSiteAdmin,
         hireable: basic.isHireable,
         organizations: {
-          totalCount: orgs.organizations?.totalCount || 0,
-          nodes: orgs.organizations?.nodes?.map((org: any) => ({
+          totalCount: orgs.organizations?.totalCount ?? 0,
+          nodes: orgs.organizations?.nodes?.map((org: unknown) => ({
             login: org.login,
             name: org.name,
             description: org.description,
             avatarUrl: org.avatarUrl,
-          })) || [],
+          })) ?? [],
         },
       };
 
@@ -162,7 +162,7 @@ export class GitHubService {
       });
 
       return userProfile;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération profil utilisateur', { error: error.message });
       throw new Error(`Récupération profil échouée: ${error.message}`);
     }
@@ -268,37 +268,37 @@ export class GitHubService {
         throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
       }
 
-      const repositories = response.data?.viewer?.repositories?.nodes || [];
+      const repositories = response.data?.viewer?.repositories?.nodes ?? [];
       const pageInfo = response.data?.viewer?.repositories?.pageInfo;
 
-      const repos: GitHubRepo[] = repositories.map((repo: any) => {
+      const repos: GitHubRepo[] = repositories.map((repo: GitHubRepo) => {
         // Transformation des langages
-        const languageNodes = repo.languages?.edges?.map((edge: any) => ({
+        const languageNodes = repo.languages?.edges?.map((edge: unknown) => ({
           name: edge.node.name,
           size: edge.size,
           percentage: Math.round((edge.size / repo.languages.totalSize) * 100),
-        })) || [];
+        })) ?? [];
 
         // Transformation des topics
-        const topics = repo.repositoryTopics?.nodes?.map((node: any) => node.topic.name) || [];
+        const topics = repo.repositoryTopics?.nodes?.map((node: unknown) => node.topic.name) ?? [];
 
         // Transformation des commits
         const commitHistory = repo.commits?.target?.history;
         const commits = {
-          totalCount: commitHistory?.totalCount || 0,
-          recent: commitHistory?.nodes?.map((commit: any) => ({
+          totalCount: commitHistory?.totalCount ?? 0,
+          recent: commitHistory?.nodes?.map((commit: unknown) => ({
             oid: commit.oid,
             message: commit.message,
             committedDate: new Date(commit.committedDate),
             author: {
               name: commit.author.name,
               email: commit.author.email,
-              login: commit.author.user?.login || null,
+              login: commit.author.user?.login ?? null,
             },
             additions: commit.additions,
             deletions: commit.deletions,
             changedFiles: commit.changedFiles,
-          })) || [],
+          })) ?? [],
         };
 
         return {
@@ -311,13 +311,13 @@ export class GitHubService {
           isTemplate: repo.isTemplate,
           stargazerCount: repo.stargazerCount,
           forkCount: repo.forkCount,
-          watchersCount: repo.watchers?.totalCount || 0,
+          watchersCount: repo.watchers?.totalCount ?? 0,
           subscriberCount: null,
           networkCount: null,
-          openIssuesCount: repo.issues?.totalCount || 0,
-          primaryLanguage: repo.primaryLanguage?.name || null,
+          openIssuesCount: repo.issues?.totalCount ?? 0,
+          primaryLanguage: repo.primaryLanguage?.name ?? null,
           languages: {
-            totalSize: repo.languages?.totalSize || 0,
+            totalSize: repo.languages?.totalSize ?? 0,
             nodes: languageNodes,
           },
           topics,
@@ -325,8 +325,8 @@ export class GitHubService {
           updatedAt: new Date(repo.updatedAt),
           createdAt: new Date(repo.createdAt),
           homepageUrl: repo.homepageUrl,
-          size: repo.diskUsage || 0,
-          defaultBranchRef: repo.defaultBranchRef?.name || null,
+          size: repo.diskUsage ?? 0,
+          defaultBranchRef: repo.defaultBranchRef?.name ?? null,
           license: repo.licenseInfo ? {
             name: repo.licenseInfo.name,
             spdxId: repo.licenseInfo.spdxId,
@@ -344,23 +344,23 @@ export class GitHubService {
           contributingGuidelinesEnabled: null,
           readmeEnabled: null,
           deployments: {
-            totalCount: repo.deployments?.totalCount || 0,
+            totalCount: repo.deployments?.totalCount ?? 0,
           },
           environments: {
-            totalCount: repo.environments?.totalCount || 0,
+            totalCount: repo.environments?.totalCount ?? 0,
           },
           commits,
           releases: {
-            totalCount: repo.releases?.totalCount || 0,
+            totalCount: repo.releases?.totalCount ?? 0,
             latestRelease: null, // Sera enrichi plus tard si nécessaire
           },
           issues: {
-            totalCount: repo.issues?.totalCount || 0,
+            totalCount: repo.issues?.totalCount ?? 0,
             openCount: 0, // À calculer
             closedCount: 0, // À calculer
           },
           pullRequests: {
-            totalCount: repo.pullRequests?.totalCount || 0,
+            totalCount: repo.pullRequests?.totalCount ?? 0,
             openCount: 0, // À calculer
             closedCount: 0, // À calculer
             mergedCount: 0, // À calculer
@@ -371,7 +371,7 @@ export class GitHubService {
           collaborators: {
             totalCount: 0, // À enrichir via REST API
           },
-          diskUsage: repo.diskUsage || 0,
+          diskUsage: repo.diskUsage ?? 0,
           owner: {
             login: repo.owner.login,
             type: 'User', // Assumé pour l'utilisateur authentifié
@@ -392,7 +392,7 @@ export class GitHubService {
       });
 
       return repos;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération repositories utilisateur', { error: error.message });
       throw new Error(`Récupération repositories échouée: ${error.message}`);
     }
@@ -498,35 +498,35 @@ export class GitHubService {
         throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
       }
 
-      const repositories = response.data?.organization?.repositories?.nodes || [];
+      const repositories = response.data?.organization?.repositories?.nodes ?? [];
       const pageInfo = response.data?.organization?.repositories?.pageInfo;
 
-      const repos: GitHubRepo[] = repositories.map((repo: any) => {
+      const repos: GitHubRepo[] = repositories.map((repo: GitHubRepo) => {
         // Même transformation que getUserRepos (factorisation possible)
-        const languageNodes = repo.languages?.edges?.map((edge: any) => ({
+        const languageNodes = repo.languages?.edges?.map((edge: unknown) => ({
           name: edge.node.name,
           size: edge.size,
           percentage: Math.round((edge.size / repo.languages.totalSize) * 100),
-        })) || [];
+        })) ?? [];
 
-        const topics = repo.repositoryTopics?.nodes?.map((node: any) => node.topic.name) || [];
+        const topics = repo.repositoryTopics?.nodes?.map((node: unknown) => node.topic.name) ?? [];
 
         const commitHistory = repo.commits?.target?.history;
         const commits = {
-          totalCount: commitHistory?.totalCount || 0,
-          recent: commitHistory?.nodes?.map((commit: any) => ({
+          totalCount: commitHistory?.totalCount ?? 0,
+          recent: commitHistory?.nodes?.map((commit: unknown) => ({
             oid: commit.oid,
             message: commit.message,
             committedDate: new Date(commit.committedDate),
             author: {
               name: commit.author.name,
               email: commit.author.email,
-              login: commit.author.user?.login || null,
+              login: commit.author.user?.login ?? null,
             },
             additions: commit.additions,
             deletions: commit.deletions,
             changedFiles: commit.changedFiles,
-          })) || [],
+          })) ?? [],
         };
 
         return {
@@ -539,13 +539,13 @@ export class GitHubService {
           isTemplate: repo.isTemplate,
           stargazerCount: repo.stargazerCount,
           forkCount: repo.forkCount,
-          watchersCount: repo.watchers?.totalCount || 0,
+          watchersCount: repo.watchers?.totalCount ?? 0,
           subscriberCount: null,
           networkCount: null,
-          openIssuesCount: repo.issues?.totalCount || 0,
-          primaryLanguage: repo.primaryLanguage?.name || null,
+          openIssuesCount: repo.issues?.totalCount ?? 0,
+          primaryLanguage: repo.primaryLanguage?.name ?? null,
           languages: {
-            totalSize: repo.languages?.totalSize || 0,
+            totalSize: repo.languages?.totalSize ?? 0,
             nodes: languageNodes,
           },
           topics,
@@ -553,8 +553,8 @@ export class GitHubService {
           updatedAt: new Date(repo.updatedAt),
           createdAt: new Date(repo.createdAt),
           homepageUrl: repo.homepageUrl,
-          size: repo.diskUsage || 0,
-          defaultBranchRef: repo.defaultBranchRef?.name || null,
+          size: repo.diskUsage ?? 0,
+          defaultBranchRef: repo.defaultBranchRef?.name ?? null,
           license: repo.licenseInfo ? {
             name: repo.licenseInfo.name,
             spdxId: repo.licenseInfo.spdxId,
@@ -572,23 +572,23 @@ export class GitHubService {
           contributingGuidelinesEnabled: null,
           readmeEnabled: null,
           deployments: {
-            totalCount: repo.deployments?.totalCount || 0,
+            totalCount: repo.deployments?.totalCount ?? 0,
           },
           environments: {
-            totalCount: repo.environments?.totalCount || 0,
+            totalCount: repo.environments?.totalCount ?? 0,
           },
           commits,
           releases: {
-            totalCount: repo.releases?.totalCount || 0,
+            totalCount: repo.releases?.totalCount ?? 0,
             latestRelease: null,
           },
           issues: {
-            totalCount: repo.issues?.totalCount || 0,
+            totalCount: repo.issues?.totalCount ?? 0,
             openCount: 0,
             closedCount: 0,
           },
           pullRequests: {
-            totalCount: repo.pullRequests?.totalCount || 0,
+            totalCount: repo.pullRequests?.totalCount ?? 0,
             openCount: 0,
             closedCount: 0,
             mergedCount: 0,
@@ -599,7 +599,7 @@ export class GitHubService {
           collaborators: {
             totalCount: 0,
           },
-          diskUsage: repo.diskUsage || 0,
+          diskUsage: repo.diskUsage ?? 0,
           owner: {
             login: repo.owner.login,
             type: 'Organization',
@@ -621,7 +621,7 @@ export class GitHubService {
       });
 
       return repos;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération repositories organisation', {
         orgName,
         error: error.message,
@@ -634,7 +634,7 @@ export class GitHubService {
    * Récupère les données GitHub Actions d'un repository
    * REST: GET /repos/{owner}/{repo}/actions/workflows, /actions/runs
    */
-  public async getGitHubActionsData(owner: string, repo: string): Promise<any> {
+  public async getGitHubActionsData(owner: string, repo: string): Promise<Record<string, unknown>> {
     try {
       const [workflowsResponse, runsResponse] = await Promise.all([
         githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/actions/workflows`),
@@ -643,19 +643,19 @@ export class GitHubService {
         }),
       ]);
 
-      const workflows = workflowsResponse.workflows || [];
-      const runs = runsResponse.workflow_runs || [];
+      const workflows = workflowsResponse.workflows ?? [];
+      const runs = runsResponse.workflow_runs ?? [];
 
       // Calcul des statistiques
-      const successfulRuns = runs.filter((run: any) => run.conclusion === 'success').length;
-      const failedRuns = runs.filter((run: any) => run.conclusion === 'failure').length;
+      const successfulRuns = runs.filter((run: unknown) => run.conclusion === 'success').length;
+      const failedRuns = runs.filter((run: unknown) => run.conclusion === 'failure').length;
       const totalRuns = runs.length;
       const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
 
       const actionsData = {
         workflowsCount: workflows.length,
-        lastRunStatus: runs[0]?.conclusion || 'unknown',
-        workflows: workflows.map((workflow: any) => ({
+        lastRunStatus: runs[0]?.conclusion ?? 'unknown',
+        workflows: workflows.map((workflow: unknown) => ({
           name: workflow.name,
           path: workflow.path,
           state: workflow.state,
@@ -680,7 +680,7 @@ export class GitHubService {
       });
 
       return actionsData;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       // Les erreurs 404 sont courantes pour les repos sans Actions
       if (error.status === 404) {
         return {
@@ -709,7 +709,7 @@ export class GitHubService {
    * Récupère les données de sécurité d'un repository
    * REST: GET /repos/{owner}/{repo}/dependabot/alerts, /secret-scanning/alerts, /code-scanning/alerts
    */
-  public async getSecurityData(owner: string, repo: string): Promise<any> {
+  public async getSecurityData(owner: string, repo: string): Promise<Record<string, unknown>> {
     try {
       const endpoints = [
         `GET /repos/${owner}/${repo}/dependabot/alerts`,
@@ -727,19 +727,19 @@ export class GitHubService {
 
       const securityData = {
         dependabotAlerts: {
-          totalCount: dependabotAlerts.length || 0,
-          open: dependabotAlerts.filter((alert: any) => alert.state === 'open').length || 0,
-          fixed: dependabotAlerts.filter((alert: any) => alert.state === 'fixed').length || 0,
-          dismissed: dependabotAlerts.filter((alert: any) => alert.state === 'dismissed').length || 0,
+          totalCount: dependabotAlerts.length ?? 0,
+          open: dependabotAlerts.filter((alert: unknown) => alert.state === 'open').length ?? 0,
+          fixed: dependabotAlerts.filter((alert: unknown) => alert.state === 'fixed').length ?? 0,
+          dismissed: dependabotAlerts.filter((alert: unknown) => alert.state === 'dismissed').length ?? 0,
         },
         secretScanning: {
-          totalCount: secretAlerts.length || 0,
-          resolved: secretAlerts.filter((alert: any) => alert.state === 'resolved').length || 0,
+          totalCount: secretAlerts.length ?? 0,
+          resolved: secretAlerts.filter((alert: unknown) => alert.state === 'resolved').length ?? 0,
         },
         codeScanning: {
-          totalCount: codeAlerts.length || 0,
-          open: codeAlerts.filter((alert: any) => alert.state === 'open').length || 0,
-          fixed: codeAlerts.filter((alert: any) => alert.state === 'fixed').length || 0,
+          totalCount: codeAlerts.length ?? 0,
+          open: codeAlerts.filter((alert: unknown) => alert.state === 'open').length ?? 0,
+          fixed: codeAlerts.filter((alert: unknown) => alert.state === 'fixed').length ?? 0,
         },
         hasSecurityPolicy: false, // À enrichir
         hasVulnerabilityAlertsEnabled: true, // Assumé si on a des alertes
@@ -754,9 +754,9 @@ export class GitHubService {
       });
 
       return securityData;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       // Les erreurs 403/404 sont courantes pour les repos sans accès sécurité
-      if (error.status === 403 || error.status === 404) {
+      if (error.status === 403 ?? error.status === 404) {
         return {
           dependabotAlerts: { totalCount: 0, open: 0, fixed: 0, dismissed: 0 },
           secretScanning: { totalCount: 0, resolved: 0 },
@@ -779,17 +779,17 @@ export class GitHubService {
    * Récupère les packages d'un repository
    * REST: GET /users/{owner}/packages
    */
-  public async getPackagesData(owner: string, repo: string): Promise<any> {
+  public async getPackagesData(owner: string, repo: string): Promise<Record<string, unknown>> {
     try {
       const response = await githubConfig.executeRestRequest(`GET /users/${owner}/packages`);
-      const packages = response || [];
+      const packages = response ?? [];
 
       // Filtrer les packages liés au repo (approximation par nom)
-      const repoPackages = packages.filter((pkg: any) =>
-        pkg.repository?.name === repo || pkg.name.includes(repo),
+      const repoPackages = packages.filter((pkg: unknown) =>
+        pkg.repository?.name === repo ?? pkg.name.includes(repo),
       );
 
-      const packageTypes = [...new Set(repoPackages.map((pkg: any) => pkg.package_type))];
+      const packageTypes = [...new Set(repoPackages.map((pkg: unknown) => pkg.package_type))];
 
       const packagesData = {
         totalCount: repoPackages.length,
@@ -804,7 +804,7 @@ export class GitHubService {
       });
 
       return packagesData;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       if (error.status === 404) {
         return { totalCount: 0, types: [] };
       }
@@ -822,9 +822,9 @@ export class GitHubService {
    * Récupère les données de protection de branche
    * REST: GET /repos/{owner}/{repo}/branches/{branch}/protection
    */
-  public async getBranchProtectionData(owner: string, repo: string, defaultBranch: string): Promise<any> {
+  public async getBranchProtectionData(owner: string, repo: string, defaultBranch: string): Promise<Record<string, unknown>> {
     try {
-      const branch = defaultBranch || 'main';
+      const branch = defaultBranch ?? 'main';
       const response = await githubConfig.executeRestRequest(
         `GET /repos/${owner}/${repo}/branches/${branch}/protection`,
       );
@@ -836,7 +836,7 @@ export class GitHubService {
           requiresCodeOwnerReviews: !!response.required_pull_request_reviews?.require_code_owner_reviews,
           dismissStaleReviews: !!response.required_pull_request_reviews?.dismiss_stale_reviews,
           restrictsPushes: !!response.restrictions,
-          requiredStatusChecks: response.required_status_checks?.contexts || [],
+          requiredStatusChecks: response.required_status_checks?.contexts ?? [],
         }],
       };
 
@@ -848,7 +848,7 @@ export class GitHubService {
       });
 
       return branchProtectionData;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       if (error.status === 404) {
         return { rules: [] };
       }
@@ -866,16 +866,16 @@ export class GitHubService {
    * Récupère les données de santé communautaire
    * REST: GET /repos/{owner}/{repo}/community/profile
    */
-  public async getCommunityHealthData(owner: string, repo: string): Promise<any> {
+  public async getCommunityHealthData(owner: string, repo: string): Promise<Record<string, unknown>> {
     try {
       const response = await githubConfig.executeRestRequest(
         `GET /repos/${owner}/${repo}/community/profile`,
       );
 
-      const files = response.files || {};
+      const files = response.files ?? {};
 
       const communityData = {
-        healthPercentage: response.health_percentage || 0,
+        healthPercentage: response.health_percentage ?? 0,
         hasReadme: !!files.readme,
         hasLicense: !!files.license,
         hasContributing: !!files.contributing,
@@ -891,7 +891,7 @@ export class GitHubService {
       });
 
       return communityData;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       if (error.status === 404) {
         return {
           healthPercentage: 0,
@@ -917,7 +917,7 @@ export class GitHubService {
    * Récupère les données de trafic
    * REST: GET /repos/{owner}/{repo}/traffic/views, /clones, /popular/paths
    */
-  public async getTrafficData(owner: string, repo: string): Promise<any> {
+  public async getTrafficData(owner: string, repo: string): Promise<Record<string, unknown>> {
     try {
       const [viewsResponse, clonesResponse, pathsResponse] = await Promise.allSettled([
         githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/traffic/views`),
@@ -931,14 +931,14 @@ export class GitHubService {
 
       const trafficData = {
         views: {
-          count: views.count || 0,
-          uniques: views.uniques || 0,
+          count: views.count ?? 0,
+          uniques: views.uniques ?? 0,
         },
         clones: {
-          count: clones.count || 0,
-          uniques: clones.uniques || 0,
+          count: clones.count ?? 0,
+          uniques: clones.uniques ?? 0,
         },
-        popularPaths: paths.map((path: any) => ({
+        popularPaths: paths.map((path: unknown) => ({
           path: path.path,
           title: path.title,
           count: path.count,
@@ -954,7 +954,7 @@ export class GitHubService {
       });
 
       return trafficData;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur récupération trafic', {
         owner,
         repo,
@@ -993,7 +993,7 @@ export class GitHubService {
         this.getGitHubActionsData(owner, repoName),
         this.getSecurityData(owner, repoName),
         this.getPackagesData(owner, repoName),
-        this.getBranchProtectionData(owner, repoName, repo.defaultBranchRef || 'main'),
+        this.getBranchProtectionData(owner, repoName, repo.defaultBranchRef ?? 'main'),
         this.getCommunityHealthData(owner, repoName),
         this.getTrafficData(owner, repoName),
       ]);
@@ -1021,7 +1021,7 @@ export class GitHubService {
       });
 
       return enrichedRepo;
-    } catch (error: any) {
+    } catch (_error: unknown) {
       logger.error('Erreur enrichissement DevOps', {
         nameWithOwner: repo.nameWithOwner,
         error: error.message,
