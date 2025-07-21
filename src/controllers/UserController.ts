@@ -38,7 +38,7 @@ export class UserController {
    */
   static getUserProfile = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_user_profile', req.path, true, {
       targetUsername: username,
@@ -118,7 +118,7 @@ export class UserController {
    */
   static searchUsers = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const searchParams = req.query as unknown as UserSearchQuery;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('search_users', req.path, true, {
       searchQuery: searchParams.query,
@@ -220,7 +220,7 @@ export class UserController {
   static getUserRepositories = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const { page = 1, limit = 20, sortBy = 'updatedAt', sortOrder = 'desc' } = req.query;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_user_repositories', req.path, true, {
       targetUsername: username,
@@ -310,7 +310,7 @@ export class UserController {
    */
   static getUserAnalysisStatus = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_user_analysis_status', req.path, true, {
       targetUsername: username,
@@ -381,7 +381,7 @@ export class UserController {
    */
   static deleteUserData = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     // Vérification que l'utilisateur ne peut supprimer que ses propres données
     if (authenticatedUser.username !== username) {
@@ -430,7 +430,7 @@ export class UserController {
    * GET /api/users/stats
    */
   static getUsersStats = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_users_stats', req.path, true, {
       requesterId: authenticatedUser?.id,

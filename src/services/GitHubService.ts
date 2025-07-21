@@ -4,7 +4,7 @@
  * Toutes les requêtes GraphQL et REST API avec gestion d'erreurs
  */
 
-import { ,_GitHubOrganization, GitHubRepo, GraphQLResponse, UserProfile } from '@/types/github';
+import { GitHubRepo, GraphQLResponse, UserProfile } from '@/types/github';
 import githubConfig from '@/config/github';
 import logger from '@/utils/logger';
 

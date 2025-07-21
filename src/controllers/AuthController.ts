@@ -157,7 +157,7 @@ export class AuthController {
      * POST /api/auth/refresh
      */
   static refresh = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const user = (req as any).user as JWTUser;
+    const user = req.user as JWTUser;
 
     if (!user) {
       throw createError.authentication('Token JWT requis pour le rafraîchissement');
@@ -215,7 +215,7 @@ export class AuthController {
      * DELETE /api/auth/logout
      */
   static logout = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const user = (req as any).user as JWTUser;
+    const user = req.user as JWTUser;
 
     if (user) {
       logWithContext.auth('logout_success', user.username, true, {
@@ -235,7 +235,7 @@ export class AuthController {
      * GET /api/auth/validate
      */
   static validateToken = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const user = (req as any).user as JWTUser;
+    const user = req.user as JWTUser;
 
     if (!user) {
       throw createError.authentication('Token JWT requis');
@@ -304,7 +304,7 @@ export class AuthController {
      * GET /api/auth/me
      */
   static getCurrentUser = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const user = (req as any).user as JWTUser;
+    const user = req.user as JWTUser;
 
     if (!user) {
       throw createError.authentication('Token JWT requis');

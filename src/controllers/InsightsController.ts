@@ -24,7 +24,7 @@ export class InsightsController {
    */
   static generateInsights = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     // Vérification des permissions : seul le propriétaire peut générer ses insights
     if (authenticatedUser.username !== username) {
@@ -130,7 +130,7 @@ export class InsightsController {
    */
   static getInsightsSummary = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_insights_summary', req.path, true, {
       targetUsername: username,
@@ -195,7 +195,7 @@ export class InsightsController {
    */
   static getDeveloperPersonality = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_developer_personality', req.path, true, {
       targetUsername: username,
@@ -262,7 +262,7 @@ export class InsightsController {
   static getRecommendations = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
     const { category } = req.query; // 'immediate', 'shortTerm', 'longTerm'
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_recommendations', req.path, true, {
       targetUsername: username,
@@ -336,7 +336,7 @@ export class InsightsController {
    */
   static getStrengths = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_strengths', req.path, true, {
       targetUsername: username,
@@ -404,7 +404,7 @@ export class InsightsController {
    */
   static getGrowthOpportunities = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_growth_opportunities', req.path, true, {
       targetUsername: username,
@@ -480,7 +480,7 @@ export class InsightsController {
    */
   static getSkillAssessment = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_skill_assessment', req.path, true, {
       targetUsername: username,
@@ -559,7 +559,7 @@ export class InsightsController {
    */
   static getCareerInsights = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_career_insights', req.path, true, {
       targetUsername: username,

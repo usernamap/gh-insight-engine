@@ -267,8 +267,8 @@ export const errorHandler: ErrorRequestHandler = (
   // Logger l'erreur avec contexte complet
   const logData = {
     errorId,
-    userId: (req as any).user?.id,
-    username: (req as any).user?.username,
+    userId: req.user?.id,
+    username: req.user?.username,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
     body: req.body,

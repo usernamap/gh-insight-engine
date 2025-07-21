@@ -24,7 +24,7 @@ export class AIService {
    */
   public async generateCompleteInsights(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<AIInsightsSummary> {
     const startTime = Date.now();
@@ -32,7 +32,7 @@ export class AIService {
     try {
       logger.info('Démarrage génération insights IA', {
         username: userProfile.login,
-        repositoriesCount: repositories.length,
+        _repositoriesCount: _repositories.length,
       });
 
       // Génération de toutes les analyses en parallèle pour optimiser les performances
@@ -45,13 +45,13 @@ export class AIService {
         strengths,
         growth,
       ] = await Promise.all([
-        this.analyzeDeveloperPersonality(userProfile, repositories, analytics),
-        this.assessTechnicalSkills(userProfile, repositories, analytics),
-        this.analyzeCareerInsights(userProfile, repositories, analytics),
-        this.analyzeProductivityPatterns(userProfile, repositories, analytics),
-        this.generateTechnicalRecommendations(userProfile, repositories, analytics),
-        this.analyzeStrengths(userProfile, repositories, analytics),
-        this.identifyGrowthOpportunities(userProfile, repositories, analytics),
+        this.analyzeDeveloperPersonality(userProfile, _repositories, analytics),
+        this.assessTechnicalSkills(userProfile, _repositories, analytics),
+        this.analyzeCareerInsights(userProfile, _repositories, analytics),
+        this.analyzeProductivityPatterns(userProfile, _repositories, analytics),
+        this.generateTechnicalRecommendations(userProfile, _repositories, analytics),
+        this.analyzeStrengths(userProfile, _repositories, analytics),
+        this.identifyGrowthOpportunities(userProfile, _repositories, analytics),
       ]);
 
       // Génération du résumé exécutif
@@ -68,7 +68,7 @@ export class AIService {
       const processingTime = (Date.now() - startTime) / 1000;
 
       // Calcul du score de confiance global
-      const confidence = this.calculateOverallConfidence(repositories.length, analytics);
+      const confidence = this.calculateOverallConfidence(_repositories.length, analytics);
 
       const insights: AIInsightsSummary = {
         userId: userProfile._id ?? '',
@@ -85,7 +85,7 @@ export class AIService {
         executiveSummary,
         metadata: {
           analysisVersion: '1.0.0',
-          dataPoints: repositories.length + Object.keys(analytics).length,
+          dataPoints: _repositories.length + Object.keys(analytics).length,
           processingTime,
           tokens: {
             input: 0, // Sera rempli par les appels individuels
@@ -116,13 +116,13 @@ export class AIService {
    */
   private async analyzeDeveloperPersonality(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<DeveloperPersonality> {
     try {
       const analysisResult = await openaiConfig.generateDeveloperSummary(
         userProfile,
-        repositories,
+        _repositories,
         analytics,
       );
 
@@ -144,7 +144,7 @@ export class AIService {
       logger.error('Erreur analyse personnalité', { _error: error.message });
 
       // Fallback basé sur les données disponibles
-      return this.generateFallbackPersonality(userProfile, repositories, analytics);
+      return this.generateFallbackPersonality(userProfile, _repositories, analytics);
     }
   }
 
@@ -153,13 +153,13 @@ export class AIService {
    */
   private async assessTechnicalSkills(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<SkillAssessment> {
     try {
       const analysisResult = await openaiConfig.assessTechnicalSkills(
         userProfile,
-        repositories,
+        _repositories,
         analytics,
       );
 
@@ -168,21 +168,21 @@ export class AIService {
       return {
         technical: Array.isArray(result.technical) ?
           result.technical.map(skill => this.validateTechnicalSkill(skill)).slice(0, 15) :
-          this.generateFallbackTechnicalSkills(repositories),
+          this.generateFallbackTechnicalSkills(_repositories),
         soft: Array.isArray(result.soft) ?
           result.soft.map(skill => this.validateSoftSkill(skill)).slice(0, 10) :
           this.generateFallbackSoftSkills(analytics),
         leadership: result.leadership ?
           this.validateLeadershipSkill(result.leadership) :
-          this.generateFallbackLeadershipSkill(userProfile, repositories),
+          this.generateFallbackLeadershipSkill(userProfile, _repositories),
       };
     } catch (_error: unknown) {
       logger.error('Erreur évaluation compétences', { _error: error.message });
 
       return {
-        technical: this.generateFallbackTechnicalSkills(repositories),
+        technical: this.generateFallbackTechnicalSkills(_repositories),
         soft: this.generateFallbackSoftSkills(analytics),
-        leadership: this.generateFallbackLeadershipSkill(userProfile, repositories),
+        leadership: this.generateFallbackLeadershipSkill(userProfile, _repositories),
       };
     }
   }
@@ -192,13 +192,13 @@ export class AIService {
    */
   private async analyzeCareerInsights(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<CareerInsights> {
     try {
       const analysisResult = await openaiConfig.analyzeCareerInsights(
         userProfile,
-        repositories,
+        _repositories,
         analytics,
       );
 
@@ -223,7 +223,7 @@ export class AIService {
     } catch (_error: unknown) {
       logger.error('Erreur analyse insights carrière', { _error: error.message });
 
-      return this.generateFallbackCareerInsights(userProfile, repositories, analytics);
+      return this.generateFallbackCareerInsights(userProfile, _repositories, analytics);
     }
   }
 
@@ -232,7 +232,7 @@ export class AIService {
    */
   private async analyzeProductivityPatterns(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<ProductivityAnalysis> {
     try {
@@ -252,10 +252,10 @@ export class AIService {
       };
 
       const efficiency = {
-        codeToImpactRatio: this.calculateCodeToImpactRatio(repositories),
+        codeToImpactRatio: this.calculateCodeToImpactRatio(_repositories),
         problemSolvingSpeed: this.assessProblemSolvingSpeed(analytics),
         qualityConsistency: this.assessQualityConsistency(analytics),
-        analysis: this.generateEfficiencyAnalysis(repositories, analytics),
+        analysis: this.generateEfficiencyAnalysis(_repositories, analytics),
       };
 
       const workLifeBalance = {
@@ -282,13 +282,13 @@ export class AIService {
    */
   private async generateTechnicalRecommendations(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<TechnicalRecommendations> {
     try {
       const analysisResult = await openaiConfig.generateRecommendations(
         userProfile,
-        repositories,
+        _repositories,
         analytics,
       );
 
@@ -321,14 +321,14 @@ export class AIService {
    */
   private async analyzeStrengths(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<StrengthsAnalysis> {
     try {
       // Analyse basée sur les métriques quantitatives
       const coreStrengths = this.identifyCoreStrengths(analytics);
-      const emergingStrengths = this.identifyEmergingStrengths(repositories, analytics);
-      const uniqueStrengths = this.identifyUniqueStrengths(userProfile, repositories, analytics);
+      const emergingStrengths = this.identifyEmergingStrengths(_repositories, analytics);
+      const uniqueStrengths = this.identifyUniqueStrengths(userProfile, _repositories, analytics);
 
       return {
         core: coreStrengths,
@@ -347,12 +347,12 @@ export class AIService {
    */
   private async identifyGrowthOpportunities(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): Promise<GrowthOpportunities> {
     try {
       const skillGaps = this.identifySkillGaps(analytics);
-      const experienceGaps = this.identifyExperienceGaps(repositories, analytics);
+      const experienceGaps = this.identifyExperienceGaps(_repositories, analytics);
       const networkingOpportunities = this.identifyNetworkingOpportunities(userProfile, analytics);
 
       return {
@@ -461,17 +461,17 @@ export class AIService {
 
   private generateFallbackPersonality(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): DeveloperPersonality {
-    const archetype = this.inferArchetypeFromData(repositories, analytics);
+    const archetype = this.inferArchetypeFromData(_repositories, analytics);
 
     return {
       archetype,
       description: `Développeur ${archetype} avec une approche méthodique et des compétences techniques solides.`,
       strengths: ['Persévérance technique', 'Apprentissage continu', 'Résolution de problèmes'],
       workingStyle: {
-        preferredProjectSize: repositories.length > 15 ? 'large' : 'medium',
+        preferredProjectSize: _repositories.length > 15 ? 'large' : 'medium',
         collaborationStyle: analytics.collaboration.teamProjects > analytics.collaboration.soloProjects ? 'contributor' : 'solo',
         learningApproach: 'hands_on',
         problemSolving: 'systematic',
@@ -481,22 +481,22 @@ export class AIService {
     };
   }
 
-  private inferArchetypeFromData(repositories: GitHubRepo[], _analytics: AnalyticsOverview): DeveloperPersonality['archetype'] {
+  private inferArchetypeFromData(_repositories: GitHubRepo[], _analytics: AnalyticsOverview): DeveloperPersonality['archetype'] {
     // Logique d'inférence basée sur les données
-    const forkRatio = repositories.filter(r => r.isFork).length / repositories.length;
-    const popularRepos = repositories.filter(r => r.stargazerCount > 5).length;
-    const docRepos = repositories.filter(r => r.community?.hasReadme).length;
+    const forkRatio = _repositories.filter(r => r.isFork).length / _repositories.length;
+    const popularRepos = _repositories.filter(r => r.stargazerCount > 5).length;
+    const docRepos = _repositories.filter(r => r.community?.hasReadme).length;
 
     if (forkRatio > 0.5) return 'explorer';
     if (popularRepos > 3) return 'innovator';
-    if (docRepos / repositories.length > 0.7) return 'teacher';
+    if (docRepos / _repositories.length > 0.7) return 'teacher';
     if (analytics.devops.overallMaturity === 'expert') return 'optimizer';
 
     return 'builder';
   }
 
-  private generateFallbackTechnicalSkills(repositories: GitHubRepo[]): SkillAssessment['technical'] {
-    const languageStats = this.aggregateLanguageStats(repositories);
+  private generateFallbackTechnicalSkills(_repositories: GitHubRepo[]): SkillAssessment['technical'] {
+    const languageStats = this.aggregateLanguageStats(_repositories);
 
     return Object.entries(languageStats)
       .sort(([, a], [, b]) => b.count - a.count)
@@ -506,7 +506,7 @@ export class AIService {
         proficiency: this.mapCountToProficiency(stats.count),
         confidence: Math.min(100, stats.count * 20 + 40),
         evidenceStrength: stats.count >= 5 ? 'strong' : stats.count >= 3 ? 'moderate' : 'weak' as const,
-        evidence: [`${stats.count} repositories`, 'Usage actif'],
+        evidence: [`${stats.count} _repositories`, 'Usage actif'],
         growthPotential: 'moderate' as const,
         marketDemand: this.getLanguageMarketDemand(language),
       }));
@@ -547,10 +547,10 @@ export class AIService {
 
   private generateFallbackLeadershipSkill(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
   ): SkillAssessment['leadership'] {
-    const ownedRepos = repositories.filter(r => !r.isFork).length;
-    const popularRepos = repositories.filter(r => r.stargazerCount > 5).length;
+    const ownedRepos = _repositories.filter(r => !r.isFork).length;
+    const popularRepos = _repositories.filter(r => r.stargazerCount > 5).length;
 
     let current: SkillAssessment['leadership']['current'] = 'individual_contributor';
     let potential: SkillAssessment['leadership']['potential'] = 'emerging';
@@ -567,7 +567,7 @@ export class AIService {
     return {
       current,
       potential,
-      indicators: [`${ownedRepos} repositories propres`, `${popularRepos} projets populaires`],
+      indicators: [`${ownedRepos} _repositories propres`, `${popularRepos} projets populaires`],
     };
   }
 
@@ -588,10 +588,10 @@ export class AIService {
     return 'moderate';
   }
 
-  private aggregateLanguageStats(repositories: GitHubRepo[]): Record<string, { count: number; totalSize: number }> {
+  private aggregateLanguageStats(_repositories: GitHubRepo[]): Record<string, { count: number; totalSize: number }> {
     const stats: Record<string, { count: number; totalSize: number }> = {};
 
-    repositories.forEach(repo => {
+    _repositories.forEach(repo => {
       if (repo.primaryLanguage) {
         if (!stats[repo.primaryLanguage]) {
           stats[repo.primaryLanguage] = { count: 0, totalSize: 0 };
@@ -666,9 +666,9 @@ export class AIService {
     return recommendations;
   }
 
-  private calculateCodeToImpactRatio(repositories: GitHubRepo[]): ProductivityAnalysis['efficiency']['codeToImpactRatio'] {
-    const totalCommits = repositories.reduce((sum, repo) => sum + repo.commits.totalCount, 0);
-    const totalStars = repositories.reduce((sum, repo) => sum + repo.stargazerCount, 0);
+  private calculateCodeToImpactRatio(_repositories: GitHubRepo[]): ProductivityAnalysis['efficiency']['codeToImpactRatio'] {
+    const totalCommits = _repositories.reduce((sum, repo) => sum + repo.commits.totalCount, 0);
+    const totalStars = _repositories.reduce((sum, repo) => sum + repo.stargazerCount, 0);
 
     if (totalCommits === 0) return 'low';
 
@@ -699,7 +699,7 @@ export class AIService {
     return 'variable';
   }
 
-  private generateEfficiencyAnalysis(repositories: GitHubRepo[], _analytics: AnalyticsOverview): string {
+  private generateEfficiencyAnalysis(_repositories: GitHubRepo[], _analytics: AnalyticsOverview): string {
     const insights = [];
 
     if (analytics.productivity.overall > 75) {
@@ -870,7 +870,7 @@ export class AIService {
     return strengths.slice(0, 4);
   }
 
-  private identifyEmergingStrengths(repositories: GitHubRepo[], _analytics: AnalyticsOverview): StrengthsAnalysis['emerging'] {
+  private identifyEmergingStrengths(_repositories: GitHubRepo[], _analytics: AnalyticsOverview): StrengthsAnalysis['emerging'] {
     const strengths = [];
 
     if (analytics.devops.overallMaturity === 'intermediate') {
@@ -885,10 +885,10 @@ export class AIService {
     return strengths;
   }
 
-  private identifyUniqueStrengths(_userProfile: UserProfile, repositories: GitHubRepo[], _analytics: AnalyticsOverview): StrengthsAnalysis['unique'] {
+  private identifyUniqueStrengths(_userProfile: UserProfile, _repositories: GitHubRepo[], _analytics: AnalyticsOverview): StrengthsAnalysis['unique'] {
     const strengths = [];
 
-    const popularRepos = repositories.filter(r => r.stargazerCount > 10).length;
+    const popularRepos = _repositories.filter(r => r.stargazerCount > 10).length;
     if (popularRepos > 0) {
       strengths.push({
         differentiator: 'Projets à impact communautaire',
@@ -918,10 +918,10 @@ export class AIService {
     return gaps.slice(0, 5);
   }
 
-  private identifyExperienceGaps(repositories: GitHubRepo[], _analytics: AnalyticsOverview): GrowthOpportunities['experiences'] {
+  private identifyExperienceGaps(_repositories: GitHubRepo[], _analytics: AnalyticsOverview): GrowthOpportunities['experiences'] {
     const experiences = [];
 
-    if (analytics.collaboration.teamProjects < repositories.length * 0.3) {
+    if (analytics.collaboration.teamProjects < _repositories.length * 0.3) {
       experiences.push({
         experience: 'Projets collaboratifs d\'envergure',
         type: 'project' as const,
@@ -949,12 +949,12 @@ export class AIService {
 
   private generateFallbackCareerInsights(
     _userProfile: UserProfile,
-    repositories: GitHubRepo[],
+    _repositories: GitHubRepo[],
     _analytics: AnalyticsOverview,
   ): CareerInsights {
     return {
       currentLevel: 'mid_level',
-      experienceIndicators: [`${repositories.length} projets`, 'Activité régulière'],
+      experienceIndicators: [`${_repositories.length} projets`, 'Activité régulière'],
       trajectory: {
         direction: 'ascending',
         velocity: 'steady',

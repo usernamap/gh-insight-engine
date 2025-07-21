@@ -4,7 +4,7 @@
  */
 
 import { User as PrismaUser } from '@/generated/prisma';
-import { ,_GitHubOrganization, UserProfile } from '@/types/github';
+import { UserProfile } from '@/types/github';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 

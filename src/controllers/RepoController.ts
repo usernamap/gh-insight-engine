@@ -43,7 +43,7 @@ export class RepoController {
   static getRepository = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { owner, repo } = req.params;
     const nameWithOwner = `${owner}/${repo}`;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_repository', req.path, true, {
       nameWithOwner,
@@ -155,7 +155,7 @@ export class RepoController {
    */
   static searchRepositories = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const searchParams = req.query as unknown as RepoSearchQuery;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('search_repositories', req.path, true, {
       searchQuery: searchParams.query,
@@ -293,7 +293,7 @@ export class RepoController {
   static enrichRepository = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { owner, repo } = req.params;
     const nameWithOwner = `${owner}/${repo}`;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     if (!authenticatedUser?.githubToken) {
       throw createError.authentication('Token GitHub requis pour l\'enrichissement');
@@ -370,7 +370,7 @@ export class RepoController {
    * GET /api/repositories/languages/stats
    */
   static getLanguagesStats = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_languages_stats', req.path, true, {
       requesterId: authenticatedUser?.id,
@@ -411,7 +411,7 @@ export class RepoController {
    */
   static getTrendingRepositories = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { period = '7d', limit = 10, language } = req.query;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_trending_repositories', req.path, true, {
       requesterId: authenticatedUser?.id,

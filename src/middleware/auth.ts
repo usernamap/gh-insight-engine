@@ -70,7 +70,7 @@ export const validateGitHubToken = async (
     }
 
     // Ajout des informations utilisateur à la requête
-    req.user = { id: "", username: "", fullName: "", githubToken: "" };
+    req.user = { id: '', username: '', fullName: '', githubToken: '' };
 
     logWithContext.auth('validate_github_token', validation.username ?? 'unknown', true, {
       scopes: validation.scopes,
@@ -157,7 +157,7 @@ export const authenticateJWT = async (
 
     // Ajout des informations à la requête
     req.jwt = decoded;
-    req.user = { id: "", username: "", fullName: "", githubToken: "" };
+    req.user = { id: '', username: '', fullName: '', githubToken: '' };
 
     logWithContext.auth('authenticate_jwt', decoded.username, true, {
       userId: decoded.userId,
@@ -350,7 +350,7 @@ export const userRateLimit = (options: {
 
     // Récupération ou création du compteur utilisateur
     let userData = userRequestCounts.get(userId);
-    if (!userData ?? userData.resetTime <= now) {
+    if (!userData || userData.resetTime <= now) {
       userData = {
         count: 0,
         resetTime: now + windowMs,

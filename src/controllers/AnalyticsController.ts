@@ -200,7 +200,7 @@ export class AnalyticsController {
      */
   static getAnalyticsOverview = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_analytics_overview', req.path, true, {
       targetUsername: username,
@@ -267,7 +267,7 @@ export class AnalyticsController {
      */
   static getPerformanceMetrics = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_performance_metrics', req.path, true, {
       targetUsername: username,
@@ -348,7 +348,7 @@ export class AnalyticsController {
      */
   static getLanguageAnalytics = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_language_analytics', req.path, true, {
       targetUsername: username,
@@ -415,7 +415,7 @@ export class AnalyticsController {
      */
   static getActivityPatterns = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_activity_patterns', req.path, true, {
       targetUsername: username,
@@ -488,7 +488,7 @@ export class AnalyticsController {
      */
   static getProductivityScore = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_productivity_score', req.path, true, {
       targetUsername: username,
@@ -567,7 +567,7 @@ export class AnalyticsController {
      */
   static getDevOpsMaturity = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
     const { username } = req.params;
-    const authenticatedUser = (req as any).user as AuthenticatedUser;
+    const authenticatedUser = req.user as AuthenticatedUser;
 
     logWithContext.api('get_devops_maturity', req.path, true, {
       targetUsername: username,

@@ -8,7 +8,7 @@ export * from './validation';
 export * from './errorHandler';
 
 // Configuration des middlewares communes pour Express
-import { Express } from 'express';
+import { Express, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -45,7 +45,7 @@ export const setupSecurityMiddlewares = (app: Express): void => {
 
       // En développement, permettre localhost
       if (process.env.NODE_ENV === 'development') {
-        if (origin.includes('localhost') ?? origin.includes('127.0.0.1')) {
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
           return callback(null, true);
         }
       }
@@ -65,7 +65,7 @@ export const setupSecurityMiddlewares = (app: Express): void => {
 
   // Compression des réponses
   app.use(compression({
-    filter: () => void = () => {
+    filter: (req, res): boolean => {
       if (req.headers['x-no-compression']) {
         return false;
       }
@@ -86,16 +86,16 @@ export const setupLoggingMiddleware = (app: Express): void => {
 
   // Stream personnalisé vers Winston
   const morganStream = {
-    write: () => void = () => {
+    write(message: string): void {
       logger.http(message.trim());
     },
   };
 
   app.use(morgan(morganFormat, {
     stream: morganStream,
-    skip: () => void = () => {
+    skip: (req: Request, _res: Response): boolean => {
       // Ne pas logger les health checks
-      return req.path === '/health' ?? req.path === '/ping';
+      return req.path === '/health' || req.path === '/ping';
     },
   }));
 };
@@ -109,14 +109,14 @@ export const setupRateLimiting = (app: Express): void => {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000'), // 15 minutes
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS ?? '100'), // 100 requêtes par IP
     message: {
-      _error: 'RATE_LIMIT_EXCEEDED',
+      error: 'RATE_LIMIT_EXCEEDED',
       message: 'Trop de requêtes depuis cette IP, réessayez plus tard',
       retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000),
       timestamp: new Date().toISOString(),
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: () => void = () => {
+    handler: (req: Request, res: Response): void => {
       logger.warn('Rate limit dépassé', {
         ip: req.ip,
         path: req.path,
@@ -125,7 +125,7 @@ export const setupRateLimiting = (app: Express): void => {
       });
 
       res.status(429).json({
-        _error: 'RATE_LIMIT_EXCEEDED',
+        error: 'RATE_LIMIT_EXCEEDED',
         message: 'Trop de requêtes depuis cette IP, réessayez plus tard',
         retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000),
         timestamp: new Date().toISOString(),
@@ -138,7 +138,7 @@ export const setupRateLimiting = (app: Express): void => {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // 5 tentatives de connexion par IP
     message: {
-      _error: 'AUTH_RATE_LIMIT_EXCEEDED',
+      error: 'AUTH_RATE_LIMIT_EXCEEDED',
       message: 'Trop de tentatives de connexion, réessayez dans 15 minutes',
       retryAfter: 900,
       timestamp: new Date().toISOString(),
@@ -151,7 +151,7 @@ export const setupRateLimiting = (app: Express): void => {
     windowMs: 60 * 60 * 1000, // 1 heure
     max: 10, // 10 analyses par heure par IP
     message: {
-      _error: 'ANALYSIS_RATE_LIMIT_EXCEEDED',
+      error: 'ANALYSIS_RATE_LIMIT_EXCEEDED',
       message: 'Limite d\'analyses atteinte, réessayez dans 1 heure',
       retryAfter: 3600,
       timestamp: new Date().toISOString(),
@@ -173,11 +173,11 @@ export const setupDataProcessingMiddlewares = (app: Express): void => {
   // Parsing JSON avec limite de taille
   app.use(express.json({
     limit: '10mb',
-    verify: () => void = () => {
+    verify: (req: Request, _res: Response, buf: Buffer): void => {
       // Vérification de la validité JSON
       try {
         JSON.parse(buf.toString());
-      } catch (_e) {
+      } catch (_error) {
         throw new Error('JSON invalide');
       }
     },
