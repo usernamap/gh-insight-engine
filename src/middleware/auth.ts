@@ -5,7 +5,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { GitHubAuthPayload, GitHubTokenValidationResult, JWTPayload } from '@/types/github';
+import { GitHubTokenValidationResult, JWTPayload } from '@/types/github';
 import githubConfig from '@/config/github';
 import { UserModel } from '@/models';
 import logger, { logWithContext } from '@/utils/logger';
@@ -57,7 +57,7 @@ export const validateGitHubToken = async (
     const validation: GitHubTokenValidationResult = await githubConfig.validateToken(githubToken);
 
     if (!validation.valid) {
-      logWithContext.auth('validate_github_token', validation.username || 'unknown', false, {
+      logWithContext.auth('validate_github_token', validation.username ?? 'unknown', false, {
         reason: validation.error,
       });
 
@@ -72,26 +72,27 @@ export const validateGitHubToken = async (
     // Ajout des informations utilisateur à la requête
     req.user = {
       id: '', // Sera rempli par le middleware JWT si nécessaire
-      username: validation.username!,
+      username: validation.username ?? 'unknown',
       fullName: '', // Sera enrichi plus tard
       githubToken,
     };
 
-    logWithContext.auth('validate_github_token', validation.username!, true, {
+    logWithContext.auth('validate_github_token', validation.username ?? 'unknown', true, {
       scopes: validation.scopes,
     });
 
     next();
-  } catch (error: any) {
-    logWithContext.auth('validate_github_token', req.ip, false, {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
+    logWithContext.auth('validate_github_token', req.ip ?? 'unknown', false, {
       reason: 'validation_error',
-      error: error.message,
+      error: errorMessage,
     });
 
     res.status(500).json({
       error: 'Erreur validation token',
       message: 'Impossible de valider le token GitHub',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     });
   }
 };

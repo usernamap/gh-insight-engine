@@ -6,10 +6,10 @@ import { logWithContext } from '@/utils/logger';
  * Interface pour la validation des requêtes
  */
 interface ValidationSchemas {
-  params?: ZodSchema<any>;
-  body?: ZodSchema<any>;
-  query?: ZodSchema<any>;
-  headers?: ZodSchema<any>;
+  params?: ZodSchema<Record<string, string>>;
+  body?: ZodSchema<Record<string, unknown>>;
+  query?: ZodSchema<Record<string, string | string[] | undefined>>;
+  headers?: ZodSchema<Record<string, string | undefined>>;
 }
 
 /**
@@ -344,7 +344,7 @@ export const validateUserAnalysis = validate({
  */
 export const sanitizeInput = (req: Request, res: Response, next: NextFunction): void => {
   // Fonction de sanitisation récursive
-  const sanitizeObject = (obj: any): any => {
+  const sanitizeObject = (obj: unknown): unknown => {
     if (obj === null || obj === undefined) return obj;
 
     if (typeof obj === 'string') {
@@ -368,10 +368,10 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
     }
 
     if (typeof obj === 'object') {
-      const sanitized: any = {};
+      const sanitized: Record<string, unknown> = {};
       for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          sanitized[key] = sanitizeObject(obj[key]);
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          sanitized[key] = sanitizeObject((obj as Record<string, unknown>)[key]);
         }
       }
       return sanitized;
@@ -402,10 +402,12 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
     });
 
     next();
-  } catch (error: any) {
-    logWithContext.security('sanitization_error', req.path, false, {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown sanitization error';
+    logWithContext.security('sanitization_error', 'medium', {
       method: req.method,
-      error: error.message,
+      path: req.path,
+      error: errorMessage,
     });
 
     res.status(500).json({
