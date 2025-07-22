@@ -8,22 +8,22 @@ import type { AnalyticsOverview } from './analytics';
 
 export interface DeveloperPersonality {
   archetype:
-    | 'innovator'
-    | 'builder'
-    | 'optimizer'
-    | 'maintainer'
-    | 'explorer'
-    | 'teacher';
+  | 'innovator'
+  | 'builder'
+  | 'optimizer'
+  | 'maintainer'
+  | 'explorer'
+  | 'teacher';
   description: string;
   strengths: string[];
   workingStyle: {
     preferredProjectSize: 'small' | 'medium' | 'large' | 'mixed';
     collaborationStyle: 'solo' | 'pair' | 'team_lead' | 'contributor';
     learningApproach:
-      | 'experimenter'
-      | 'methodical'
-      | 'research_driven'
-      | 'hands_on';
+    | 'experimenter'
+    | 'methodical'
+    | 'research_driven'
+    | 'hands_on';
     problemSolving: 'analytical' | 'creative' | 'systematic' | 'intuitive';
   };
   motivations: string[];
@@ -34,11 +34,11 @@ export interface SkillAssessment {
   technical: Array<{
     skill: string;
     proficiency:
-      | 'novice'
-      | 'advanced_beginner'
-      | 'competent'
-      | 'proficient'
-      | 'expert';
+    | 'novice'
+    | 'advanced_beginner'
+    | 'competent'
+    | 'proficient'
+    | 'expert';
     confidence: number; // Score 0-100
     evidenceStrength: 'weak' | 'moderate' | 'strong' | 'very_strong';
     evidence: string[];
@@ -53,10 +53,10 @@ export interface SkillAssessment {
   }>;
   leadership: {
     current:
-      | 'individual_contributor'
-      | 'informal_leader'
-      | 'team_lead'
-      | 'senior_leader';
+    | 'individual_contributor'
+    | 'informal_leader'
+    | 'team_lead'
+    | 'senior_leader';
     potential: 'limited' | 'emerging' | 'strong' | 'exceptional';
     indicators: string[];
   };
@@ -64,12 +64,12 @@ export interface SkillAssessment {
 
 export interface CareerInsights {
   currentLevel:
-    | 'junior'
-    | 'mid_level'
-    | 'senior'
-    | 'staff'
-    | 'principal'
-    | 'distinguished';
+  | 'junior'
+  | 'mid_level'
+  | 'senior'
+  | 'staff'
+  | 'principal'
+  | 'distinguished';
   experienceIndicators: string[];
   trajectory: {
     direction: 'ascending' | 'stable' | 'transitioning' | 'exploring';
@@ -85,10 +85,10 @@ export interface CareerInsights {
   }>;
   marketPosition: {
     competitiveness:
-      | 'below_average'
-      | 'average'
-      | 'above_average'
-      | 'exceptional';
+    | 'below_average'
+    | 'average'
+    | 'above_average'
+    | 'exceptional';
     uniqueValueProposition: string;
     differentiators: string[];
     gaps: string[];
@@ -105,10 +105,10 @@ export interface ProductivityAnalysis {
     };
     consistency: {
       level:
-        | 'irregular'
-        | 'somewhat_consistent'
-        | 'consistent'
-        | 'highly_consistent';
+      | 'irregular'
+      | 'somewhat_consistent'
+      | 'consistent'
+      | 'highly_consistent';
       factors: string[];
       recommendations: string[];
     };
@@ -209,13 +209,13 @@ export interface AIAnalysisPrompt {
     analytics: AnalyticsOverview;
   };
   analysisType:
-    | 'personality'
-    | 'skills'
-    | 'career'
-    | 'productivity'
-    | 'recommendations'
-    | 'strengths'
-    | 'growth';
+  | 'personality'
+  | 'skills'
+  | 'career'
+  | 'productivity'
+  | 'recommendations'
+  | 'strengths'
+  | 'growth';
 }
 
 export interface AIInsightsSummary {

@@ -16,15 +16,6 @@ interface EnvironmentData {
   totalCount: number;
 }
 
-interface CommitData {
-  totalCount: number;
-  recent: Array<{
-    oid: string;
-    message: string;
-    committedDate: Date;
-  }>;
-}
-
 interface ReleaseData {
   totalCount: number;
   latestRelease: {
@@ -48,10 +39,6 @@ function isDeploymentData(obj: unknown): obj is DeploymentData {
 
 function isEnvironmentData(obj: unknown): obj is EnvironmentData {
   return typeof obj === 'object' && obj !== null && 'totalCount' in obj;
-}
-
-function isCommitData(obj: unknown): obj is CommitData {
-  return typeof obj === 'object' && obj !== null && 'totalCount' in obj && 'recent' in obj;
 }
 
 function isReleaseData(obj: unknown): obj is ReleaseData {
@@ -178,6 +165,10 @@ export class InsightsController {
             keys.every((k) => k in (obj as object))
           );
         }
+        // Déclarer le guard juste avant le mapping repositoriesStrict :
+        const isValidCommits = (c: unknown): c is { totalCount: number; recent: import('@/types/github').GitHubCommit[] } => {
+          return !!c && typeof c === 'object' && 'totalCount' in c && 'recent' in c && Array.isArray((c as { recent: unknown }).recent);
+        };
         const repositoriesStrict = repositories.map((repo) => ({
           ...repo,
           description: repo.description ?? '',
@@ -224,15 +215,20 @@ export class InsightsController {
               isEnvironmentData(repo.environments)
               ? { totalCount: repo.environments.totalCount }
               : { totalCount: 0 },
-          commits:
-            repo.commits &&
-              typeof repo.commits === 'object' &&
-              isCommitData(repo.commits)
-              ? {
-                totalCount: repo.commits.totalCount,
-                recent: repo.commits.recent,
-              }
-              : { totalCount: 0, recent: [] },
+          commits: isValidCommits(repo.commits)
+            ? {
+              totalCount: repo.commits.totalCount,
+              recent: (repo.commits.recent as import('@/types/github').GitHubCommit[]).map((commit) => ({
+                oid: commit.oid,
+                message: commit.message,
+                committedDate: commit.committedDate,
+                author: commit.author ?? { name: '', email: '', login: null },
+                additions: commit.additions ?? 0,
+                deletions: commit.deletions ?? 0,
+                changedFiles: commit.changedFiles ?? 0,
+              })),
+            }
+            : { totalCount: 0, recent: [] },
           releases:
             repo.releases &&
               typeof repo.releases === 'object' &&

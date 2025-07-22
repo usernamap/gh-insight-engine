@@ -62,7 +62,7 @@ export class AnalyticsService {
           ..._timeframe,
           totalDays: Math.ceil(
             (_timeframe.end.getTime() - _timeframe.start.getTime()) /
-                (1000 * 60 * 60 * 24),
+            (1000 * 60 * 60 * 24),
           ),
         }
         : {
@@ -451,7 +451,7 @@ export class AnalyticsService {
         total > 0
           ? Math.round(
             (simple * 25 + moderate * 50 + complex * 75 + enterprise * 100) /
-                total,
+            total,
           )
           : 0;
 

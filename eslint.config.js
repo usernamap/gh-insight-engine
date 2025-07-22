@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import globals from 'globals';
+import importPlugin from 'eslint-plugin-import';
 
 export default [
   js.configs.recommended,
@@ -20,33 +21,22 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
+      import: importPlugin,
     },
     rules: {
-      // ESLint recommended overrides
-      'no-unused-vars': 'off',
-      'no-undef': 'off',
-
       // TypeScript ESLint rules
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-        },
-      ],
+      '@typescript-eslint/no-unused-vars': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'warn',
-      '@typescript-eslint/no-implicit-any-catch': 'off', // Deprecated rule
-      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'error',
+      '@typescript-eslint/strict-boolean-expressions': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-inferrable-types': 'error',
       '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
 
       // General code quality
-      'no-console': 'warn',
+      'no-console': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
       'object-shorthand': 'error',
@@ -60,15 +50,8 @@ export default [
       indent: ['error', 2],
 
       // Import/Export
-      'import/order': 'off', // Disabled as we don't have import plugin
-      'sort-imports': [
-        'error',
-        {
-          ignoreDeclarationSort: true,
-          ignoreMemberSort: false,
-          memberSyntaxSortOrder: ['none', 'all', 'multiple', 'single'],
-        },
-      ],
+      'import/order': 'error',
+      'sort-imports': 'error',
     },
   },
   {
@@ -89,6 +72,7 @@ export default [
       '*.config.js',
       'coverage/**',
       '.cursor/**',
+      'src/generated/**',
     ],
   },
 ];

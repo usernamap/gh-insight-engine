@@ -644,7 +644,7 @@ export class AIService {
         preferredProjectSize: _repositories.length > 15 ? 'large' : 'medium',
         collaborationStyle:
           _analytics.collaboration.teamProjects >
-          _analytics.collaboration.soloProjects
+            _analytics.collaboration.soloProjects
             ? 'contributor'
             : 'solo',
         learningApproach: 'hands_on',
@@ -1673,27 +1673,27 @@ export class AIService {
       effort,
       resources: Array.isArray(obj['resources'])
         ? (
-            obj['resources'] as Array<{
-              title: string;
-              type: string;
-              url?: string;
-              priority: number;
-            }>
+          obj['resources'] as Array<{
+            title: string;
+            type: string;
+            url?: string;
+            priority: number;
+          }>
         )
           .slice(0, 3)
           .map(
             (res: {
-                title: string;
-                type: string;
-                url?: string;
-                priority: number;
-              }) => {
+              title: string;
+              type: string;
+              url?: string;
+              priority: number;
+            }) => {
               const resourceType: (typeof allowedResourceType)[number] =
-                  allowedResourceType.includes(
-                    res.type as (typeof allowedResourceType)[number],
-                  )
-                    ? (res.type as (typeof allowedResourceType)[number])
-                    : 'course';
+                allowedResourceType.includes(
+                  res.type as (typeof allowedResourceType)[number],
+                )
+                  ? (res.type as (typeof allowedResourceType)[number])
+                  : 'course';
               return {
                 title: res.title ?? 'Ressource',
                 type: resourceType,

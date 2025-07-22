@@ -14,13 +14,14 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import logger from '@/utils/logger';
+import express from 'express';
 import { sanitizeInput } from './validation';
 import {
   errorHandler,
   notFoundHandler,
   setupGlobalErrorHandlers,
 } from './errorHandler';
+import logger from '@/utils/logger';
 
 /**
  * Configuration des middlewares de sécurité
@@ -259,5 +260,4 @@ export const setupAllMiddlewares = (app: Express): void => {
 };
 
 // Ré-exporter Express pour faciliter l'usage
-import express from 'express';
 export { express };

@@ -387,12 +387,12 @@ export class RepoController {
         const enrichedData = await RepositoryModel.enrichWithDevOpsData(
           existingRepo.id,
           {
-            githubActions: existingRepo.githubActions,
-            security: existingRepo.security,
-            packages: existingRepo.packages,
-            branchProtection: existingRepo.branchProtection,
-            community: existingRepo.community,
-            traffic: existingRepo.traffic,
+            githubActions: existingRepo.githubActions as unknown as import('@/types/github').GitHubActions | undefined,
+            security: existingRepo.security as unknown as import('@/types/github').GitHubSecurity | undefined,
+            packages: existingRepo.packages as unknown as import('@/types/github').GitHubPackages | undefined,
+            branchProtection: existingRepo.branchProtection as unknown as import('@/types/github').GitHubBranchProtection | undefined,
+            community: existingRepo.community as unknown as import('@/types/github').GitHubCommunity | undefined,
+            traffic: existingRepo.traffic as unknown as import('@/types/github').GitHubTraffic | undefined,
           },
         );
 
@@ -405,12 +405,12 @@ export class RepoController {
 
         // Mise à jour en base de données
         await RepositoryModel.enrichWithDevOpsData(nameWithOwner, {
-          githubActions: enrichedData.githubActions,
-          security: enrichedData.security,
-          packages: enrichedData.packages,
-          branchProtection: enrichedData.branchProtection,
-          community: enrichedData.community,
-          traffic: enrichedData.traffic,
+          githubActions: enrichedData.githubActions as unknown as import('@/types/github').GitHubActions | undefined,
+          security: enrichedData.security as unknown as import('@/types/github').GitHubSecurity | undefined,
+          packages: enrichedData.packages as unknown as import('@/types/github').GitHubPackages | undefined,
+          branchProtection: enrichedData.branchProtection as unknown as import('@/types/github').GitHubBranchProtection | undefined,
+          community: enrichedData.community as unknown as import('@/types/github').GitHubCommunity | undefined,
+          traffic: enrichedData.traffic as unknown as import('@/types/github').GitHubTraffic | undefined,
         });
 
         logWithContext.api('enrich_repository', req.path, true, {

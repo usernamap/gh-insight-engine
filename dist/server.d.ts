@@ -1,4 +1,4 @@
-import "dotenv/config";
+import 'dotenv/config';
 declare const startServer: () => Promise<void>;
 declare const stopServer: (signal: string) => Promise<void>;
 export { startServer, stopServer };
