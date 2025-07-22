@@ -16,7 +16,8 @@ const router = Router();
  * @access  Private (JWT requis + ownership + rate limit analyse)
  * @query   { includePrivate?: boolean, forceRefresh?: boolean, maxAge?: number }
  */
-router.post('/:username/analyze',
+router.post(
+  '/:username/analyze',
   // Rate limiting spécialisé pour les analyses (coûteuses)
   (req: Request, res: Response, next: NextFunction) => {
     const analysisLimiter = req.app.get('analysisLimiter');
@@ -37,7 +38,8 @@ router.post('/:username/analyze',
  * @desc    Vue d'ensemble des métriques d'un utilisateur
  * @access  Public (mais données limitées sans auth)
  */
-router.get('/:username/overview',
+router.get(
+  '/:username/overview',
   optionalJWT,
   validateUserParams,
   AnalyticsController.getAnalyticsOverview,
@@ -48,7 +50,8 @@ router.get('/:username/overview',
  * @desc    Métriques de performance détaillées
  * @access  Public
  */
-router.get('/:username/performance',
+router.get(
+  '/:username/performance',
   optionalJWT,
   validateUserParams,
   AnalyticsController.getPerformanceMetrics,
@@ -59,7 +62,8 @@ router.get('/:username/performance',
  * @desc    Analyse des langages de programmation
  * @access  Public
  */
-router.get('/:username/languages',
+router.get(
+  '/:username/languages',
   optionalJWT,
   validateUserParams,
   AnalyticsController.getLanguageAnalytics,
@@ -70,7 +74,8 @@ router.get('/:username/languages',
  * @desc    Patterns d'activité et habitudes de développement
  * @access  Public
  */
-router.get('/:username/activity',
+router.get(
+  '/:username/activity',
   optionalJWT,
   validateUserParams,
   AnalyticsController.getActivityPatterns,
@@ -81,7 +86,8 @@ router.get('/:username/activity',
  * @desc    Score de productivité et métriques associées
  * @access  Public
  */
-router.get('/:username/productivity',
+router.get(
+  '/:username/productivity',
   optionalJWT,
   validateUserParams,
   AnalyticsController.getProductivityScore,
@@ -92,7 +98,8 @@ router.get('/:username/productivity',
  * @desc    Maturité DevOps et pratiques de développement
  * @access  Public
  */
-router.get('/:username/devops',
+router.get(
+  '/:username/devops',
   optionalJWT,
   validateUserParams,
   AnalyticsController.getDevOpsMaturity,

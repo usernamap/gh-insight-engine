@@ -14,7 +14,8 @@ const router = Router();
  * @desc    Génération d'insights IA pour un utilisateur
  * @access  Private (JWT requis + ownership + rate limit IA)
  */
-router.post('/:username/generate',
+router.post(
+  '/:username/generate',
   // Rate limiting spécialisé pour les analyses IA (très coûteuses)
   (req: Request, res: Response, next: NextFunction) => {
     const analysisLimiter = req.app.get('analysisLimiter');
@@ -35,7 +36,8 @@ router.post('/:username/generate',
  * @desc    Résumé des insights IA d'un utilisateur
  * @access  Public
  */
-router.get('/:username/summary',
+router.get(
+  '/:username/summary',
   optionalJWT,
   validateUserParams,
   InsightsController.getInsightsSummary,
@@ -46,7 +48,8 @@ router.get('/:username/summary',
  * @desc    Personnalité de développeur analysée par IA
  * @access  Public
  */
-router.get('/:username/personality',
+router.get(
+  '/:username/personality',
   optionalJWT,
   validateUserParams,
   InsightsController.getDeveloperPersonality,
@@ -58,7 +61,8 @@ router.get('/:username/personality',
  * @access  Public
  * @query   { category?: 'immediate'|'shortTerm'|'longTerm' }
  */
-router.get('/:username/recommendations',
+router.get(
+  '/:username/recommendations',
   optionalJWT,
   validateUserParams,
   InsightsController.getRecommendations,
@@ -69,7 +73,8 @@ router.get('/:username/recommendations',
  * @desc    Forces et points forts identifiés par l'IA
  * @access  Public
  */
-router.get('/:username/strengths',
+router.get(
+  '/:username/strengths',
   optionalJWT,
   validateUserParams,
   InsightsController.getStrengths,
@@ -80,7 +85,8 @@ router.get('/:username/strengths',
  * @desc    Opportunités de croissance identifiées par l'IA
  * @access  Public
  */
-router.get('/:username/growth',
+router.get(
+  '/:username/growth',
   optionalJWT,
   validateUserParams,
   InsightsController.getGrowthOpportunities,
@@ -91,7 +97,8 @@ router.get('/:username/growth',
  * @desc    Évaluation des compétences par l'IA
  * @access  Public
  */
-router.get('/:username/skills',
+router.get(
+  '/:username/skills',
   optionalJWT,
   validateUserParams,
   InsightsController.getSkillAssessment,
@@ -102,7 +109,8 @@ router.get('/:username/skills',
  * @desc    Insights de carrière par l'IA
  * @access  Public
  */
-router.get('/:username/career',
+router.get(
+  '/:username/career',
   optionalJWT,
   validateUserParams,
   InsightsController.getCareerInsights,

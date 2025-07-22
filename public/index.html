@@ -1,375 +1,452 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Insight Engine - Analysez votre profil GitHub avec l'IA</title>
-    <meta name="description" content="API d'analyse GitHub avec insights IA pour développeurs - Métriques quantitatives et recommandations personnalisées">
-    
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      GitHub Insight Engine - Analysez votre profil GitHub avec l'IA
+    </title>
+    <meta
+      name="description"
+      content="API d'analyse GitHub avec insights IA pour développeurs - Métriques quantitatives et recommandations personnalisées"
+    />
+
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
-    
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>"
+    />
+
     <!-- Styles -->
-    <link rel="stylesheet" href="/css/styles.css">
-    
+    <link rel="stylesheet" href="/css/styles.css" />
+
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
     <!-- Header -->
     <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <span class="logo-icon">🔍</span>
-                    <span class="logo-text">GitHub Insight Engine</span>
-                </div>
-                <nav class="nav">
-                    <a href="/" class="nav-link active">Accueil</a>
-                    <a href="/api" class="nav-link">API Docs</a>
-                    <a href="https://github.com" target="_blank" class="nav-link">GitHub</a>
-                </nav>
-            </div>
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <span class="logo-icon">🔍</span>
+            <span class="logo-text">GitHub Insight Engine</span>
+          </div>
+          <nav class="nav">
+            <a href="/" class="nav-link active">Accueil</a>
+            <a href="/api" class="nav-link">API Docs</a>
+            <a href="https://github.com" target="_blank" class="nav-link"
+              >GitHub</a
+            >
+          </nav>
         </div>
+      </div>
     </header>
 
     <!-- Main Content -->
     <main class="main">
-        <div class="container">
-            <!-- Hero Section -->
-            <section class="hero">
-                <h1 class="hero-title">
-                    Analysez votre profil GitHub avec l'<span class="gradient-text">Intelligence Artificielle</span>
-                </h1>
-                <p class="hero-subtitle">
-                    Obtenez des insights personnalisés, des métriques de performance et des recommandations IA pour améliorer vos projets de développement.
-                </p>
-            </section>
+      <div class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+          <h1 class="hero-title">
+            Analysez votre profil GitHub avec l'<span class="gradient-text"
+              >Intelligence Artificielle</span
+            >
+          </h1>
+          <p class="hero-subtitle">
+            Obtenez des insights personnalisés, des métriques de performance et
+            des recommandations IA pour améliorer vos projets de développement.
+          </p>
+        </section>
 
-            <!-- Content Layout -->
-            <div class="content-layout">
-                <!-- Left Side: Tutorial (70%) -->
-                <div class="tutorial-section">
-                    <div class="tutorial-header">
-                        <h2 class="section-title">
-                            <span class="step-icon">📝</span>
-                            Guide : Création de votre Token GitHub Classic
-                        </h2>
-                        <p class="section-subtitle">
-                            Suivez ce guide étape par étape pour créer votre token d'authentification GitHub
-                        </p>
-                    </div>
-
-                    <!-- Steps -->
-                    <div class="steps">
-                        <!-- Step 1 -->
-                        <div class="step">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Accéder aux paramètres GitHub</h3>
-                                <p class="step-description">
-                                    Connectez-vous à <strong>GitHub.com</strong> et cliquez sur votre photo de profil en haut à droite, puis sélectionnez <strong>"Settings"</strong>.
-                                </p>
-                                <div class="step-visual">
-                                    <div class="code-block">
-                                        <code>GitHub.com → Photo de profil → Settings</code>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 2 -->
-                        <div class="step">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Naviguer vers Developer Settings</h3>
-                                <p class="step-description">
-                                    Dans le menu de gauche, faites défiler jusqu'en bas et cliquez sur <strong>"Developer settings"</strong>.
-                                </p>
-                                <div class="step-visual">
-                                    <div class="code-block">
-                                        <code>Settings → Developer settings (en bas du menu)</code>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3 -->
-                        <div class="step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Accéder aux Personal Access Tokens</h3>
-                                <p class="step-description">
-                                    Cliquez sur <strong>"Personal access tokens"</strong> puis sélectionnez <strong>"Tokens (classic)"</strong>.
-                                </p>
-                                <div class="step-visual">
-                                    <div class="code-block">
-                                        <code>Personal access tokens → Tokens (classic)</code>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 4 -->
-                        <div class="step">
-                            <div class="step-number">4</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Générer un nouveau token</h3>
-                                <p class="step-description">
-                                    Cliquez sur <strong>"Generate new token"</strong> puis <strong>"Generate new token (classic)"</strong>.
-                                </p>
-                                <div class="step-visual">
-                                    <div class="alert alert-info">
-                                        <strong>💡 Important :</strong> GitHub peut vous demander votre mot de passe ou une authentification 2FA à cette étape.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 5 -->
-                        <div class="step">
-                            <div class="step-number">5</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Configuration du token</h3>
-                                <p class="step-description">
-                                    Remplissez les informations suivantes :
-                                </p>
-                                <div class="step-visual">
-                                    <div class="config-list">
-                                        <div class="config-item">
-                                            <strong>Note :</strong> <code>GitHub Insight Engine</code>
-                                        </div>
-                                        <div class="config-item">
-                                            <strong>Expiration :</strong> <code>90 days</code> (recommandé)
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 6 -->
-                        <div class="step">
-                            <div class="step-number">6</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Sélection des permissions (Scopes)</h3>
-                                <p class="step-description">
-                                    <strong>Cochez exactement ces permissions :</strong>
-                                </p>
-                                <div class="step-visual">
-                                    <div class="scopes-list">
-                                        <div class="scope-item required">
-                                            <input type="checkbox" checked disabled>
-                                            <strong>user</strong> - Accès complet aux informations du profil utilisateur
-                                        </div>
-                                        <div class="scope-item required">
-                                            <input type="checkbox" checked disabled>
-                                            <strong>public_repo</strong> - Accès aux repositories publics
-                                        </div>
-                                        <div class="scope-item required">
-                                            <input type="checkbox" checked disabled>
-                                            <strong>read:org</strong> - Lecture des organisations et équipes
-                                        </div>
-                                        <div class="scope-item required">
-                                            <input type="checkbox" checked disabled>
-                                            <strong>user:email</strong> - Accès aux adresses email
-                                        </div>
-                                        <div class="scope-item optional">
-                                            <input type="checkbox" disabled>
-                                            <strong>repo</strong> - Accès aux repositories privés (optionnel)
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="alert alert-warning">
-                                    <strong>⚠️ Attention :</strong> Ne sélectionnez pas d'autres permissions pour des raisons de sécurité.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 7 -->
-                        <div class="step">
-                            <div class="step-number">7</div>
-                            <div class="step-content">
-                                <h3 class="step-title">Générer et copier le token</h3>
-                                <p class="step-description">
-                                    Cliquez sur <strong>"Generate token"</strong> en bas de la page. Copiez immédiatement le token généré.
-                                </p>
-                                <div class="step-visual">
-                                    <div class="alert alert-danger">
-                                        <strong>🚨 IMPORTANT :</strong> Le token ne sera affiché qu'une seule fois ! Copiez-le immédiatement et conservez-le en sécurité.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Security Notice -->
-                    <div class="security-notice">
-                        <h3 class="security-title">
-                            <span class="security-icon">🔒</span>
-                            Sécurité de votre token
-                        </h3>
-                        <div class="security-content">
-                            <ul class="security-list">
-                                <li>Ne partagez jamais votre token avec qui que ce soit</li>
-                                <li>Gardez votre token confidentiel et en lieu sûr</li>
-                                <li>Si votre token est compromis, révoquez-le immédiatement sur GitHub</li>
-                                <li>Votre token est utilisé uniquement pour l'analyse de votre profil</li>
-                                <li>Nous ne stockons jamais votre token de façon persistante</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Troubleshooting -->
-                    <div class="troubleshooting">
-                        <h3 class="troubleshooting-title">
-                            <span class="troubleshooting-icon">🛠️</span>
-                            Résolution de problèmes
-                        </h3>
-                        <div class="troubleshooting-content">
-                            <div class="faq-item">
-                                <h4 class="faq-question">❓ Le token ne fonctionne pas</h4>
-                                <p class="faq-answer">Vérifiez que vous avez sélectionné les bonnes permissions et que le token n'a pas expiré.</p>
-                            </div>
-                            <div class="faq-item">
-                                <h4 class="faq-question">❓ Je ne trouve pas "Developer settings"</h4>
-                                <p class="faq-answer">Assurez-vous d'être connecté à GitHub.com et regardez tout en bas du menu de gauche dans Settings.</p>
-                            </div>
-                            <div class="faq-item">
-                                <h4 class="faq-question">❓ Erreur "Token invalid"</h4>
-                                <p class="faq-answer">Le token est peut-être incorrect ou a expiré. Générez un nouveau token en suivant les étapes ci-dessus.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Side: Login Form (30%) -->
-                <div class="login-section">
-                    <div class="login-card">
-                        <div class="login-header">
-                            <h2 class="login-title">
-                                <span class="login-icon">🚀</span>
-                                Connexion
-                            </h2>
-                            <p class="login-subtitle">
-                                Connectez-vous avec vos informations GitHub
-                            </p>
-                        </div>
-
-                        <form class="login-form" id="loginForm">
-                            <div class="form-group">
-                                <label for="username" class="form-label">Nom d'utilisateur GitHub</label>
-                                <input 
-                                    type="text" 
-                                    id="username" 
-                                    name="username" 
-                                    class="form-input" 
-                                    placeholder="votre-username"
-                                    required
-                                    autocomplete="username"
-                                >
-                                <small class="form-help">Votre nom d'utilisateur GitHub (sans @)</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="fullName" class="form-label">Nom complet</label>
-                                <input 
-                                    type="text" 
-                                    id="fullName" 
-                                    name="fullName" 
-                                    class="form-input" 
-                                    placeholder="Prénom Nom"
-                                    required
-                                    autocomplete="name"
-                                >
-                                <small class="form-help">Votre nom complet pour personnaliser l'analyse</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="githubToken" class="form-label">Token GitHub Classic</label>
-                                <input 
-                                    type="password" 
-                                    id="githubToken" 
-                                    name="githubToken" 
-                                    class="form-input" 
-                                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                                    required
-                                    autocomplete="current-password"
-                                >
-                                <small class="form-help">Token généré selon le guide ci-contre</small>
-                            </div>
-
-                            <button type="submit" class="login-button" id="loginButton">
-                                <span class="login-button-text">Se connecter</span>
-                                <span class="login-button-loading" style="display: none;">
-                                    <span class="spinner"></span>
-                                    Connexion...
-                                </span>
-                            </button>
-                        </form>
-
-                        <!-- Status Messages -->
-                        <div class="message-container">
-                            <div class="message message-error" id="errorMessage" style="display: none;">
-                                <span class="message-icon">❌</span>
-                                <span class="message-text"></span>
-                            </div>
-                            <div class="message message-success" id="successMessage" style="display: none;">
-                                <span class="message-icon">✅</span>
-                                <span class="message-text"></span>
-                            </div>
-                        </div>
-
-                        <!-- Features List -->
-                        <div class="features-list">
-                            <h3 class="features-title">Ce que vous obtiendrez :</h3>
-                            <ul class="features">
-                                <li class="feature-item">
-                                    <span class="feature-icon">📊</span>
-                                    Métriques de performance détaillées
-                                </li>
-                                <li class="feature-item">
-                                    <span class="feature-icon">🧠</span>
-                                    Analyse de personnalité développeur IA
-                                </li>
-                                <li class="feature-item">
-                                    <span class="feature-icon">💡</span>
-                                    Recommandations personnalisées
-                                </li>
-                                <li class="feature-item">
-                                    <span class="feature-icon">🎯</span>
-                                    Identification des forces et opportunités
-                                </li>
-                                <li class="feature-item">
-                                    <span class="feature-icon">📈</span>
-                                    Analyse de productivité et tendances
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+        <!-- Content Layout -->
+        <div class="content-layout">
+          <!-- Left Side: Tutorial (70%) -->
+          <div class="tutorial-section">
+            <div class="tutorial-header">
+              <h2 class="section-title">
+                <span class="step-icon">📝</span>
+                Guide : Création de votre Token GitHub Classic
+              </h2>
+              <p class="section-subtitle">
+                Suivez ce guide étape par étape pour créer votre token
+                d'authentification GitHub
+              </p>
             </div>
+
+            <!-- Steps -->
+            <div class="steps">
+              <!-- Step 1 -->
+              <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <h3 class="step-title">Accéder aux paramètres GitHub</h3>
+                  <p class="step-description">
+                    Connectez-vous à <strong>GitHub.com</strong> et cliquez sur
+                    votre photo de profil en haut à droite, puis sélectionnez
+                    <strong>"Settings"</strong>.
+                  </p>
+                  <div class="step-visual">
+                    <div class="code-block">
+                      <code>GitHub.com → Photo de profil → Settings</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 2 -->
+              <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <h3 class="step-title">Naviguer vers Developer Settings</h3>
+                  <p class="step-description">
+                    Dans le menu de gauche, faites défiler jusqu'en bas et
+                    cliquez sur <strong>"Developer settings"</strong>.
+                  </p>
+                  <div class="step-visual">
+                    <div class="code-block">
+                      <code
+                        >Settings → Developer settings (en bas du menu)</code
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 3 -->
+              <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <h3 class="step-title">Accéder aux Personal Access Tokens</h3>
+                  <p class="step-description">
+                    Cliquez sur <strong>"Personal access tokens"</strong> puis
+                    sélectionnez <strong>"Tokens (classic)"</strong>.
+                  </p>
+                  <div class="step-visual">
+                    <div class="code-block">
+                      <code>Personal access tokens → Tokens (classic)</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 4 -->
+              <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                  <h3 class="step-title">Générer un nouveau token</h3>
+                  <p class="step-description">
+                    Cliquez sur <strong>"Generate new token"</strong> puis
+                    <strong>"Generate new token (classic)"</strong>.
+                  </p>
+                  <div class="step-visual">
+                    <div class="alert alert-info">
+                      <strong>💡 Important :</strong> GitHub peut vous demander
+                      votre mot de passe ou une authentification 2FA à cette
+                      étape.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 5 -->
+              <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                  <h3 class="step-title">Configuration du token</h3>
+                  <p class="step-description">
+                    Remplissez les informations suivantes :
+                  </p>
+                  <div class="step-visual">
+                    <div class="config-list">
+                      <div class="config-item">
+                        <strong>Note :</strong>
+                        <code>GitHub Insight Engine</code>
+                      </div>
+                      <div class="config-item">
+                        <strong>Expiration :</strong>
+                        <code>90 days</code> (recommandé)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 6 -->
+              <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                  <h3 class="step-title">Sélection des permissions (Scopes)</h3>
+                  <p class="step-description">
+                    <strong>Cochez exactement ces permissions :</strong>
+                  </p>
+                  <div class="step-visual">
+                    <div class="scopes-list">
+                      <div class="scope-item required">
+                        <input type="checkbox" checked disabled />
+                        <strong>user</strong> - Accès complet aux informations
+                        du profil utilisateur
+                      </div>
+                      <div class="scope-item required">
+                        <input type="checkbox" checked disabled />
+                        <strong>public_repo</strong> - Accès aux repositories
+                        publics
+                      </div>
+                      <div class="scope-item required">
+                        <input type="checkbox" checked disabled />
+                        <strong>read:org</strong> - Lecture des organisations et
+                        équipes
+                      </div>
+                      <div class="scope-item required">
+                        <input type="checkbox" checked disabled />
+                        <strong>user:email</strong> - Accès aux adresses email
+                      </div>
+                      <div class="scope-item optional">
+                        <input type="checkbox" disabled />
+                        <strong>repo</strong> - Accès aux repositories privés
+                        (optionnel)
+                      </div>
+                    </div>
+                  </div>
+                  <div class="alert alert-warning">
+                    <strong>⚠️ Attention :</strong> Ne sélectionnez pas d'autres
+                    permissions pour des raisons de sécurité.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 7 -->
+              <div class="step">
+                <div class="step-number">7</div>
+                <div class="step-content">
+                  <h3 class="step-title">Générer et copier le token</h3>
+                  <p class="step-description">
+                    Cliquez sur <strong>"Generate token"</strong> en bas de la
+                    page. Copiez immédiatement le token généré.
+                  </p>
+                  <div class="step-visual">
+                    <div class="alert alert-danger">
+                      <strong>🚨 IMPORTANT :</strong> Le token ne sera affiché
+                      qu'une seule fois ! Copiez-le immédiatement et
+                      conservez-le en sécurité.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Notice -->
+            <div class="security-notice">
+              <h3 class="security-title">
+                <span class="security-icon">🔒</span>
+                Sécurité de votre token
+              </h3>
+              <div class="security-content">
+                <ul class="security-list">
+                  <li>Ne partagez jamais votre token avec qui que ce soit</li>
+                  <li>Gardez votre token confidentiel et en lieu sûr</li>
+                  <li>
+                    Si votre token est compromis, révoquez-le immédiatement sur
+                    GitHub
+                  </li>
+                  <li>
+                    Votre token est utilisé uniquement pour l'analyse de votre
+                    profil
+                  </li>
+                  <li>
+                    Nous ne stockons jamais votre token de façon persistante
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="troubleshooting">
+              <h3 class="troubleshooting-title">
+                <span class="troubleshooting-icon">🛠️</span>
+                Résolution de problèmes
+              </h3>
+              <div class="troubleshooting-content">
+                <div class="faq-item">
+                  <h4 class="faq-question">❓ Le token ne fonctionne pas</h4>
+                  <p class="faq-answer">
+                    Vérifiez que vous avez sélectionné les bonnes permissions et
+                    que le token n'a pas expiré.
+                  </p>
+                </div>
+                <div class="faq-item">
+                  <h4 class="faq-question">
+                    ❓ Je ne trouve pas "Developer settings"
+                  </h4>
+                  <p class="faq-answer">
+                    Assurez-vous d'être connecté à GitHub.com et regardez tout
+                    en bas du menu de gauche dans Settings.
+                  </p>
+                </div>
+                <div class="faq-item">
+                  <h4 class="faq-question">❓ Erreur "Token invalid"</h4>
+                  <p class="faq-answer">
+                    Le token est peut-être incorrect ou a expiré. Générez un
+                    nouveau token en suivant les étapes ci-dessus.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Side: Login Form (30%) -->
+          <div class="login-section">
+            <div class="login-card">
+              <div class="login-header">
+                <h2 class="login-title">
+                  <span class="login-icon">🚀</span>
+                  Connexion
+                </h2>
+                <p class="login-subtitle">
+                  Connectez-vous avec vos informations GitHub
+                </p>
+              </div>
+
+              <form class="login-form" id="loginForm">
+                <div class="form-group">
+                  <label for="username" class="form-label"
+                    >Nom d'utilisateur GitHub</label
+                  >
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="form-input"
+                    placeholder="votre-username"
+                    required
+                    autocomplete="username"
+                  />
+                  <small class="form-help"
+                    >Votre nom d'utilisateur GitHub (sans @)</small
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="fullName" class="form-label">Nom complet</label>
+                  <input
+                    type="text"
+                    id="fullName"
+                    name="fullName"
+                    class="form-input"
+                    placeholder="Prénom Nom"
+                    required
+                    autocomplete="name"
+                  />
+                  <small class="form-help"
+                    >Votre nom complet pour personnaliser l'analyse</small
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="githubToken" class="form-label"
+                    >Token GitHub Classic</label
+                  >
+                  <input
+                    type="password"
+                    id="githubToken"
+                    name="githubToken"
+                    class="form-input"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    required
+                    autocomplete="current-password"
+                  />
+                  <small class="form-help"
+                    >Token généré selon le guide ci-contre</small
+                  >
+                </div>
+
+                <button type="submit" class="login-button" id="loginButton">
+                  <span class="login-button-text">Se connecter</span>
+                  <span class="login-button-loading" style="display: none">
+                    <span class="spinner"></span>
+                    Connexion...
+                  </span>
+                </button>
+              </form>
+
+              <!-- Status Messages -->
+              <div class="message-container">
+                <div
+                  class="message message-error"
+                  id="errorMessage"
+                  style="display: none"
+                >
+                  <span class="message-icon">❌</span>
+                  <span class="message-text"></span>
+                </div>
+                <div
+                  class="message message-success"
+                  id="successMessage"
+                  style="display: none"
+                >
+                  <span class="message-icon">✅</span>
+                  <span class="message-text"></span>
+                </div>
+              </div>
+
+              <!-- Features List -->
+              <div class="features-list">
+                <h3 class="features-title">Ce que vous obtiendrez :</h3>
+                <ul class="features">
+                  <li class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    Métriques de performance détaillées
+                  </li>
+                  <li class="feature-item">
+                    <span class="feature-icon">🧠</span>
+                    Analyse de personnalité développeur IA
+                  </li>
+                  <li class="feature-item">
+                    <span class="feature-icon">💡</span>
+                    Recommandations personnalisées
+                  </li>
+                  <li class="feature-item">
+                    <span class="feature-icon">🎯</span>
+                    Identification des forces et opportunités
+                  </li>
+                  <li class="feature-item">
+                    <span class="feature-icon">📈</span>
+                    Analyse de productivité et tendances
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </main>
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <p class="footer-text">
-                    © 2024 GitHub Insight Engine - Alimenté par l'IA GPT-4 et l'API GitHub
-                </p>
-                <div class="footer-links">
-                    <a href="/api" class="footer-link">API</a>
-                    <a href="/api/health" class="footer-link">Status</a>
-                    <a href="https://github.com" target="_blank" class="footer-link">GitHub</a>
-                </div>
-            </div>
+      <div class="container">
+        <div class="footer-content">
+          <p class="footer-text">
+            © 2024 GitHub Insight Engine - Alimenté par l'IA GPT-4 et l'API
+            GitHub
+          </p>
+          <div class="footer-links">
+            <a href="/api" class="footer-link">API</a>
+            <a href="/api/health" class="footer-link">Status</a>
+            <a href="https://github.com" target="_blank" class="footer-link"
+              >GitHub</a
+            >
+          </div>
         </div>
+      </div>
     </footer>
 
     <!-- Scripts -->
     <script src="/js/app.js"></script>
-</body>
-</html> 
+  </body>
+</html>

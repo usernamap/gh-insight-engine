@@ -4,10 +4,31 @@ const express_1 = require("express");
 const controllers_1 = require("@/controllers");
 const middleware_1 = require("@/middleware");
 const router = (0, express_1.Router)();
-router.post('/login', middleware_1.validateAuth, middleware_1.validateGitHubToken, controllers_1.AuthController.login);
-router.post('/refresh', middleware_1.authenticateJWT, controllers_1.AuthController.refresh);
-router.delete('/logout', middleware_1.authenticateJWT, controllers_1.AuthController.logout);
-router.get('/validate', middleware_1.authenticateJWT, controllers_1.AuthController.validateToken);
-router.get('/me', middleware_1.authenticateJWT, controllers_1.AuthController.getCurrentUser);
+router.post(
+  "/login",
+  middleware_1.validateAuth,
+  middleware_1.validateGitHubToken,
+  controllers_1.AuthController.login,
+);
+router.post(
+  "/refresh",
+  middleware_1.authenticateJWT,
+  controllers_1.AuthController.refresh,
+);
+router.delete(
+  "/logout",
+  middleware_1.authenticateJWT,
+  controllers_1.AuthController.logout,
+);
+router.get(
+  "/validate",
+  middleware_1.authenticateJWT,
+  controllers_1.AuthController.validateToken,
+);
+router.get(
+  "/me",
+  middleware_1.authenticateJWT,
+  controllers_1.AuthController.getCurrentUser,
+);
 exports.default = router;
 //# sourceMappingURL=auth.js.map

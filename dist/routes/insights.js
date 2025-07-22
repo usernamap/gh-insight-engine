@@ -4,21 +4,62 @@ const express_1 = require("express");
 const controllers_1 = require("@/controllers");
 const middleware_1 = require("@/middleware");
 const router = (0, express_1.Router)();
-router.post('/:username/generate', (req, res, next) => {
-    const analysisLimiter = req.app.get('analysisLimiter');
+router.post(
+  "/:username/generate",
+  (req, res, next) => {
+    const analysisLimiter = req.app.get("analysisLimiter");
     if (analysisLimiter) {
-        analysisLimiter(req, res, next);
+      analysisLimiter(req, res, next);
+    } else {
+      next();
     }
-    else {
-        next();
-    }
-}, middleware_1.authenticateJWT, middleware_1.validateUserParams, middleware_1.requireOwnership, controllers_1.InsightsController.generateInsights);
-router.get('/:username/summary', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getInsightsSummary);
-router.get('/:username/personality', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getDeveloperPersonality);
-router.get('/:username/recommendations', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getRecommendations);
-router.get('/:username/strengths', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getStrengths);
-router.get('/:username/growth', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getGrowthOpportunities);
-router.get('/:username/skills', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getSkillAssessment);
-router.get('/:username/career', middleware_1.optionalJWT, middleware_1.validateUserParams, controllers_1.InsightsController.getCareerInsights);
+  },
+  middleware_1.authenticateJWT,
+  middleware_1.validateUserParams,
+  middleware_1.requireOwnership,
+  controllers_1.InsightsController.generateInsights,
+);
+router.get(
+  "/:username/summary",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getInsightsSummary,
+);
+router.get(
+  "/:username/personality",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getDeveloperPersonality,
+);
+router.get(
+  "/:username/recommendations",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getRecommendations,
+);
+router.get(
+  "/:username/strengths",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getStrengths,
+);
+router.get(
+  "/:username/growth",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getGrowthOpportunities,
+);
+router.get(
+  "/:username/skills",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getSkillAssessment,
+);
+router.get(
+  "/:username/career",
+  middleware_1.optionalJWT,
+  middleware_1.validateUserParams,
+  controllers_1.InsightsController.getCareerInsights,
+);
 exports.default = router;
 //# sourceMappingURL=insights.js.map

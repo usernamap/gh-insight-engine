@@ -13,13 +13,15 @@ export class DatabaseConfig {
   private isConnected = false;
 
   /**
-     * Initialise les connexions aux bases de données
-     */
+   * Initialise les connexions aux bases de données
+   */
   public async initialize(): Promise<void> {
     const databaseUrl = process.env.DATABASE_URL;
 
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL non définie dans les variables d\'environnement');
+      throw new Error(
+        "DATABASE_URL non définie dans les variables d'environnement",
+      );
     }
 
     try {
@@ -35,19 +37,20 @@ export class DatabaseConfig {
         providers: ['Prisma', 'Mongoose'],
         url: this.sanitizeUrl(databaseUrl),
       });
-
     } catch (_error: unknown) {
-      logger.error('Échec de l\'initialisation de la base de données', {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Échec de l'initialisation de la base de données", {
+        error: (_error as Error).message,
+        stack: (_error as Error).stack,
       });
-      throw new Error(`Connexion base de données échouée: ${error.message}`);
+      throw new Error(
+        `Connexion base de données échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
-     * Initialise le client Prisma
-     */
+   * Initialise le client Prisma
+   */
   private async initializePrisma(databaseUrl: string): Promise<void> {
     this.prismaClient = new PrismaClient({
       datasources: {
@@ -66,16 +69,16 @@ export class DatabaseConfig {
     // Configuration des event listeners pour logs
     this.prismaClient.$on('query', (e: unknown) => {
       logger.debug('Prisma Query', {
-        query: e.query,
-        duration: `${e.duration}ms`,
-        params: e.params,
+        query: (e as unknown as { query: string }).query,
+        duration: `${(e as unknown as { duration: number }).duration}ms`,
+        params: (e as unknown as { params: unknown }).params,
       });
     });
 
     this.prismaClient.$on('error', (e: unknown) => {
       logger.error('Prisma Error', {
-        message: e.message,
-        target: e.target,
+        message: (e as unknown as { message: string }).message,
+        target: (e as unknown as { target: string }).target,
       });
     });
 
@@ -86,8 +89,8 @@ export class DatabaseConfig {
   }
 
   /**
-     * Initialise la connexion Mongoose
-     */
+   * Initialise la connexion Mongoose
+   */
   private async initializeMongoose(databaseUrl: string): Promise<void> {
     const options: mongoose.ConnectOptions = {
       maxPoolSize: 10, // Maintain up to 10 socket connections
@@ -115,13 +118,13 @@ export class DatabaseConfig {
   }
 
   /**
-     * Vérifie la santé de la connexion
-     */
+   * Vérifie la santé de la connexion
+   */
   public async healthCheck(): Promise<{
-        prisma: boolean;
-        mongoose: boolean;
-        overall: boolean;
-    }> {
+    prisma: boolean;
+    mongoose: boolean;
+    overall: boolean;
+  }> {
     const health = {
       prisma: false,
       mongoose: false,
@@ -134,8 +137,10 @@ export class DatabaseConfig {
         await this.prismaClient.$queryRaw`SELECT 1`;
         health.prisma = true;
       }
-    } catch (_error) {
-      logger.warn('Health check Prisma échoué', { error });
+    } catch (_error: unknown) {
+      logger.warn('Health check Prisma échoué', {
+        error: (_error as Error).message,
+      });
     }
 
     // Test Mongoose
@@ -143,8 +148,10 @@ export class DatabaseConfig {
       if (this.mongooseConnection && this.mongooseConnection.readyState === 1) {
         health.mongoose = true;
       }
-    } catch (_error) {
-      logger.warn('Health check Mongoose échoué', { error });
+    } catch (_error: unknown) {
+      logger.warn('Health check Mongoose échoué', {
+        error: (_error as Error).message,
+      });
     }
 
     health.overall = health.prisma && health.mongoose;
@@ -153,8 +160,8 @@ export class DatabaseConfig {
   }
 
   /**
-     * Exécute une transaction Prisma
-     */
+   * Exécute une transaction Prisma
+   */
   public async transaction<T>(
     operations: (prisma: PrismaClient) => Promise<T>,
   ): Promise<T> {
@@ -165,27 +172,31 @@ export class DatabaseConfig {
     const startTime = Date.now();
 
     try {
-      const result = await this.prismaClient.$transaction(async (tx: PrismaClient) => {
-        return await operations(tx);
-      });
+      const result = await this.prismaClient.$transaction(
+        async (tx: PrismaClient) => {
+          return await operations(tx);
+        },
+      );
 
       const duration = Date.now() - startTime;
-      logger.debug('Transaction Prisma terminée', { duration: `${duration}ms` });
+      logger.debug('Transaction Prisma terminée', {
+        duration: `${duration}ms`,
+      });
 
       return result;
     } catch (_error: unknown) {
       const duration = Date.now() - startTime;
       logger.error('Transaction Prisma échouée', {
         duration: `${duration}ms`,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
-     * Crée les indexes nécessaires pour optimiser les performances
-     */
+   * Crée les indexes nécessaires pour optimiser les performances
+   */
   public async createIndexes(): Promise<void> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -197,14 +208,16 @@ export class DatabaseConfig {
 
       logger.info('Indexes de base de données créés avec succès');
     } catch (_error: unknown) {
-      logger.error('Erreur lors de la création des indexes', { error: error.message });
-      throw error;
+      logger.error('Erreur lors de la création des indexes', {
+        error: (_error as Error).message,
+      });
+      throw _error as Error;
     }
   }
 
   /**
-     * Nettoyage et fermeture des connexions
-     */
+   * Nettoyage et fermeture des connexions
+   */
   public async cleanup(): Promise<void> {
     try {
       if (this.prismaClient) {
@@ -220,15 +233,16 @@ export class DatabaseConfig {
       }
 
       this.isConnected = false;
-
     } catch (_error: unknown) {
-      logger.error('Erreur lors de la fermeture des connexions', { error: error.message });
+      logger.error('Erreur lors de la fermeture des connexions', {
+        error: (_error as Error).message,
+      });
     }
   }
 
   /**
-     * Nettoyage des données pour les tests
-     */
+   * Nettoyage des données pour les tests
+   */
   public async cleanupTestData(): Promise<void> {
     if (process.env.NODE_ENV !== 'test') {
       throw new Error('Nettoyage des données autorisé uniquement en mode test');
@@ -246,14 +260,16 @@ export class DatabaseConfig {
 
       logger.info('Données de test nettoyées');
     } catch (_error: unknown) {
-      logger.error('Erreur lors du nettoyage des données de test', { error: error.message });
-      throw error;
+      logger.error('Erreur lors du nettoyage des données de test', {
+        error: (_error as Error).message,
+      });
+      throw _error as Error;
     }
   }
 
   /**
-     * Sanitise l'URL pour les logs (retire le mot de passe)
-     */
+   * Sanitise l'URL pour les logs (retire le mot de passe)
+   */
   private sanitizeUrl(url: string): string {
     try {
       const parsedUrl = new URL(url);
@@ -267,8 +283,8 @@ export class DatabaseConfig {
   }
 
   /**
-     * Getters
-     */
+   * Getters
+   */
   public getPrismaClient(): PrismaClient | null {
     return this.prismaClient;
   }
@@ -282,11 +298,11 @@ export class DatabaseConfig {
   }
 
   /**
-     * Méthodes utilitaires pour les opérations courantes
-     */
+   * Méthodes utilitaires pour les opérations courantes
+   */
   public async findMany<T>(
     model: string,
-    options: unknown = {},
+    options: Record<string, unknown> = {},
   ): Promise<T[]> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -309,15 +325,15 @@ export class DatabaseConfig {
     } catch (_error: unknown) {
       logger.error('Find many operation failed', {
         model,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   public async findUnique<T>(
     model: string,
-    where: unknown,
+    where: Record<string, unknown>,
   ): Promise<T | null> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -340,9 +356,9 @@ export class DatabaseConfig {
     } catch (_error: unknown) {
       logger.error('Find unique operation failed', {
         model,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -370,15 +386,15 @@ export class DatabaseConfig {
     } catch (_error: unknown) {
       logger.error('Create operation failed', {
         model,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   public async update<T>(
     model: string,
-    where: unknown,
+    where: Record<string, unknown>,
     data: Record<string, unknown>,
   ): Promise<T> {
     if (!this.prismaClient) {
@@ -401,15 +417,15 @@ export class DatabaseConfig {
     } catch (_error: unknown) {
       logger.error('Update operation failed', {
         model,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   public async delete<T>(
     model: string,
-    where: unknown,
+    where: Record<string, unknown>,
   ): Promise<T> {
     if (!this.prismaClient) {
       throw new Error('Client Prisma non initialisé');
@@ -431,9 +447,9 @@ export class DatabaseConfig {
     } catch (_error: unknown) {
       logger.error('Delete operation failed', {
         model,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 }

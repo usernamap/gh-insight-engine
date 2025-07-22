@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 export declare const createApp: () => Promise<express.Application>;
 export declare const gracefulShutdown: () => Promise<void>;
 export default createApp;

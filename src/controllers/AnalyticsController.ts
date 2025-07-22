@@ -5,639 +5,588 @@ import { databaseService } from '@/services/DatabaseService';
 import { analyticsService } from '@/services/AnalyticsService';
 import { githubService } from '@/services/GitHubService';
 import { logWithContext } from '@/utils/logger';
+import { UserModel } from '@/models/User';
+import { AuthenticatedUser } from '@/types/github';
 
-/**
- * Interface pour les paramètres d'analyse
- */
 interface AnalysisQuery {
-    includePrivate: boolean;
-    forceRefresh: boolean;
-    maxAge: number;
+  includePrivate: boolean;
+  forceRefresh: boolean;
+  maxAge: number;
 }
 
-/**
- * Interface pour l'utilisateur authentifié
- */
-interface AuthenticatedUser {
-    id: string;
-    username: string;
-    githubToken: string;
-}
 
-/**
- * Contrôleur d'analytics (métriques quantitatives)
- */
+
 export class AnalyticsController {
-  /**
-     * Lancement d'une analyse complète d'un utilisateur
-     * POST /api/users/:username/analyze
-     */
-  static analyzeUser = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const analysisParams = req.query as AnalysisQuery;
-    const authenticatedUser = req.user as AuthenticatedUser;
+  static analyzeUser = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const analysisParams = req.query as unknown as AnalysisQuery;
+      const authenticatedUser = req.user as AuthenticatedUser;
 
-    if (!authenticatedUser?.githubToken) {
-      throw createError.authentication('Token GitHub requis pour l\'analyse');
-    }
-
-    // Vérification des permissions : seul le propriétaire peut analyser son profil
-    if (authenticatedUser.username !== username) {
-      throw createError.authorization('Vous ne pouvez analyser que votre propre profil');
-    }
-
-    logWithContext.api('analyze_user_start', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser.id,
-      includePrivate: analysisParams.includePrivate,
-      forceRefresh: analysisParams.forceRefresh,
-    });
-
-    try {
-      // 1. Vérification de la fraîcheur des analyses existantes
-      const existingUser = await databaseService.getUser(username);
-      if (!existingUser) {
-        throw createError.notFound('Utilisateur');
+      if (!authenticatedUser?.githubToken) {
+        throw createError.authentication("Token GitHub requis pour l'analyse");
       }
-
-      const analysisFreshness = await databaseService.checkAnalysisFreshness(existingUser.id);
-
-      if (analysisFreshness.isUpToDate && !analysisParams.forceRefresh) {
-        const latestDataset = await databaseService.getLatestDatasetForUser(existingUser.id);
-
-        logWithContext.api('analyze_user_cached', req.path, true, {
-          targetUsername: username,
-          ageHours: analysisFreshness.ageHours,
+      if (authenticatedUser.username !== username) {
+        throw createError.authorization(
+          'Vous ne pouvez analyser que votre propre profil',
+        );
+      }
+      logWithContext.api('analyze_user_start', req.path, true, {
+        targetUsername: username,
+        requesterId: authenticatedUser.id,
+        includePrivate: analysisParams.includePrivate,
+        forceRefresh: analysisParams.forceRefresh,
+      });
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const freshness =
+          await databaseService.areUserAnalyticsUpToDate(username);
+        if (freshness.analyticsUpToDate && !analysisParams.forceRefresh) {
+          const latest = await databaseService.getLatestUserDataset(username);
+          logWithContext.api('analyze_user_cached', req.path, true, {
+            targetUsername: username,
+            ageHours: freshness.lastUpdate
+              ? (Date.now() - new Date(freshness.lastUpdate).getTime()) /
+              3600000
+              : null,
+          });
+          res.status(200).json({
+            message: 'Analyse déjà à jour',
+            analysis: {
+              cached: true,
+              ageHours: freshness.lastUpdate
+                ? (Date.now() - new Date(freshness.lastUpdate).getTime()) /
+                3600000
+                : null,
+              lastAnalyzed: latest?.dataset.updatedAt,
+            },
+            dataset: {
+              id: latest?.dataset.id,
+              hasAnalytics: !!latest?.dataset.analytics,
+              repositoriesCount: Array.isArray(latest?.dataset.repositories)
+                ? latest.dataset.repositories.length
+                : 0,
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+        // Récupération du profil utilisateur (pour l'utilisateur authentifié)
+        const userProfile = await githubService.getUserProfile();
+        if (!userProfile) {
+          throw createError.notFound('Profil utilisateur GitHub');
+        }
+        // Récupération des repositories (pour l'utilisateur authentifié)
+        const repositories = await githubService.getUserRepos();
+        // Construction stricte du DatasetMetadata
+        const organizations = Array.isArray(userProfile.organizations?.nodes)
+          ? userProfile.organizations.nodes.map(
+            (org: { login: string }) => org.login,
+          )
+          : [];
+        const breakdown = {
+          userRepositories: repositories.length,
+          organizationRepositories: {},
+          privateRepositories: repositories.filter((r) => r.isPrivate).length,
+          publicRepositories: repositories.filter((r) => !r.isPrivate).length,
+          forkedRepositories: repositories.filter((r) => r.isFork).length,
+          archivedRepositories: repositories.filter((r) => r.isArchived).length,
+          templateRepositories: repositories.filter((r) => r.isTemplate).length,
+        };
+        const statistics = {
+          totalStars: repositories.reduce(
+            (sum, r) => sum + (r.stargazerCount || 0),
+            0,
+          ),
+          totalForks: repositories.reduce(
+            (sum, r) => sum + (r.forkCount || 0),
+            0,
+          ),
+          totalWatchers: repositories.reduce(
+            (sum, r) => sum + (r.watchersCount || 0),
+            0,
+          ),
+          totalIssues: repositories.reduce(
+            (sum, r) => sum + (r.issues?.totalCount || 0),
+            0,
+          ),
+          totalPullRequests: repositories.reduce(
+            (sum, r) => sum + (r.pullRequests?.totalCount || 0),
+            0,
+          ),
+          totalReleases: repositories.reduce(
+            (sum, r) => sum + (r.releases?.totalCount || 0),
+            0,
+          ),
+          totalCommits: repositories.reduce(
+            (sum, r) => sum + (r.commits?.totalCount || 0),
+            0,
+          ),
+          totalDeployments: repositories.reduce(
+            (sum, r) => sum + (r.deployments?.totalCount || 0),
+            0,
+          ),
+          totalEnvironments: repositories.reduce(
+            (sum, r) => sum + (r.environments?.totalCount || 0),
+            0,
+          ),
+          totalLanguages: repositories.reduce(
+            (sum, r) => sum + (r.languages?.nodes?.length || 0),
+            0,
+          ),
+          averageRepoSize:
+            repositories.length > 0
+              ? Math.round(
+                repositories.reduce((sum, r) => sum + (r.size || 0), 0) /
+                repositories.length,
+              )
+              : 0,
+          mostUsedLanguages: [],
+          topTopics: [],
+          repositoriesWithWebsite: repositories.filter((r) => !!r.homepageUrl)
+            .length,
+          repositoriesWithDeployments: repositories.filter(
+            (r) => r.deployments?.totalCount > 0,
+          ).length,
+          repositoriesWithActions: repositories.filter((r) => r.githubActions)
+            .length,
+          repositoriesWithSecurityAlerts: repositories.filter((r) => r.security)
+            .length,
+          repositoriesWithPackages: repositories.filter((r) => r.packages)
+            .length,
+          repositoriesWithBranchProtection: repositories.filter(
+            (r) => r.branchProtection,
+          ).length,
+          averageCommunityHealth: 0,
+        };
+        const metadata = {
+          generatedAt: new Date(),
+          totalRepositories: repositories.length,
+          organizations,
+          dataCollectionScope: ['user'],
+          breakdown,
+          statistics,
+        };
+        const saved = await databaseService.saveCompleteUserDataset(
+          userProfile,
+          repositories,
+          metadata,
+        );
+        // Génération des analytics quantitatives
+        logWithContext.api('generate_analytics_start', username, true);
+        const analyticsOverview =
+          await analyticsService.generateAnalyticsOverview(
+            userProfile,
+            repositories,
+          );
+        const analyticsExtension = {
+          analytics: analyticsOverview,
+          benchmarks: {
+            commits: {
+              percentile: 0,
+              category: 'beginner' as 'beginner',
+              comparisonGroup: 'all_developers' as 'all_developers',
+              strengths: [],
+              improvementAreas: [],
+            },
+            repositories: {
+              percentile: 0,
+              category: 'beginner' as 'beginner',
+              comparisonGroup: 'all_developers' as 'all_developers',
+              strengths: [],
+              improvementAreas: [],
+            },
+            languages: {
+              percentile: 0,
+              category: 'beginner' as 'beginner',
+              comparisonGroup: 'all_developers' as 'all_developers',
+              strengths: [],
+              improvementAreas: [],
+            },
+            stars: {
+              percentile: 0,
+              category: 'beginner' as 'beginner',
+              comparisonGroup: 'all_developers' as 'all_developers',
+              strengths: [],
+              improvementAreas: [],
+            },
+            collaboration: {
+              percentile: 0,
+              category: 'beginner' as 'beginner',
+              comparisonGroup: 'all_developers' as 'all_developers',
+              strengths: [],
+              improvementAreas: [],
+            },
+            consistency: {
+              percentile: 0,
+              category: 'beginner' as 'beginner',
+              comparisonGroup: 'all_developers' as 'all_developers',
+              strengths: [],
+              improvementAreas: [],
+            },
+          },
+          trends: [],
+          alerts: [],
+          recommendations: [],
+          updatedAt: new Date(),
+        };
+        await databaseService.updateDatasetAnalyses(
+          saved.dataset.id,
+          analyticsExtension,
+        );
+        logWithContext.api('generate_analytics_complete', username, true, {
+          datasetId: saved.dataset.id,
+          performanceScore: analyticsOverview.performance,
+          productivityScore: analyticsOverview.productivity,
+          languagesCount: analyticsOverview.languages.distribution.length,
         });
-
         res.status(200).json({
-          message: 'Analyse déjà à jour',
+          message: 'Analyse terminée avec succès',
           analysis: {
-            cached: true,
-            ageHours: analysisFreshness.ageHours,
-            lastAnalyzed: latestDataset?.updatedAt,
+            completed: true,
+            duration: Date.now() - new Date(saved.dataset.createdAt).getTime(),
+            fresh: true,
           },
           dataset: {
-            id: latestDataset?.id,
-            hasAnalytics: !!latestDataset?.analytics,
-            repositoriesCount: Array.isArray(latestDataset?.repositories) ? latestDataset.repositories.length : 0,
+            id: saved.dataset.id,
+            createdAt: saved.dataset.createdAt,
+            repositoriesCount: repositories.length,
+            hasAnalytics: true,
+            hasAiInsights: false,
+          },
+          _analytics: analyticsOverview,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (_error: unknown) {
+        logWithContext.api('analyze_user_failed', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+          errorType: (_error as Error).constructor.name,
+        });
+        throw _error;
+      }
+    },
+  );
+
+  static getAnalyticsOverview = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const authenticatedUser = req.user as AuthenticatedUser;
+      logWithContext.api('get_analytics_overview', req.path, true, {
+        targetUsername: username,
+        requesterId: authenticatedUser?.id,
+      });
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const latest = await databaseService.getLatestUserDataset(username);
+        if (!latest?.dataset.analytics) {
+          throw createError.notFound(
+            'Aucune analyse trouvée pour cet utilisateur',
+          );
+        }
+        const analytics = latest.dataset
+          .analytics as unknown as import('@/types/analytics').AnalyticsOverview;
+        res.status(200).json({
+          user: {
+            username: user.login,
+            name: user.name,
+            avatarUrl: user.avatarUrl,
+          },
+          _analytics: analytics,
+          metadata: {
+            datasetId: latest.dataset.id,
+            analyzedAt: latest.dataset.updatedAt,
+            repositoriesAnalyzed: Array.isArray(latest.dataset.repositories)
+              ? latest.dataset.repositories.length
+              : 0,
+            settings:
+              typeof latest.dataset.metadata === 'object' &&
+                latest.dataset.metadata &&
+                'settings' in latest.dataset.metadata
+                ? (latest.dataset.metadata as unknown as { settings: unknown }).settings
+                : undefined,
           },
           timestamp: new Date().toISOString(),
         });
         return;
+      } catch (_error: unknown) {
+        logWithContext.api('get_analytics_overview', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+        });
+        throw _error;
       }
+    },
+  );
 
-      // 2. Récupération des données depuis GitHub API
-      logWithContext.github('fetch_user_data_start', username, true);
-
-      // Récupération du profil utilisateur
-      const userProfile = await githubService.getUserProfile(username, authenticatedUser.githubToken);
-      if (!userProfile) {
-        throw createError.notFound('Profil utilisateur GitHub');
+  static getPerformanceMetrics = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const authenticatedUser = req.user as AuthenticatedUser;
+      logWithContext.api('get_performance_metrics', req.path, true, {
+        targetUsername: username,
+        requesterId: authenticatedUser?.id,
+      });
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const latest = await databaseService.getLatestUserDataset(username);
+        if (!latest?.dataset.analytics) {
+          throw createError.notFound('Aucune analyse de performance trouvée');
+        }
+        const analytics = latest.dataset
+          .analytics as unknown as import('@/types/analytics').AnalyticsOverview;
+        const performance = analytics.performance;
+        res.status(200).json({
+          user: {
+            username: user.login,
+            name: user.name,
+          },
+          performance,
+          metadata: {
+            analyzedAt: latest.dataset.updatedAt,
+            repositoriesCount: Array.isArray(latest.dataset.repositories)
+              ? latest.dataset.repositories.length
+              : 0,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (_error: unknown) {
+        logWithContext.api('get_performance_metrics', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+        });
+        throw _error;
       }
+    },
+  );
 
-      // Récupération des repositories
-      const repositories = await githubService.getUserRepos(
-        username,
-        authenticatedUser.githubToken,
-        analysisParams.includePrivate,
-      );
-
-      logWithContext.github('fetch_user_data_complete', username, true, {
-        repositoriesCount: repositories.length,
-        includePrivate: analysisParams.includePrivate,
+  static getLanguageAnalytics = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const authenticatedUser = req.user as AuthenticatedUser;
+      logWithContext.api('get_language_analytics', req.path, true, {
+        targetUsername: username,
+        requesterId: authenticatedUser?.id,
       });
-
-      // 3. Sauvegarde des données brutes
-      const savedDataset = await databaseService.saveUserDataset({
-        userProfile,
-        repositories,
-        metadata: {
-          datasetId: `dataset_${username}_${Date.now()}`,
-          collectionDate: new Date(),
-          githubUsername: username,
-          fullName: userProfile.name,
-          scope: analysisParams.includePrivate ? 'user_repositories' : 'public_repositories',
-          totalRepositories: repositories.length,
-          analysisVersion: '1.0.0',
-          dataVersion: '1.0.0',
-          settings: {
-            includePrivateRepos: analysisParams.includePrivate,
-            includeForkedRepos: true,
-            includeArchivedRepos: false,
-            analysisDepth: 'standard',
-            aiAnalysisEnabled: true,
-          },
-        },
-      });
-
-      // 4. Génération des analytics quantitatives
-      logWithContext.analytics('generate_analytics_start', username, true);
-
-      const analyticsOverview = await analyticsService.generateAnalyticsOverview(
-        userProfile,
-        repositories,
-      );
-
-      // Sauvegarde des analytics
-      await databaseService.updateDatasetAnalytics(savedDataset.id, analyticsOverview);
-
-      logWithContext.analytics('generate_analytics_complete', username, true, {
-        datasetId: savedDataset.id,
-        performanceScore: analyticsOverview.performance.overallScore,
-        productivityScore: analyticsOverview.productivity.overallScore,
-        languagesCount: analyticsOverview.languages.languages.length,
-      });
-
-      res.status(200).json({
-        message: 'Analyse terminée avec succès',
-        analysis: {
-          completed: true,
-          duration: Date.now() - new Date(savedDataset.createdAt).getTime(),
-          fresh: true,
-        },
-        dataset: {
-          id: savedDataset.id,
-          createdAt: savedDataset.createdAt,
-          repositoriesCount: repositories.length,
-          hasAnalytics: true,
-          hasAiInsights: false, // Sera mis à jour par InsightsController
-        },
-        _analytics: {
-          performance: {
-            overallScore: analyticsOverview.performance.overallScore,
-            codeQuality: analyticsOverview.performance.codeQualityScore,
-            consistency: analyticsOverview.performance.consistencyScore,
-          },
-          productivity: {
-            overallScore: analyticsOverview.productivity.overallScore,
-            commitFrequency: analyticsOverview.productivity.commitFrequency,
-            averageCommitsPerRepo: analyticsOverview.productivity.averageCommitsPerRepo,
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const latest = await databaseService.getLatestUserDataset(username);
+        if (!latest?.dataset.analytics) {
+          throw createError.notFound('Aucune analyse de langages trouvée');
+        }
+        const languages = (
+          latest.dataset
+            .analytics as unknown as import('@/types/analytics').AnalyticsOverview
+        ).languages;
+        const repositories = latest.repositories || [];
+        res.status(200).json({
+          user: {
+            username: user.login,
+            name: user.name,
           },
           languages: {
-            primaryLanguage: analyticsOverview.languages.primaryLanguage,
-            totalLanguages: analyticsOverview.languages.languages.length,
-            diversity: analyticsOverview.languages.diversityIndex,
-          },
-        },
-        timestamp: new Date().toISOString(),
-      });
-
-    } catch (_error: unknown) {
-      logWithContext.api('analyze_user_failed', req.path, false, {
-        targetUsername: username,
-        _error: error.message,
-        errorType: error.constructor.name,
-      });
-
-      throw error;
-    }
-  });
-
-  /**
-     * Vue d'ensemble des métriques d'un utilisateur
-     * GET /api/analytics/:username/overview
-     */
-  static getAnalyticsOverview = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const authenticatedUser = req.user as AuthenticatedUser;
-
-    logWithContext.api('get_analytics_overview', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser?.id,
-    });
-
-    try {
-      // Récupération de l'utilisateur
-      const userData = await databaseService.getUser(username);
-      if (!userData) {
-        throw createError.notFound('Utilisateur');
-      }
-
-      // Récupération du dataset avec analytics
-      const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset?.analytics) {
-        throw createError.notFound('Aucune analyse trouvée pour cet utilisateur');
-      }
-
-      const analytics = latestDataset.analytics as any; // Cast pour éviter les erreurs de type
-
-      logWithContext.api('get_analytics_overview', req.path, true, {
-        targetUsername: username,
-        datasetAge: Date.now() - new Date(latestDataset.updatedAt).getTime(),
-      });
-
-      res.status(200).json({
-        user: {
-          username: userData.login,
-          name: userData.name,
-          avatarUrl: userData.avatarUrl,
-        },
-        _analytics: {
-          performance: analytics.performance,
-          productivity: analytics.productivity,
-          languages: analytics.languages,
-          activity: analytics.activity,
-          complexity: analytics.complexity,
-          devops: analytics.devops,
-          collaboration: analytics.collaboration,
-        },
-        metadata: {
-          datasetId: latestDataset.id,
-          analyzedAt: latestDataset.updatedAt,
-          repositoriesAnalyzed: Array.isArray(latestDataset.repositories) ? latestDataset.repositories.length : 0,
-          settings: latestDataset.metadata.settings,
-        },
-        timestamp: new Date().toISOString(),
-      });
-
-    } catch (_error: unknown) {
-      logWithContext.api('get_analytics_overview', req.path, false, {
-        targetUsername: username,
-        _error: error.message,
-      });
-
-      throw error;
-    }
-  });
-
-  /**
-     * Métriques de performance détaillées
-     * GET /api/analytics/:username/performance
-     */
-  static getPerformanceMetrics = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const authenticatedUser = req.user as AuthenticatedUser;
-
-    logWithContext.api('get_performance_metrics', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser?.id,
-    });
-
-    try {
-      const userData = await databaseService.getUser(username);
-      if (!userData) {
-        throw createError.notFound('Utilisateur');
-      }
-
-      const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset?.analytics) {
-        throw createError.notFound('Aucune analyse de performance trouvée');
-      }
-
-      const analytics = latestDataset.analytics as any;
-      const performance = analytics.performance;
-
-      res.status(200).json({
-        user: {
-          username: userData.login,
-          name: userData.name,
-        },
-        performance: {
-          overall: {
-            score: performance.overallScore,
-            grade: performance.overallScore >= 80 ? 'A' :
-              performance.overallScore >= 60 ? 'B' :
-                performance.overallScore >= 40 ? 'C' : 'D',
-          },
-          codeQuality: {
-            score: performance.codeQualityScore,
-            metrics: {
-              documentationCoverage: performance.documentationCoverage,
-              testCoverage: performance.testCoverage ?? 0,
-              codeReusability: performance.codeReusability,
+            primary: languages.primary,
+            diversity: {
+              _index:
+                languages.distribution.length > 0
+                  ? languages.distribution.length / repositories.length
+                  : 0,
+              totalLanguages: languages.distribution.length,
+              description:
+                languages.distribution.length > 10
+                  ? 'Très diversifié'
+                  : languages.distribution.length > 5
+                    ? 'Diversifié'
+                    : languages.distribution.length > 2
+                      ? 'Modérément diversifié'
+                      : 'Peu diversifié',
             },
-          },
-          consistency: {
-            score: performance.consistencyScore,
-            metrics: {
-              commitMessageQuality: performance.commitMessageQuality,
-              namingConsistency: performance.namingConsistency,
-              projectStructure: performance.projectStructureScore,
+            distribution: languages.distribution,
+            trends: languages.trends,
+            experience: {
+              senior:
+                languages.expertise.advanced.length +
+                languages.expertise.expert.length,
+              intermediate: languages.expertise.intermediate.length,
+              beginner: languages.expertise.beginner.length,
             },
+            recommendations: [], // LanguageAnalytics n'a pas recommendations, donc valeur par défaut
           },
-          efficiency: {
-            score: performance.efficiencyScore,
-            metrics: {
-              averageCommitSize: performance.averageCommitSize,
-              issueResolutionTime: performance.issueResolutionTime ?? 0,
-              pullRequestEfficiency: performance.pullRequestEfficiency ?? 0,
+          metadata: {
+            analyzedAt: latest.dataset.updatedAt,
+            repositoriesAnalyzed: Array.isArray(latest.dataset.repositories)
+              ? latest.dataset.repositories.length
+              : 0,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (_error: unknown) {
+        logWithContext.api('get_language_analytics', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+        });
+        throw _error;
+      }
+    },
+  );
+
+  static getActivityPatterns = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const authenticatedUser = req.user as AuthenticatedUser;
+      logWithContext.api('get_activity_patterns', req.path, true, {
+        targetUsername: username,
+        requesterId: authenticatedUser?.id,
+      });
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const latest = await databaseService.getLatestUserDataset(username);
+        if (!latest?.dataset.analytics) {
+          throw createError.notFound("Aucune analyse d'activité trouvée");
+        }
+        const activity = (
+          latest.dataset
+            .analytics as unknown as import('@/types/analytics').AnalyticsOverview
+        ).activity;
+        res.status(200).json({
+          user: {
+            username: user.login,
+            name: user.name,
+          },
+          activity: {
+            patterns: {
+              hourly: activity.hourlyDistribution,
+              daily: activity.dailyDistribution,
+              monthly: activity.monthlyDistribution,
             },
+            seasonality: activity.seasonality,
           },
-        },
-        metadata: {
-          analyzedAt: latestDataset.updatedAt,
-          repositoriesCount: Array.isArray(latestDataset.repositories) ? latestDataset.repositories.length : 0,
-        },
-        timestamp: new Date().toISOString(),
-      });
+          metadata: {
+            analyzedAt: latest.dataset.updatedAt,
+            timeRange: activity.seasonality
+              ? activity.seasonality.mostActiveQuarter
+              : undefined,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (_error: unknown) {
+        logWithContext.api('get_activity_patterns', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+        });
+        throw _error;
+      }
+    },
+  );
 
-    } catch (_error: unknown) {
-      logWithContext.api('get_performance_metrics', req.path, false, {
+  static getProductivityScore = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const authenticatedUser = req.user as AuthenticatedUser;
+      logWithContext.api('get_productivity_score', req.path, true, {
         targetUsername: username,
-        _error: error.message,
+        requesterId: authenticatedUser?.id,
       });
-
-      throw error;
-    }
-  });
-
-  /**
-     * Analyse des langages de programmation
-     * GET /api/analytics/:username/languages
-     */
-  static getLanguageAnalytics = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const authenticatedUser = req.user as AuthenticatedUser;
-
-    logWithContext.api('get_language_analytics', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser?.id,
-    });
-
-    try {
-      const userData = await databaseService.getUser(username);
-      if (!userData) {
-        throw createError.notFound('Utilisateur');
-      }
-
-      const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset?.analytics) {
-        throw createError.notFound('Aucune analyse de langages trouvée');
-      }
-
-      const analytics = latestDataset.analytics as any;
-      const languages = analytics.languages;
-
-      res.status(200).json({
-        user: {
-          username: userData.login,
-          name: userData.name,
-        },
-        languages: {
-          primary: languages.primaryLanguage,
-          diversity: {
-            _index: languages.diversityIndex,
-            totalLanguages: languages.languages.length,
-            description: languages.diversityIndex > 0.7 ? 'Très diversifié' :
-              languages.diversityIndex > 0.5 ? 'Diversifié' :
-                languages.diversityIndex > 0.3 ? 'Modérément diversifié' : 'Peu diversifié',
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const latest = await databaseService.getLatestUserDataset(username);
+        if (!latest?.dataset.analytics) {
+          throw createError.notFound('Aucune analyse de productivité trouvée');
+        }
+        const productivity = (
+          latest.dataset
+            .analytics as unknown as import('@/types/analytics').AnalyticsOverview
+        ).productivity;
+        res.status(200).json({
+          user: {
+            username: user.login,
+            name: user.name,
           },
-          distribution: languages.languages,
-          trends: languages.trendAnalysis,
-          experience: {
-            senior: languages.languages.filter((l: unknown) => l.experienceLevel === 'Senior').length,
-            intermediate: languages.languages.filter((l: unknown) => l.experienceLevel === 'Intermediate').length,
-            beginner: languages.languages.filter((l: unknown) => l.experienceLevel === 'Beginner').length,
+          productivity,
+          metadata: {
+            analyzedAt: latest.dataset.updatedAt,
+            repositoriesCount: Array.isArray(latest.dataset.repositories)
+              ? latest.dataset.repositories.length
+              : 0,
           },
-          recommendations: languages.recommendations,
-        },
-        metadata: {
-          analyzedAt: latestDataset.updatedAt,
-          repositoriesAnalyzed: Array.isArray(latestDataset.repositories) ? latestDataset.repositories.length : 0,
-        },
-        timestamp: new Date().toISOString(),
-      });
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (_error: unknown) {
+        logWithContext.api('get_productivity_score', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+        });
+        throw _error;
+      }
+    },
+  );
 
-    } catch (_error: unknown) {
-      logWithContext.api('get_language_analytics', req.path, false, {
+  static getDevOpsMaturity = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { username } = req.params;
+      const authenticatedUser = req.user as AuthenticatedUser;
+      logWithContext.api('get_devops_maturity', req.path, true, {
         targetUsername: username,
-        _error: error.message,
+        requesterId: authenticatedUser?.id,
       });
-
-      throw error;
-    }
-  });
-
-  /**
-     * Patterns d'activité
-     * GET /api/analytics/:username/activity
-     */
-  static getActivityPatterns = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const authenticatedUser = req.user as AuthenticatedUser;
-
-    logWithContext.api('get_activity_patterns', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser?.id,
-    });
-
-    try {
-      const userData = await databaseService.getUser(username);
-      if (!userData) {
-        throw createError.notFound('Utilisateur');
+      try {
+        const user = await UserModel.findByLogin(username);
+        if (!user) {
+          throw createError.notFound('Utilisateur');
+        }
+        const latest = await databaseService.getLatestUserDataset(username);
+        if (!latest?.dataset.analytics) {
+          throw createError.notFound('Aucune analyse DevOps trouvée');
+        }
+        const devops = (
+          latest.dataset
+            .analytics as unknown as import('@/types/analytics').AnalyticsOverview
+        ).devops;
+        res.status(200).json({
+          user: {
+            username: user.login,
+            name: user.name,
+          },
+          devops,
+          metadata: {
+            analyzedAt: latest.dataset.updatedAt,
+            repositoriesWithDevOps: 0,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (_error: unknown) {
+        logWithContext.api('get_devops_maturity', req.path, false, {
+          targetUsername: username,
+          error: String(_error),
+        });
+        throw _error;
       }
-
-      const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset?.analytics) {
-        throw createError.notFound('Aucune analyse d\'activité trouvée');
-      }
-
-      const analytics = latestDataset.analytics as any;
-      const activity = analytics.activity;
-
-      res.status(200).json({
-        user: {
-          username: userData.login,
-          name: userData.name,
-        },
-        activity: {
-          patterns: {
-            weeklyPattern: activity.weeklyPattern,
-            monthlyPattern: activity.monthlyPattern,
-            yearlyPattern: activity.yearlyTrend,
-          },
-          peaks: {
-            mostActiveDay: activity.peakActivityDay,
-            mostActiveMonth: activity.peakActivityMonth,
-            averageDailyCommits: activity.averageDailyCommits,
-          },
-          consistency: {
-            score: activity.consistencyScore,
-            streaks: {
-              longest: activity.longestStreak,
-              current: activity.currentStreak,
-            },
-            regularity: activity.commitRegularity,
-          },
-          seasonal: {
-            trends: activity.seasonalTrends,
-            preferences: activity.workingHoursPattern,
-          },
-        },
-        metadata: {
-          analyzedAt: latestDataset.updatedAt,
-          timeRange: activity.analysisTimeRange,
-        },
-        timestamp: new Date().toISOString(),
-      });
-
-    } catch (_error: unknown) {
-      logWithContext.api('get_activity_patterns', req.path, false, {
-        targetUsername: username,
-        _error: error.message,
-      });
-
-      throw error;
-    }
-  });
-
-  /**
-     * Score de productivité
-     * GET /api/analytics/:username/productivity
-     */
-  static getProductivityScore = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const authenticatedUser = req.user as AuthenticatedUser;
-
-    logWithContext.api('get_productivity_score', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser?.id,
-    });
-
-    try {
-      const userData = await databaseService.getUser(username);
-      if (!userData) {
-        throw createError.notFound('Utilisateur');
-      }
-
-      const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset?.analytics) {
-        throw createError.notFound('Aucune analyse de productivité trouvée');
-      }
-
-      const analytics = latestDataset.analytics as any;
-      const productivity = analytics.productivity;
-
-      res.status(200).json({
-        user: {
-          username: userData.login,
-          name: userData.name,
-        },
-        productivity: {
-          overall: {
-            score: productivity.overallScore,
-            level: productivity.overallScore >= 80 ? 'Très élevée' :
-              productivity.overallScore >= 60 ? 'Élevée' :
-                productivity.overallScore >= 40 ? 'Modérée' : 'Faible',
-          },
-          commits: {
-            frequency: productivity.commitFrequency,
-            averagePerRepo: productivity.averageCommitsPerRepo,
-            averagePerWeek: productivity.averageCommitsPerWeek,
-            consistency: productivity.commitConsistency,
-          },
-          projects: {
-            activeProjects: productivity.activeProjects,
-            completedProjects: productivity.completedProjects,
-            averageProjectDuration: productivity.averageProjectDuration,
-            multiProjectBalance: productivity.multiProjectBalance,
-          },
-          impact: {
-            codeImpact: productivity.codeImpact,
-            communityImpact: productivity.communityImpact,
-            innovationIndex: productivity.innovationIndex,
-          },
-          efficiency: {
-            outputQuality: productivity.outputQuality,
-            deliverySpeed: productivity.deliverySpeed,
-            technicalDebt: productivity.technicalDebt,
-          },
-        },
-        metadata: {
-          analyzedAt: latestDataset.updatedAt,
-          repositoriesCount: Array.isArray(latestDataset.repositories) ? latestDataset.repositories.length : 0,
-        },
-        timestamp: new Date().toISOString(),
-      });
-
-    } catch (_error: unknown) {
-      logWithContext.api('get_productivity_score', req.path, false, {
-        targetUsername: username,
-        _error: error.message,
-      });
-
-      throw error;
-    }
-  });
-
-  /**
-     * Maturité DevOps
-     * GET /api/analytics/:username/devops
-     */
-  static getDevOpsMaturity = asyncHandler(async (req: Request, _res: Response): Promise<void> => {
-    const { username } = req.params;
-    const authenticatedUser = req.user as AuthenticatedUser;
-
-    logWithContext.api('get_devops_maturity', req.path, true, {
-      targetUsername: username,
-      requesterId: authenticatedUser?.id,
-    });
-
-    try {
-      const userData = await databaseService.getUser(username);
-      if (!userData) {
-        throw createError.notFound('Utilisateur');
-      }
-
-      const latestDataset = await databaseService.getLatestDatasetForUser(userData.id);
-      if (!latestDataset?.analytics) {
-        throw createError.notFound('Aucune analyse DevOps trouvée');
-      }
-
-      const analytics = latestDataset.analytics as any;
-      const devops = analytics.devops;
-
-      res.status(200).json({
-        user: {
-          username: userData.login,
-          name: userData.name,
-        },
-        devops: {
-          maturity: {
-            overall: devops.maturityLevel,
-            score: devops.overallScore,
-          },
-          cicd: {
-            adoption: devops.cicdAdoption,
-            sophistication: devops.cicdSophistication,
-            automation: devops.automationLevel,
-          },
-          security: {
-            score: devops.securityScore,
-            practices: devops.securityPractices,
-            vulnerabilities: devops.vulnerabilityManagement,
-          },
-          monitoring: {
-            level: devops.monitoringLevel,
-            practices: devops.monitoringPractices,
-          },
-          documentation: {
-            coverage: devops.documentationCoverage,
-            quality: devops.documentationQuality,
-          },
-          collaboration: {
-            practices: devops.collaborationPractices,
-            toolsUsage: devops.toolsUsage,
-          },
-        },
-        recommendations: devops.recommendations,
-        metadata: {
-          analyzedAt: latestDataset.updatedAt,
-          repositoriesWithDevOps: devops.repositoriesWithDevOpsCount,
-        },
-        timestamp: new Date().toISOString(),
-      });
-
-    } catch (_error: unknown) {
-      logWithContext.api('get_devops_maturity', req.path, false, {
-        targetUsername: username,
-        _error: error.message,
-      });
-
-      throw error;
-    }
-  });
+    },
+  );
 }
 
 export default AnalyticsController;

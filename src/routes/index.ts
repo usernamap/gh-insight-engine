@@ -1,4 +1,4 @@
-import { Express, Router } from 'express';
+import { Express, Response, Router } from 'express';
 import authRoutes from './auth';
 import userRoutes from './users';
 import repositoryRoutes from './repositories';
@@ -13,7 +13,7 @@ export const setupRoutes = (app: Express): void => {
   const apiRouter = Router();
 
   // Route de santé (health check)
-  apiRouter.get('/health', (req, res) => {
+  apiRouter.get('/health', (res: Response) => {
     res.status(200).json({
       status: 'healthy',
       service: 'GitHub Insight Engine API',
@@ -25,8 +25,10 @@ export const setupRoutes = (app: Express): void => {
   });
 
   // Route ping simple
-  apiRouter.get('/ping', (req, res) => {
-    res.status(200).json({ message: 'pong', timestamp: new Date().toISOString() });
+  apiRouter.get('/ping', (res: Response) => {
+    res
+      .status(200)
+      .json({ message: 'pong', timestamp: new Date().toISOString() });
   });
 
   // Routes d'authentification
@@ -50,10 +52,11 @@ export const setupRoutes = (app: Express): void => {
   app.use('/api', apiRouter);
 
   // Route racine avec documentation basique
-  app.get('/', (req, res) => {
+  app.get('/', (res: Response) => {
     res.status(200).json({
       name: 'GitHub Insight Engine API',
-      description: 'API REST pour l\'analyse en profondeur des données GitHub avec insights IA',
+      description:
+        "API REST pour l'analyse en profondeur des données GitHub avec insights IA",
       version: process.env.npm_package_version ?? '1.0.0',
       documentation: {
         endpoints: {
@@ -76,7 +79,9 @@ export const setupRoutes = (app: Express): void => {
           analysis: '10 analyses par heure par IP',
         },
         support: {
-          github: process.env.GITHUB_REPOSITORY_URL ?? 'https://github.com/org/gh-insight-engine',
+          github:
+            process.env.GITHUB_REPOSITORY_URL ??
+            'https://github.com/org/gh-insight-engine',
           documentation: '/docs (à venir)',
         },
       },

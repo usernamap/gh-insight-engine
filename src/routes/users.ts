@@ -17,7 +17,8 @@ const router = Router();
  * @access  Public
  * @query   { query?: string, location?: string, language?: string, minFollowers?: number, minRepos?: number, page?: number, limit?: number, sortBy?: string, sortOrder?: 'asc'|'desc' }
  */
-router.get('/search',
+router.get(
+  '/search',
   optionalJWT,
   validateUserSearch,
   UserController.searchUsers,
@@ -28,17 +29,15 @@ router.get('/search',
  * @desc    Statistiques globales des utilisateurs
  * @access  Public
  */
-router.get('/stats',
-  optionalJWT,
-  UserController.getUsersStats,
-);
+router.get('/stats', optionalJWT, UserController.getUsersStats);
 
 /**
  * @route   GET /api/users/:username
  * @desc    Récupération du profil d'un utilisateur
  * @access  Public
  */
-router.get('/:username',
+router.get(
+  '/:username',
   optionalJWT,
   validateUserParams,
   UserController.getUserProfile,
@@ -50,7 +49,8 @@ router.get('/:username',
  * @access  Public
  * @query   { page?: number, limit?: number, sortBy?: string, sortOrder?: 'asc'|'desc' }
  */
-router.get('/:username/repositories',
+router.get(
+  '/:username/repositories',
   optionalJWT,
   validateUserWithPagination,
   UserController.getUserRepositories,
@@ -61,7 +61,8 @@ router.get('/:username/repositories',
  * @desc    Statut de l'analyse d'un utilisateur
  * @access  Public
  */
-router.get('/:username/status',
+router.get(
+  '/:username/status',
   optionalJWT,
   validateUserParams,
   UserController.getUserAnalysisStatus,
@@ -72,7 +73,8 @@ router.get('/:username/status',
  * @desc    Suppression des données utilisateur (GDPR)
  * @access  Private (JWT requis + ownership)
  */
-router.delete('/:username',
+router.delete(
+  '/:username',
   authenticateJWT,
   validateUserParams,
   requireOwnership,

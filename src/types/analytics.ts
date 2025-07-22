@@ -151,6 +151,38 @@ export interface AnalyticsResponse {
   };
 }
 
+// Interface spécifique pour la réponse d'analyse utilisateur complète
+export interface UserAnalysisResponse {
+  message: string;
+  analysis: {
+    completed: boolean;
+    duration: number;
+    fresh: boolean;
+  };
+  dataset: {
+    id: string;
+    createdAt: Date;
+    repositoriesCount: number;
+    hasAnalytics: boolean;
+    hasAiInsights: boolean;
+  };
+  _analytics: AnalyticsOverview;
+  timestamp: string;
+}
+
+// Interface pour les réponses de récupération d'analytics existantes
+export interface AnalyticsRetrievalResponse {
+  success: boolean;
+  data: AnalyticsOverview;
+  metadata: {
+    datasetId: string;
+    generatedAt: string;
+    fresh: boolean;
+    lastUpdated: string;
+  };
+  timestamp: string;
+}
+
 // Types pour comparaisons et benchmarking
 export interface BenchmarkData {
   percentile: number;

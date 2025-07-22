@@ -4,9 +4,145 @@
  * Toutes les requêtes GraphQL et REST API avec gestion d'erreurs
  */
 
-import { GitHubRepo, GraphQLResponse, UserProfile } from '@/types/github';
+import {
+  GitHubGraphQLOrganizationNode,
+  GitHubGraphQLOrganizationRepositoriesResponse,
+  GitHubGraphQLRepositoriesResponse,
+  GitHubGraphQLRepositoryNode,
+  GitHubGraphQLUserBasic,
+  GitHubGraphQLUserBasicResponse,
+  GitHubGraphQLUserCounters,
+  GitHubGraphQLUserCountersResponse,
+  GitHubGraphQLUserOrganizations,
+  GitHubGraphQLUserOrganizationsResponse,
+  GitHubRepo,
+  GitHubRestCodeScanningAlert,
+  GitHubRestCommunityProfile,
+  GitHubRestDependabotAlert,
+  GitHubRestPackage,
+  GitHubRestTrafficPaths,
+  GitHubRestWorkflow,
+  GitHubRestWorkflowRun,
+  GraphQLResponse,
+  UserProfile,
+} from '@/types/github';
+
 import githubConfig from '@/config/github';
 import logger from '@/utils/logger';
+
+// Fonction utilitaire stricte pour transformer un node GraphQL en GitHubRepo
+function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
+  return {
+    nameWithOwner: node.nameWithOwner,
+    name: node.name,
+    description: node.description ?? '',
+    isPrivate: node.isPrivate,
+    isArchived: node.isArchived,
+    isFork: node.isFork,
+    isTemplate: node.isTemplate,
+    stargazerCount: node.stargazerCount,
+    forkCount: node.forkCount,
+    watchersCount: node.watchers?.totalCount ?? 0,
+    subscriberCount: node.subscriberCount ?? 0,
+    networkCount: node.networkCount ?? 0,
+    openIssuesCount: node.openIssuesCount ?? 0,
+    primaryLanguage: node.primaryLanguage?.name ?? '',
+    languages: {
+      totalSize: node.languages?.totalSize ?? 0,
+      nodes:
+        node.languages?.edges?.map((edge) => ({
+          name: edge.node.name,
+          size: edge.size,
+          percentage: 0,
+        })) ?? [],
+    },
+    topics: node.repositoryTopics?.nodes?.map((t) => t.topic.name) ?? [],
+    pushedAt: new Date(node.pushedAt),
+    updatedAt: new Date(node.updatedAt),
+    createdAt: new Date(node.createdAt),
+    homepageUrl: node.homepageUrl ?? '',
+    size: node.diskUsage ?? 0,
+    defaultBranchRef: node.defaultBranchRef?.name ?? '',
+    license: node.licenseInfo
+      ? {
+        name: node.licenseInfo.name,
+        spdxId: node.licenseInfo.spdxId,
+        url: node.licenseInfo.url,
+      }
+      : null,
+    hasIssuesEnabled: node.hasIssuesEnabled ?? false,
+    hasProjectsEnabled: node.hasProjectsEnabled ?? false,
+    hasWikiEnabled: node.hasWikiEnabled ?? false,
+    hasPages: node.hasPages ?? false,
+    hasDownloads: node.hasDownloads ?? false,
+    hasDiscussions: node.hasDiscussions ?? false,
+    vulnerabilityAlertsEnabled: node.vulnerabilityAlertsEnabled ?? false,
+    securityPolicyEnabled: node.securityPolicyEnabled ?? false,
+    codeOfConductEnabled: node.codeOfConductEnabled ?? false,
+    contributingGuidelinesEnabled: node.contributingGuidelinesEnabled ?? false,
+    readmeEnabled: node.readmeEnabled ?? false,
+    deployments: node.deployments ?? { totalCount: 0 },
+    environments: node.environments ?? { totalCount: 0 },
+    commits: node.commits?.target?.history
+      ? {
+        totalCount: node.commits.target.history.totalCount,
+        recent:
+          node.commits.target.history.nodes?.map((commit) => ({
+            oid: commit.oid,
+            message: commit.message,
+            committedDate: new Date(commit.committedDate),
+            author: {
+              name: commit.author.name,
+              email: commit.author.email,
+              login: commit.author.user?.login ?? null,
+            },
+            additions: commit.additions,
+            deletions: commit.deletions,
+            changedFiles: commit.changedFiles,
+          })) ?? [],
+      }
+      : { totalCount: 0, recent: [] },
+    releases: node.releases
+      ? {
+        totalCount: node.releases.totalCount,
+        latestRelease: node.releases.nodes?.length
+          ? {
+            name: node.releases.nodes[0].name,
+            tagName: node.releases.nodes[0].tagName,
+            publishedAt: new Date(node.releases.nodes[0].publishedAt),
+            isLatest: node.releases.nodes[0].isLatest,
+          }
+          : null,
+      }
+      : { totalCount: 0, latestRelease: null },
+    issues: node.issues
+      ? {
+        totalCount: node.issues.totalCount,
+        openCount: node.issues.openCount ?? 0,
+        closedCount: node.issues.closedCount ?? 0,
+      }
+      : { totalCount: 0, openCount: 0, closedCount: 0 },
+    pullRequests: node.pullRequests
+      ? {
+        totalCount: node.pullRequests.totalCount,
+        openCount: node.pullRequests.openCount ?? 0,
+        closedCount: node.pullRequests.closedCount ?? 0,
+        mergedCount: node.pullRequests.mergedCount ?? 0,
+      }
+      : { totalCount: 0, openCount: 0, closedCount: 0, mergedCount: 0 },
+    branchProtectionRules: node.branchProtectionRules ?? { totalCount: 0 },
+    collaborators: node.collaborators ?? { totalCount: 0 },
+    githubActions: undefined,
+    security: undefined,
+    packages: undefined,
+    branchProtection: undefined,
+    community: undefined,
+    traffic: undefined,
+    diskUsage: node.diskUsage ?? 0,
+    owner: node.owner,
+    userId: undefined,
+  };
+}
 
 export class GitHubService {
   /**
@@ -27,21 +163,33 @@ export class GitHubService {
     `;
 
     try {
-      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(query);
+      const response: GraphQLResponse =
+        await githubConfig.executeGraphQLQuery(query);
 
       if (response.errors) {
-        throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
+        throw new Error(
+          `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+        );
       }
 
-      const organizations = response.data?.viewer?.organizations?.nodes ?? [];
-      const orgNames = organizations.map((org: unknown) => org.login);
+      const organizations =
+        (
+          response.data as {
+            viewer?: { organizations?: { nodes?: { login: string }[] } };
+          }
+        )?.viewer?.organizations?.nodes ?? [];
+      const orgNames = organizations.map((org: { login: string }) => org.login);
 
       logger.info('Organisations récupérées', { count: orgNames.length });
 
       return orgNames;
     } catch (_error: unknown) {
-      logger.error('Erreur récupération organisations', { error: error.message });
-      throw new Error(`Récupération organisations échouée: ${error.message}`);
+      logger.error('Erreur récupération organisations', {
+        error: (_error as Error).message,
+      });
+      throw new Error(
+        `Récupération organisations échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -103,23 +251,27 @@ export class GitHubService {
     `;
 
     try {
-      const [basicResponse, countersResponse, orgsResponse] = await Promise.all([
-        githubConfig.executeGraphQLQuery(basicQuery),
-        githubConfig.executeGraphQLQuery(countersQuery),
-        githubConfig.executeGraphQLQuery(orgsQuery),
-      ]);
+      const [basicResponse, countersResponse, orgsResponse] = await Promise.all(
+        [
+          githubConfig.executeGraphQLQuery(basicQuery),
+          githubConfig.executeGraphQLQuery(countersQuery),
+          githubConfig.executeGraphQLQuery(orgsQuery),
+        ],
+      );
 
       // Vérification des erreurs
       const responses = [basicResponse, countersResponse, orgsResponse];
       for (const response of responses) {
         if (response.errors) {
-          throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
+          throw new Error(
+            `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+          );
         }
       }
 
-      const basic = basicResponse.data?.viewer ?? {};
-      const counters = countersResponse.data?.viewer ?? {};
-      const orgs = orgsResponse.data?.viewer ?? {};
+      const basic = (basicResponse.data as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
+      const counters = (countersResponse.data as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
+      const orgs = (orgsResponse.data as GitHubGraphQLUserOrganizationsResponse)?.viewer ?? {} as GitHubGraphQLUserOrganizations;
 
       const userProfile: UserProfile = {
         login: basic.login,
@@ -146,12 +298,13 @@ export class GitHubService {
         hireable: basic.isHireable,
         organizations: {
           totalCount: orgs.organizations?.totalCount ?? 0,
-          nodes: orgs.organizations?.nodes?.map((org: unknown) => ({
-            login: org.login,
-            name: org.name,
-            description: org.description,
-            avatarUrl: org.avatarUrl,
-          })) ?? [],
+          nodes:
+            orgs.organizations?.nodes?.map((org: GitHubGraphQLOrganizationNode) => ({
+              login: org.login,
+              name: org.name,
+              description: org.description,
+              avatarUrl: org.avatarUrl,
+            })) ?? [],
         },
       };
 
@@ -163,8 +316,12 @@ export class GitHubService {
 
       return userProfile;
     } catch (_error: unknown) {
-      logger.error('Erreur récupération profil utilisateur', { error: error.message });
-      throw new Error(`Récupération profil échouée: ${error.message}`);
+      logger.error('Erreur récupération profil utilisateur', {
+        error: (_error as Error).message,
+      });
+      throw new Error(
+        `Récupération profil échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -262,123 +419,22 @@ export class GitHubService {
 
     try {
       const variables = cursor ? { cursor } : {};
-      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(query, variables);
+      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(
+        query,
+        variables,
+      );
 
       if (response.errors) {
-        throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
+        throw new Error(
+          `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+        );
       }
 
-      const repositories = response.data?.viewer?.repositories?.nodes ?? [];
-      const pageInfo = response.data?.viewer?.repositories?.pageInfo;
+      const repositories =
+        ((response.data as unknown) as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.nodes ?? [];
+      const pageInfo = ((response.data as unknown) as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.pageInfo;
 
-      const repos: GitHubRepo[] = repositories.map((repo: GitHubRepo) => {
-        // Transformation des langages
-        const languageNodes = repo.languages?.edges?.map((edge: unknown) => ({
-          name: edge.node.name,
-          size: edge.size,
-          percentage: Math.round((edge.size / repo.languages.totalSize) * 100),
-        })) ?? [];
-
-        // Transformation des topics
-        const topics = repo.repositoryTopics?.nodes?.map((node: unknown) => node.topic.name) ?? [];
-
-        // Transformation des commits
-        const commitHistory = repo.commits?.target?.history;
-        const commits = {
-          totalCount: commitHistory?.totalCount ?? 0,
-          recent: commitHistory?.nodes?.map((commit: unknown) => ({
-            oid: commit.oid,
-            message: commit.message,
-            committedDate: new Date(commit.committedDate),
-            author: {
-              name: commit.author.name,
-              email: commit.author.email,
-              login: commit.author.user?.login ?? null,
-            },
-            additions: commit.additions,
-            deletions: commit.deletions,
-            changedFiles: commit.changedFiles,
-          })) ?? [],
-        };
-
-        return {
-          nameWithOwner: repo.nameWithOwner,
-          name: repo.name,
-          description: repo.description,
-          isPrivate: repo.isPrivate,
-          isArchived: repo.isArchived,
-          isFork: repo.isFork,
-          isTemplate: repo.isTemplate,
-          stargazerCount: repo.stargazerCount,
-          forkCount: repo.forkCount,
-          watchersCount: repo.watchers?.totalCount ?? 0,
-          subscriberCount: null,
-          networkCount: null,
-          openIssuesCount: repo.issues?.totalCount ?? 0,
-          primaryLanguage: repo.primaryLanguage?.name ?? null,
-          languages: {
-            totalSize: repo.languages?.totalSize ?? 0,
-            nodes: languageNodes,
-          },
-          topics,
-          pushedAt: repo.pushedAt ? new Date(repo.pushedAt) : null,
-          updatedAt: new Date(repo.updatedAt),
-          createdAt: new Date(repo.createdAt),
-          homepageUrl: repo.homepageUrl,
-          size: repo.diskUsage ?? 0,
-          defaultBranchRef: repo.defaultBranchRef?.name ?? null,
-          license: repo.licenseInfo ? {
-            name: repo.licenseInfo.name,
-            spdxId: repo.licenseInfo.spdxId,
-            url: repo.licenseInfo.url,
-          } : null,
-          hasIssuesEnabled: repo.hasIssuesEnabled,
-          hasProjectsEnabled: repo.hasProjectsEnabled,
-          hasWikiEnabled: repo.hasWikiEnabled,
-          hasPages: null,
-          hasDownloads: null,
-          hasDiscussions: null,
-          vulnerabilityAlertsEnabled: null,
-          securityPolicyEnabled: null,
-          codeOfConductEnabled: null,
-          contributingGuidelinesEnabled: null,
-          readmeEnabled: null,
-          deployments: {
-            totalCount: repo.deployments?.totalCount ?? 0,
-          },
-          environments: {
-            totalCount: repo.environments?.totalCount ?? 0,
-          },
-          commits,
-          releases: {
-            totalCount: repo.releases?.totalCount ?? 0,
-            latestRelease: null, // Sera enrichi plus tard si nécessaire
-          },
-          issues: {
-            totalCount: repo.issues?.totalCount ?? 0,
-            openCount: 0, // À calculer
-            closedCount: 0, // À calculer
-          },
-          pullRequests: {
-            totalCount: repo.pullRequests?.totalCount ?? 0,
-            openCount: 0, // À calculer
-            closedCount: 0, // À calculer
-            mergedCount: 0, // À calculer
-          },
-          branchProtectionRules: {
-            totalCount: 0, // À enrichir via REST API
-          },
-          collaborators: {
-            totalCount: 0, // À enrichir via REST API
-          },
-          diskUsage: repo.diskUsage ?? 0,
-          owner: {
-            login: repo.owner.login,
-            type: 'User', // Assumé pour l'utilisateur authentifié
-            avatarUrl: repo.owner.avatarUrl,
-          },
-        };
-      });
+      const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => toGitHubRepo(node));
 
       // Récupération récursive si il y a plus de pages
       if (pageInfo?.hasNextPage) {
@@ -393,8 +449,12 @@ export class GitHubService {
 
       return repos;
     } catch (_error: unknown) {
-      logger.error('Erreur récupération repositories utilisateur', { error: error.message });
-      throw new Error(`Récupération repositories échouée: ${error.message}`);
+      logger.error('Erreur récupération repositories utilisateur', {
+        error: (_error as Error).message,
+      });
+      throw new Error(
+        `Récupération repositories échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -402,7 +462,10 @@ export class GitHubService {
    * Récupère les repositories d'une organisation
    * GraphQL: organization(login).repositories(first: 50, orderBy: PUSHED_AT DESC)
    */
-  public async getOrgRepos(orgName: string, cursor?: string): Promise<GitHubRepo[]> {
+  public async getOrgRepos(
+    orgName: string,
+    cursor?: string,
+  ): Promise<GitHubRepo[]> {
     const query = `
       query($orgName: String!, $cursor: String) {
         organization(login: $orgName) {
@@ -492,121 +555,23 @@ export class GitHubService {
 
     try {
       const variables = { orgName, ...(cursor ? { cursor } : {}) };
-      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(query, variables);
+      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(
+        query,
+        variables,
+      );
 
       if (response.errors) {
-        throw new Error(`GraphQL errors: ${response.errors.map(e => e.message).join(', ')}`);
+        throw new Error(
+          `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+        );
       }
 
-      const repositories = response.data?.organization?.repositories?.nodes ?? [];
-      const pageInfo = response.data?.organization?.repositories?.pageInfo;
+      const repositories =
+        ((response.data as unknown) as GitHubGraphQLOrganizationRepositoriesResponse)?.organization?.repositories?.nodes ?? [];
+      const pageInfo = ((response.data as unknown) as GitHubGraphQLOrganizationRepositoriesResponse)?.organization?.repositories
+        ?.pageInfo;
 
-      const repos: GitHubRepo[] = repositories.map((repo: GitHubRepo) => {
-        // Même transformation que getUserRepos (factorisation possible)
-        const languageNodes = repo.languages?.edges?.map((edge: unknown) => ({
-          name: edge.node.name,
-          size: edge.size,
-          percentage: Math.round((edge.size / repo.languages.totalSize) * 100),
-        })) ?? [];
-
-        const topics = repo.repositoryTopics?.nodes?.map((node: unknown) => node.topic.name) ?? [];
-
-        const commitHistory = repo.commits?.target?.history;
-        const commits = {
-          totalCount: commitHistory?.totalCount ?? 0,
-          recent: commitHistory?.nodes?.map((commit: unknown) => ({
-            oid: commit.oid,
-            message: commit.message,
-            committedDate: new Date(commit.committedDate),
-            author: {
-              name: commit.author.name,
-              email: commit.author.email,
-              login: commit.author.user?.login ?? null,
-            },
-            additions: commit.additions,
-            deletions: commit.deletions,
-            changedFiles: commit.changedFiles,
-          })) ?? [],
-        };
-
-        return {
-          nameWithOwner: repo.nameWithOwner,
-          name: repo.name,
-          description: repo.description,
-          isPrivate: repo.isPrivate,
-          isArchived: repo.isArchived,
-          isFork: repo.isFork,
-          isTemplate: repo.isTemplate,
-          stargazerCount: repo.stargazerCount,
-          forkCount: repo.forkCount,
-          watchersCount: repo.watchers?.totalCount ?? 0,
-          subscriberCount: null,
-          networkCount: null,
-          openIssuesCount: repo.issues?.totalCount ?? 0,
-          primaryLanguage: repo.primaryLanguage?.name ?? null,
-          languages: {
-            totalSize: repo.languages?.totalSize ?? 0,
-            nodes: languageNodes,
-          },
-          topics,
-          pushedAt: repo.pushedAt ? new Date(repo.pushedAt) : null,
-          updatedAt: new Date(repo.updatedAt),
-          createdAt: new Date(repo.createdAt),
-          homepageUrl: repo.homepageUrl,
-          size: repo.diskUsage ?? 0,
-          defaultBranchRef: repo.defaultBranchRef?.name ?? null,
-          license: repo.licenseInfo ? {
-            name: repo.licenseInfo.name,
-            spdxId: repo.licenseInfo.spdxId,
-            url: repo.licenseInfo.url,
-          } : null,
-          hasIssuesEnabled: repo.hasIssuesEnabled,
-          hasProjectsEnabled: repo.hasProjectsEnabled,
-          hasWikiEnabled: repo.hasWikiEnabled,
-          hasPages: null,
-          hasDownloads: null,
-          hasDiscussions: null,
-          vulnerabilityAlertsEnabled: null,
-          securityPolicyEnabled: null,
-          codeOfConductEnabled: null,
-          contributingGuidelinesEnabled: null,
-          readmeEnabled: null,
-          deployments: {
-            totalCount: repo.deployments?.totalCount ?? 0,
-          },
-          environments: {
-            totalCount: repo.environments?.totalCount ?? 0,
-          },
-          commits,
-          releases: {
-            totalCount: repo.releases?.totalCount ?? 0,
-            latestRelease: null,
-          },
-          issues: {
-            totalCount: repo.issues?.totalCount ?? 0,
-            openCount: 0,
-            closedCount: 0,
-          },
-          pullRequests: {
-            totalCount: repo.pullRequests?.totalCount ?? 0,
-            openCount: 0,
-            closedCount: 0,
-            mergedCount: 0,
-          },
-          branchProtectionRules: {
-            totalCount: 0,
-          },
-          collaborators: {
-            totalCount: 0,
-          },
-          diskUsage: repo.diskUsage ?? 0,
-          owner: {
-            login: repo.owner.login,
-            type: 'Organization',
-            avatarUrl: repo.owner.avatarUrl,
-          },
-        };
-      });
+      const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => toGitHubRepo(node));
 
       // Récupération récursive
       if (pageInfo?.hasNextPage) {
@@ -624,9 +589,11 @@ export class GitHubService {
     } catch (_error: unknown) {
       logger.error('Erreur récupération repositories organisation', {
         orgName,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Récupération repositories organisation échouée: ${error.message}`);
+      throw new Error(
+        `Récupération repositories organisation échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -634,28 +601,41 @@ export class GitHubService {
    * Récupère les données GitHub Actions d'un repository
    * REST: GET /repos/{owner}/{repo}/actions/workflows, /actions/runs
    */
-  public async getGitHubActionsData(owner: string, repo: string): Promise<Record<string, unknown>> {
+  public async getGitHubActionsData(
+    owner: string,
+    repo: string,
+  ): Promise<Record<string, unknown>> {
     try {
       const [workflowsResponse, runsResponse] = await Promise.all([
-        githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/actions/workflows`),
-        githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/actions/runs`, {
-          per_page: 20,
-        }),
+        githubConfig.executeRestRequest(
+          `GET /repos/${owner}/${repo}/actions/workflows`,
+        ),
+        githubConfig.executeRestRequest(
+          `GET /repos/${owner}/${repo}/actions/runs`,
+          {
+            per_page: 20,
+          },
+        ),
       ]);
 
-      const workflows = workflowsResponse.workflows ?? [];
-      const runs = runsResponse.workflow_runs ?? [];
+      const workflows = (workflowsResponse.workflows as GitHubRestWorkflow[]) ?? [];
+      const runs = (runsResponse.workflow_runs as GitHubRestWorkflowRun[]) ?? [];
 
       // Calcul des statistiques
-      const successfulRuns = runs.filter((run: unknown) => run.conclusion === 'success').length;
-      const failedRuns = runs.filter((run: unknown) => run.conclusion === 'failure').length;
+      const successfulRuns = runs.filter(
+        (run: GitHubRestWorkflowRun) => run.conclusion === 'success',
+      ).length;
+      const failedRuns = runs.filter(
+        (run: GitHubRestWorkflowRun) => run.conclusion === 'failure',
+      ).length;
       const totalRuns = runs.length;
-      const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
+      const successRate =
+        totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
 
       const actionsData = {
         workflowsCount: workflows.length,
         lastRunStatus: runs[0]?.conclusion ?? 'unknown',
-        workflows: workflows.map((workflow: unknown) => ({
+        workflows: workflows.map((workflow: GitHubRestWorkflow) => ({
           name: workflow.name,
           path: workflow.path,
           state: workflow.state,
@@ -682,7 +662,7 @@ export class GitHubService {
       return actionsData;
     } catch (_error: unknown) {
       // Les erreurs 404 sont courantes pour les repos sans Actions
-      if (error.status === 404) {
+      if (typeof _error === 'object' && _error && 'status' in _error && (_error as { status: number }).status === 404) {
         return {
           workflowsCount: 0,
           lastRunStatus: 'none',
@@ -699,9 +679,11 @@ export class GitHubService {
       logger.error('Erreur récupération GitHub Actions', {
         owner,
         repo,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Récupération GitHub Actions échouée: ${error.message}`);
+      throw new Error(
+        `Récupération GitHub Actions échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -709,7 +691,10 @@ export class GitHubService {
    * Récupère les données de sécurité d'un repository
    * REST: GET /repos/{owner}/{repo}/dependabot/alerts, /secret-scanning/alerts, /code-scanning/alerts
    */
-  public async getSecurityData(owner: string, repo: string): Promise<Record<string, unknown>> {
+  public async getSecurityData(
+    owner: string,
+    repo: string,
+  ): Promise<Record<string, unknown>> {
     try {
       const endpoints = [
         `GET /repos/${owner}/${repo}/dependabot/alerts`,
@@ -718,28 +703,48 @@ export class GitHubService {
       ];
 
       const responses = await Promise.allSettled(
-        endpoints.map(endpoint => githubConfig.executeRestRequest(endpoint)),
+        endpoints.map((endpoint) => githubConfig.executeRestRequest(endpoint)),
       );
 
-      const dependabotAlerts = responses[0].status === 'fulfilled' ? responses[0].value : [];
-      const secretAlerts = responses[1].status === 'fulfilled' ? responses[1].value : [];
-      const codeAlerts = responses[2].status === 'fulfilled' ? responses[2].value : [];
+      const dependabotAlerts =
+        responses[0].status === 'fulfilled' ? responses[0].value : [];
+      const secretAlerts =
+        responses[1].status === 'fulfilled' ? responses[1].value : [];
+      const codeAlerts =
+        responses[2].status === 'fulfilled' ? responses[2].value : [];
 
       const securityData = {
         dependabotAlerts: {
           totalCount: dependabotAlerts.length ?? 0,
-          open: dependabotAlerts.filter((alert: unknown) => alert.state === 'open').length ?? 0,
-          fixed: dependabotAlerts.filter((alert: unknown) => alert.state === 'fixed').length ?? 0,
-          dismissed: dependabotAlerts.filter((alert: unknown) => alert.state === 'dismissed').length ?? 0,
+          open: Array.isArray(dependabotAlerts)
+            ? dependabotAlerts.filter((alert: GitHubRestDependabotAlert) => alert.state === 'open')
+              .length
+            : 0,
+          fixed: Array.isArray(dependabotAlerts)
+            ? dependabotAlerts.filter((alert: GitHubRestDependabotAlert) => alert.state === 'fixed')
+              .length
+            : 0,
+          dismissed: Array.isArray(dependabotAlerts)
+            ? dependabotAlerts.filter(
+              (alert: GitHubRestDependabotAlert) => alert.state === 'dismissed',
+            ).length
+            : 0,
         },
         secretScanning: {
           totalCount: secretAlerts.length ?? 0,
-          resolved: secretAlerts.filter((alert: unknown) => alert.state === 'resolved').length ?? 0,
+          resolved: Array.isArray(secretAlerts)
+            ? secretAlerts.filter((alert: GitHubRestCodeScanningAlert) => alert.state === 'resolved')
+              .length
+            : 0,
         },
         codeScanning: {
           totalCount: codeAlerts.length ?? 0,
-          open: codeAlerts.filter((alert: unknown) => alert.state === 'open').length ?? 0,
-          fixed: codeAlerts.filter((alert: unknown) => alert.state === 'fixed').length ?? 0,
+          open: Array.isArray(codeAlerts)
+            ? codeAlerts.filter((alert: GitHubRestCodeScanningAlert) => alert.state === 'open').length
+            : 0,
+          fixed: Array.isArray(codeAlerts)
+            ? codeAlerts.filter((alert: GitHubRestCodeScanningAlert) => alert.state === 'fixed').length
+            : 0,
         },
         hasSecurityPolicy: false, // À enrichir
         hasVulnerabilityAlertsEnabled: true, // Assumé si on a des alertes
@@ -756,7 +761,7 @@ export class GitHubService {
       return securityData;
     } catch (_error: unknown) {
       // Les erreurs 403/404 sont courantes pour les repos sans accès sécurité
-      if (error.status === 403 ?? error.status === 404) {
+      if (typeof _error === 'object' && _error && 'status' in _error && ((_error as { status: number }).status === 403 || (_error as { status: number }).status === 404)) {
         return {
           dependabotAlerts: { totalCount: 0, open: 0, fixed: 0, dismissed: 0 },
           secretScanning: { totalCount: 0, resolved: 0 },
@@ -769,9 +774,11 @@ export class GitHubService {
       logger.error('Erreur récupération données sécurité', {
         owner,
         repo,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Récupération sécurité échouée: ${error.message}`);
+      throw new Error(
+        `Récupération sécurité échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -779,17 +786,24 @@ export class GitHubService {
    * Récupère les packages d'un repository
    * REST: GET /users/{owner}/packages
    */
-  public async getPackagesData(owner: string, repo: string): Promise<Record<string, unknown>> {
+  public async getPackagesData(
+    owner: string,
+    repo: string,
+  ): Promise<Record<string, unknown>> {
     try {
-      const response = await githubConfig.executeRestRequest(`GET /users/${owner}/packages`);
-      const packages = response ?? [];
+      const response = await githubConfig.executeRestRequest(
+        `GET /users/${owner}/packages`,
+      );
+      const packages = ((response as unknown) as GitHubRestPackage[]) ?? [];
 
       // Filtrer les packages liés au repo (approximation par nom)
-      const repoPackages = packages.filter((pkg: unknown) =>
-        pkg.repository?.name === repo ?? pkg.name.includes(repo),
+      const repoPackages = packages.filter(
+        (pkg: GitHubRestPackage) => pkg.repository?.name === repo || pkg.name.includes(repo),
       );
 
-      const packageTypes = [...new Set(repoPackages.map((pkg: unknown) => pkg.package_type))];
+      const packageTypes = [
+        ...new Set(repoPackages.map((pkg: GitHubRestPackage) => pkg.package_type)),
+      ];
 
       const packagesData = {
         totalCount: repoPackages.length,
@@ -805,16 +819,18 @@ export class GitHubService {
 
       return packagesData;
     } catch (_error: unknown) {
-      if (error.status === 404) {
+      if (typeof _error === 'object' && _error && 'status' in _error && (_error as { status: number }).status === 404) {
         return { totalCount: 0, types: [] };
       }
 
       logger.error('Erreur récupération packages', {
         owner,
         repo,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Récupération packages échouée: ${error.message}`);
+      throw new Error(
+        `Récupération packages échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -822,22 +838,29 @@ export class GitHubService {
    * Récupère les données de protection de branche
    * REST: GET /repos/{owner}/{repo}/branches/{branch}/protection
    */
-  public async getBranchProtectionData(owner: string, repo: string, defaultBranch: string): Promise<Record<string, unknown>> {
+  public async getBranchProtectionData(
+    owner: string,
+    repo: string,
+    defaultBranch: string,
+  ): Promise<Record<string, unknown>> {
     try {
       const branch = defaultBranch ?? 'main';
       const response = await githubConfig.executeRestRequest(
         `GET /repos/${owner}/${repo}/branches/${branch}/protection`,
       );
 
+      // Correction accès require_code_owner_reviews, dismiss_stale_reviews, contexts
       const branchProtectionData = {
-        rules: [{
-          pattern: branch,
-          requiresStatusChecks: !!response.required_status_checks,
-          requiresCodeOwnerReviews: !!response.required_pull_request_reviews?.require_code_owner_reviews,
-          dismissStaleReviews: !!response.required_pull_request_reviews?.dismiss_stale_reviews,
-          restrictsPushes: !!response.restrictions,
-          requiredStatusChecks: response.required_status_checks?.contexts ?? [],
-        }],
+        rules: [
+          {
+            pattern: branch,
+            requiresStatusChecks: !!(response.required_status_checks as { contexts?: string[] }),
+            requiresCodeOwnerReviews: !!(response.required_pull_request_reviews as { require_code_owner_reviews?: boolean }).require_code_owner_reviews,
+            dismissStaleReviews: !!(response.required_pull_request_reviews as { dismiss_stale_reviews?: boolean }).dismiss_stale_reviews,
+            restrictsPushes: !!response.restrictions,
+            requiredStatusChecks: (response.required_status_checks as { contexts?: string[] })?.contexts ?? [],
+          },
+        ],
       };
 
       logger.debug('Données protection de branche récupérées', {
@@ -849,16 +872,18 @@ export class GitHubService {
 
       return branchProtectionData;
     } catch (_error: unknown) {
-      if (error.status === 404) {
+      if (typeof _error === 'object' && _error && 'status' in _error && (_error as { status: number }).status === 404) {
         return { rules: [] };
       }
 
       logger.error('Erreur récupération protection branche', {
         owner,
         repo,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Récupération protection branche échouée: ${error.message}`);
+      throw new Error(
+        `Récupération protection branche échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -866,16 +891,19 @@ export class GitHubService {
    * Récupère les données de santé communautaire
    * REST: GET /repos/{owner}/{repo}/community/profile
    */
-  public async getCommunityHealthData(owner: string, repo: string): Promise<Record<string, unknown>> {
+  public async getCommunityHealthData(
+    owner: string,
+    repo: string,
+  ): Promise<Record<string, unknown>> {
     try {
       const response = await githubConfig.executeRestRequest(
         `GET /repos/${owner}/${repo}/community/profile`,
       );
 
-      const files = response.files ?? {};
+      const files = ((response.files as unknown) as GitHubRestCommunityProfile)?.files ?? {};
 
       const communityData = {
-        healthPercentage: response.health_percentage ?? 0,
+        healthPercentage: (response.health_percentage as number) ?? 0,
         hasReadme: !!files.readme,
         hasLicense: !!files.license,
         hasContributing: !!files.contributing,
@@ -892,7 +920,7 @@ export class GitHubService {
 
       return communityData;
     } catch (_error: unknown) {
-      if (error.status === 404) {
+      if (typeof _error === 'object' && _error && 'status' in _error && (_error as { status: number }).status === 404) {
         return {
           healthPercentage: 0,
           hasReadme: false,
@@ -907,9 +935,11 @@ export class GitHubService {
       logger.error('Erreur récupération santé communautaire', {
         owner,
         repo,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Récupération santé communautaire échouée: ${error.message}`);
+      throw new Error(
+        `Récupération santé communautaire échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -917,17 +947,40 @@ export class GitHubService {
    * Récupère les données de trafic
    * REST: GET /repos/{owner}/{repo}/traffic/views, /clones, /popular/paths
    */
-  public async getTrafficData(owner: string, repo: string): Promise<Record<string, unknown>> {
+  public async getTrafficData(
+    owner: string,
+    repo: string,
+  ): Promise<Record<string, unknown>> {
     try {
-      const [viewsResponse, clonesResponse, pathsResponse] = await Promise.allSettled([
-        githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/traffic/views`),
-        githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/traffic/clones`),
-        githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/traffic/popular/paths`),
-      ]);
+      const [viewsResponse, clonesResponse, pathsResponse] =
+        await Promise.allSettled([
+          githubConfig.executeRestRequest(
+            `GET /repos/${owner}/${repo}/traffic/views`,
+          ),
+          githubConfig.executeRestRequest(
+            `GET /repos/${owner}/${repo}/traffic/clones`,
+          ),
+          githubConfig.executeRestRequest(
+            `GET /repos/${owner}/${repo}/traffic/popular/paths`,
+          ),
+        ]);
 
-      const views = viewsResponse.status === 'fulfilled' ? viewsResponse.value : { count: 0, uniques: 0 };
-      const clones = clonesResponse.status === 'fulfilled' ? clonesResponse.value : { count: 0, uniques: 0 };
-      const paths = pathsResponse.status === 'fulfilled' ? pathsResponse.value : [];
+      const views =
+        viewsResponse.status === 'fulfilled'
+          ? viewsResponse.value
+          : { count: 0, uniques: 0 };
+      const clones =
+        clonesResponse.status === 'fulfilled'
+          ? clonesResponse.value
+          : { count: 0, uniques: 0 };
+      const paths =
+        pathsResponse.status === 'fulfilled' ? pathsResponse.value : [];
+
+      // Correction mapping popularPaths
+      let popularPaths: { path: string; title: string; count: number; uniques: number }[] = [];
+      if (paths && typeof paths === 'object' && 'paths' in paths && Array.isArray((paths as unknown as GitHubRestTrafficPaths).paths)) {
+        popularPaths = (paths as unknown as GitHubRestTrafficPaths).paths.map(({ path, title, count, uniques }) => ({ path, title, count, uniques }));
+      }
 
       const trafficData = {
         views: {
@@ -938,12 +991,7 @@ export class GitHubService {
           count: clones.count ?? 0,
           uniques: clones.uniques ?? 0,
         },
-        popularPaths: paths.map((path: unknown) => ({
-          path: path.path,
-          title: path.title,
-          count: path.count,
-          uniques: path.uniques,
-        })),
+        popularPaths,
       };
 
       logger.debug('Données trafic récupérées', {
@@ -958,7 +1006,7 @@ export class GitHubService {
       logger.error('Erreur récupération trafic', {
         owner,
         repo,
-        error: error.message,
+        error: (_error as Error).message,
       });
 
       // Retourner des données vides plutôt que d'échouer
@@ -993,19 +1041,46 @@ export class GitHubService {
         this.getGitHubActionsData(owner, repoName),
         this.getSecurityData(owner, repoName),
         this.getPackagesData(owner, repoName),
-        this.getBranchProtectionData(owner, repoName, repo.defaultBranchRef ?? 'main'),
+        this.getBranchProtectionData(
+          owner,
+          repoName,
+          repo.defaultBranchRef ?? 'main',
+        ),
         this.getCommunityHealthData(owner, repoName),
         this.getTrafficData(owner, repoName),
       ]);
 
       const enrichedRepo: GitHubRepo = {
         ...repo,
-        githubActions: githubActions.status === 'fulfilled' ? githubActions.value : undefined,
-        security: security.status === 'fulfilled' ? security.value : undefined,
-        packages: packages.status === 'fulfilled' ? packages.value : undefined,
-        branchProtection: branchProtection.status === 'fulfilled' ? branchProtection.value : undefined,
-        community: community.status === 'fulfilled' ? community.value : undefined,
-        traffic: traffic.status === 'fulfilled' ? traffic.value : undefined,
+        githubActions:
+          githubActions.status === 'fulfilled' &&
+            isValidGitHubActions(githubActions.value)
+            ? githubActions.value
+            : undefined,
+        security:
+          security.status === 'fulfilled' &&
+            isValidGitHubSecurity(security.value)
+            ? security.value
+            : undefined,
+        packages:
+          packages.status === 'fulfilled' &&
+            isValidGitHubPackages(packages.value)
+            ? packages.value
+            : undefined,
+        branchProtection:
+          branchProtection.status === 'fulfilled' &&
+            isValidGitHubBranchProtection(branchProtection.value)
+            ? branchProtection.value
+            : undefined,
+        community:
+          community.status === 'fulfilled' &&
+            isValidGitHubCommunity(community.value)
+            ? community.value
+            : undefined,
+        traffic:
+          traffic.status === 'fulfilled' && isValidGitHubTraffic(traffic.value)
+            ? traffic.value
+            : undefined,
       };
 
       logger.info('Enrichissement DevOps terminé', {
@@ -1017,14 +1092,14 @@ export class GitHubService {
           branchProtection: enrichedRepo.branchProtection,
           community: enrichedRepo.community,
           traffic: enrichedRepo.traffic,
-        }).filter(key => enrichedRepo[key as keyof GitHubRepo]),
+        }).filter((key) => enrichedRepo[key as keyof GitHubRepo]),
       });
 
       return enrichedRepo;
     } catch (_error: unknown) {
       logger.error('Erreur enrichissement DevOps', {
         nameWithOwner: repo.nameWithOwner,
-        error: error.message,
+        error: (_error as Error).message,
       });
 
       // Retourner le repo original si l'enrichissement échoue
@@ -1043,6 +1118,26 @@ export class GitHubService {
       .trim()
       .substring(0, 500); // Limite de longueur
   }
+}
+
+// Ajouter les guards de type en bas du fichier :
+function isValidGitHubActions(obj: unknown): obj is import('@/types/github').GitHubActions {
+  return !!obj && typeof obj === 'object' && 'workflowsCount' in obj && 'workflows' in obj && 'runs' in obj;
+}
+function isValidGitHubSecurity(obj: unknown): obj is import('@/types/github').GitHubSecurity {
+  return !!obj && typeof obj === 'object' && 'dependabotAlerts' in obj && 'secretScanning' in obj && 'codeScanning' in obj;
+}
+function isValidGitHubPackages(obj: unknown): obj is import('@/types/github').GitHubPackages {
+  return !!obj && typeof obj === 'object' && 'totalCount' in obj && 'types' in obj;
+}
+function isValidGitHubBranchProtection(obj: unknown): obj is import('@/types/github').GitHubBranchProtection {
+  return !!obj && typeof obj === 'object' && 'rules' in obj;
+}
+function isValidGitHubCommunity(obj: unknown): obj is import('@/types/github').GitHubCommunity {
+  return !!obj && typeof obj === 'object' && 'healthPercentage' in obj && 'hasReadme' in obj;
+}
+function isValidGitHubTraffic(obj: unknown): obj is import('@/types/github').GitHubTraffic {
+  return !!obj && typeof obj === 'object' && 'views' in obj && 'clones' in obj && 'popularPaths' in obj;
 }
 
 // Export de l'instance singleton

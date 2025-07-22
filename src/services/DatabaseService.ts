@@ -6,7 +6,14 @@
 import { DatasetMetadata, GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsExtension } from '@/types/analytics';
 import { InsightsExtension } from '@/types/insights';
-import { DatasetModel, PrismaDataset, PrismaRepository, PrismaUser, RepositoryModel, UserModel } from '@/models';
+import {
+  DatasetModel,
+  PrismaDataset,
+  PrismaRepository,
+  PrismaUser,
+  RepositoryModel,
+  UserModel,
+} from '@/models';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 
@@ -33,7 +40,7 @@ export class DatabaseService {
         repositoriesCount: repositories.length,
       });
 
-      return await databaseConfig.transaction(async (prisma) => {
+      return await databaseConfig.transaction(async () => {
         // 1. Sauvegarde de l'utilisateur
         const user = await UserModel.upsert(userProfile);
 
@@ -45,8 +52,12 @@ export class DatabaseService {
         }
 
         // 3. Création du dataset avec références
-        const repositoryIds = savedRepositories.map(repo => repo.id);
-        let dataset = await DatasetModel.create(user.id, metadata, repositoryIds);
+        const repositoryIds = savedRepositories.map((repo) => repo.id);
+        let dataset = await DatasetModel.create(
+          user.id,
+          metadata,
+          repositoryIds,
+        );
 
         // 4. Ajout des analyses si disponibles
         if (analytics) {
@@ -73,13 +84,14 @@ export class DatabaseService {
           dataset,
         };
       });
-
     } catch (_error: unknown) {
       logger.error('Erreur sauvegarde dataset complet', {
         username: userProfile.login,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Sauvegarde dataset échouée: ${error.message}`);
+      throw new Error(
+        `Sauvegarde dataset échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -114,9 +126,11 @@ export class DatabaseService {
     } catch (_error: unknown) {
       logger.error('Erreur récupération dataset complet', {
         datasetId,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur récupération dataset complet: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -139,7 +153,9 @@ export class DatabaseService {
         return null;
       }
 
-      const repositories = await this.getRepositoriesByIds(dataset.repositories);
+      const repositories = await this.getRepositoriesByIds(
+        dataset.repositories,
+      );
 
       return {
         dataset,
@@ -149,9 +165,11 @@ export class DatabaseService {
     } catch (_error: unknown) {
       logger.error('Erreur récupération dernier dataset utilisateur', {
         username,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur récupération dernier dataset utilisateur: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -187,9 +205,11 @@ export class DatabaseService {
     } catch (_error: unknown) {
       logger.error('Erreur mise à jour analyses dataset', {
         datasetId,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur mise à jour analyses dataset: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -198,14 +218,17 @@ export class DatabaseService {
    */
   public async enrichRepositoriesWithDevOpsData(
     repositoryIds: string[],
-    devOpsDataMap: Record<string, {
-      githubActions?: unknown;
-      security?: unknown;
-      packages?: unknown;
-      branchProtection?: unknown;
-      community?: unknown;
-      traffic?: unknown;
-    }>,
+    devOpsDataMap: Record<
+      string,
+      {
+        githubActions?: import('@/types/github').GitHubActions;
+        security?: import('@/types/github').GitHubSecurity;
+        packages?: import('@/types/github').GitHubPackages;
+        branchProtection?: import('@/types/github').GitHubBranchProtection;
+        community?: import('@/types/github').GitHubCommunity;
+        traffic?: import('@/types/github').GitHubTraffic;
+      }
+    >,
   ): Promise<PrismaRepository[]> {
     try {
       const enrichedRepositories: PrismaRepository[] = [];
@@ -213,7 +236,10 @@ export class DatabaseService {
       for (const repositoryId of repositoryIds) {
         const devOpsData = devOpsDataMap[repositoryId];
         if (devOpsData) {
-          const enrichedRepo = await RepositoryModel.enrichWithDevOpsData(repositoryId, devOpsData);
+          const enrichedRepo = await RepositoryModel.enrichWithDevOpsData(
+            repositoryId,
+            devOpsData,
+          );
           enrichedRepositories.push(enrichedRepo);
         }
       }
@@ -226,9 +252,11 @@ export class DatabaseService {
       return enrichedRepositories;
     } catch (_error: unknown) {
       logger.error('Erreur enrichissement repositories DevOps', {
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur enrichissement repositories DevOps: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -246,13 +274,15 @@ export class DatabaseService {
     limit?: number;
     offset?: number;
   }): Promise<{
-    users: Array<PrismaUser & {
-      stats: {
-        repositoriesCount: number;
-        datasetsCount: number;
-        lastActivity?: Date;
-      };
-    }>;
+    users: Array<
+      PrismaUser & {
+        stats: {
+          repositoriesCount: number;
+          datasetsCount: number;
+          lastActivity?: Date;
+        };
+      }
+    >;
     total: number;
   }> {
     try {
@@ -269,7 +299,8 @@ export class DatabaseService {
           const stats = {
             repositoriesCount: repositoriesResult.total,
             datasetsCount: datasetsResult.total,
-            lastActivity: repositoriesResult.repositories[0]?.pushedAt ?? undefined,
+            lastActivity:
+              repositoriesResult.repositories[0]?.pushedAt ?? undefined,
           };
 
           return {
@@ -286,9 +317,11 @@ export class DatabaseService {
     } catch (_error: unknown) {
       logger.error('Erreur recherche utilisateurs avec stats', {
         filters,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur recherche utilisateurs avec stats: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -307,13 +340,15 @@ export class DatabaseService {
     limit?: number;
     offset?: number;
   }): Promise<{
-    repositories: Array<PrismaRepository & {
-      user: {
-        login: string;
-        name: string;
-        avatarUrl: string;
-      };
-    }>;
+    repositories: Array<
+      PrismaRepository & {
+        user: {
+          login: string;
+          name: string;
+          avatarUrl: string;
+        };
+      }
+    >;
     total: number;
   }> {
     try {
@@ -342,9 +377,11 @@ export class DatabaseService {
     } catch (_error: unknown) {
       logger.error('Erreur recherche repositories avec info utilisateur', {
         filters,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur recherche repositories avec info utilisateur: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -406,13 +443,22 @@ export class DatabaseService {
           topLanguages: repositoryStats.topLanguages,
           devOpsAdoption: repositoryStats.devOpsAdoption,
         },
-        datasets: datasetStats,
+        datasets: {
+          total: datasetStats.totalDatasets,
+          withAnalytics: datasetStats.datasetsWithAnalytics,
+          withInsights: datasetStats.datasetsWithInsights,
+          averageRepositoriesPerDataset:
+            datasetStats.averageRepositoriesPerDataset,
+          recentActivity: datasetStats.recentActivity,
+        },
       };
     } catch (_error: unknown) {
       logger.error('Erreur récupération statistiques plateforme', {
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur récupération statistiques plateforme: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -459,9 +505,11 @@ export class DatabaseService {
     } catch (_error: unknown) {
       logger.error('Erreur vérification fraîcheur analyses', {
         username,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur vérification fraîcheur analyses: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -481,7 +529,7 @@ export class DatabaseService {
         throw new Error('Utilisateur non trouvé');
       }
 
-      return await databaseConfig.transaction(async (prisma) => {
+      return await databaseConfig.transaction(async () => {
         // Comptage avant suppression
         const [repositoriesResult, datasetsResult] = await Promise.all([
           RepositoryModel.findByUserId(user.id),
@@ -504,23 +552,26 @@ export class DatabaseService {
 
         return stats;
       });
-
     } catch (_error: unknown) {
       logger.error('Erreur suppression données utilisateur', {
         username,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(
+        `Erreur suppression données utilisateur: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
    * Nettoyage des données obsolètes
    */
-  public async cleanupOldData(options: {
-    olderThanDays?: number;
-    dryRun?: boolean;
-  } = {}): Promise<{
+  public async cleanupOldData(
+    options: {
+      olderThanDays?: number;
+      dryRun?: boolean;
+    } = {},
+  ): Promise<{
     datasets: number;
     orphanedRepositories: number;
     inactiveUsers: number;
@@ -543,7 +594,8 @@ export class DatabaseService {
       const orphanedRepositories = await this.findOrphanedRepositories();
       let orphanedDeleted = 0;
       if (!dryRun && orphanedRepositories.length > 0) {
-        orphanedDeleted = await this.deleteOrphanedRepositories(orphanedRepositories);
+        orphanedDeleted =
+          await this.deleteOrphanedRepositories(orphanedRepositories);
       }
 
       // Identification des utilisateurs inactifs (pas d'activité depuis X jours)
@@ -554,8 +606,12 @@ export class DatabaseService {
       }
 
       const stats = {
-        datasets: dryRun ? await this.countOldDatasets(olderThanDays) : datasetsDeleted,
-        orphanedRepositories: dryRun ? orphanedRepositories.length : orphanedDeleted,
+        datasets: dryRun
+          ? await this.countOldDatasets(olderThanDays)
+          : datasetsDeleted,
+        orphanedRepositories: dryRun
+          ? orphanedRepositories.length
+          : orphanedDeleted,
         inactiveUsers: dryRun ? inactiveUsers.length : inactiveDeleted,
       };
 
@@ -567,9 +623,9 @@ export class DatabaseService {
       return stats;
     } catch (_error: unknown) {
       logger.error('Erreur nettoyage données', {
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw new Error(`Erreur nettoyage données: ${(_error as Error).message}`);
     }
   }
 
@@ -627,7 +683,6 @@ export class DatabaseService {
         statistics,
         issues,
       };
-
     } catch (_error: unknown) {
       const responseTime = Date.now() - startTime;
 
@@ -635,14 +690,16 @@ export class DatabaseService {
         connected: false,
         responseTime,
         statistics: { users: 0, repositories: 0, datasets: 0 },
-        issues: [`Erreur health check: ${error.message}`],
+        issues: [`Erreur health check: ${(_error as Error).message}`],
       };
     }
   }
 
   // Méthodes utilitaires privées
 
-  private async getRepositoriesByIds(repositoryIds: string[]): Promise<PrismaRepository[]> {
+  private async getRepositoriesByIds(
+    repositoryIds: string[],
+  ): Promise<PrismaRepository[]> {
     const repositories: PrismaRepository[] = [];
 
     for (const id of repositoryIds) {
@@ -657,49 +714,63 @@ export class DatabaseService {
 
   private async countUsersWithDatasets(): Promise<number> {
     try {
-      const usersWithDatasets = await databaseConfig.getPrismaClient()?.user.findMany({
-        where: {
-          datasets: {
-            some: {},
+      const usersWithDatasets = await databaseConfig
+        .getPrismaClient()
+        ?.user.findMany({
+          where: {
+            datasets: {
+              some: {},
+            },
           },
-        },
-        select: { id: true },
-      });
+          select: { id: true },
+        });
 
       return usersWithDatasets?.length ?? 0;
     } catch (_error) {
-      logger.warn('Erreur comptage utilisateurs avec datasets', { error });
+      logger.warn('Erreur comptage utilisateurs avec datasets', {
+        error: (_error as Error).message,
+      });
       return 0;
     }
   }
 
   private async findOrphanedRepositories(): Promise<string[]> {
     try {
-      const orphaned = await databaseConfig.getPrismaClient()?.repository.findMany({
-        where: {
-          user: null,
-        },
-        select: { id: true },
-      });
+      const orphaned = await databaseConfig
+        .getPrismaClient()
+        ?.repository.findMany({
+          where: {
+            user: null,
+          },
+          select: { id: true },
+        });
 
-      return orphaned?.map(repo => repo.id) ?? [];
+      return orphaned?.map((repo: { id: string }) => repo.id) ?? [];
     } catch (_error) {
-      logger.warn('Erreur recherche repositories orphelins', { error });
+      logger.warn('Erreur recherche repositories orphelins', {
+        error: (_error as Error).message,
+      });
       return [];
     }
   }
 
-  private async deleteOrphanedRepositories(orphanedIds: string[]): Promise<number> {
+  private async deleteOrphanedRepositories(
+    orphanedIds: string[],
+  ): Promise<number> {
     try {
-      const result = await databaseConfig.getPrismaClient()?.repository.deleteMany({
-        where: {
-          id: { in: orphanedIds },
-        },
-      });
+      const result = await databaseConfig
+        .getPrismaClient()
+        ?.repository.deleteMany({
+          where: {
+            id: { in: orphanedIds },
+          },
+        });
 
       return result?.count ?? 0;
     } catch (_error) {
-      logger.error('Erreur suppression repositories orphelins', { error });
+      logger.error('Erreur suppression repositories orphelins', {
+        error: (_error as Error).message,
+      });
       return 0;
     }
   }
@@ -717,9 +788,11 @@ export class DatabaseService {
         select: { id: true },
       });
 
-      return inactive?.map(user => user.id) ?? [];
+      return inactive?.map((user: { id: string }) => user.id) ?? [];
     } catch (_error) {
-      logger.warn('Erreur recherche utilisateurs inactifs', { error });
+      logger.warn('Erreur recherche utilisateurs inactifs', {
+        error: (_error as Error).message,
+      });
       return [];
     }
   }
@@ -732,7 +805,10 @@ export class DatabaseService {
         await UserModel.delete(userId);
         deletedCount++;
       } catch (_error) {
-        logger.warn('Erreur suppression utilisateur inactif', { userId, error });
+        logger.warn('Erreur suppression utilisateur inactif', {
+          userId,
+          error: (_error as Error).message,
+        });
       }
     }
 
@@ -752,7 +828,9 @@ export class DatabaseService {
 
       return count ?? 0;
     } catch (_error) {
-      logger.warn('Erreur comptage datasets obsolètes', { error });
+      logger.warn('Erreur comptage datasets obsolètes', {
+        error: (_error as Error).message,
+      });
       return 0;
     }
   }

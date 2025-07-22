@@ -10,9 +10,12 @@ import logger from '@/utils/logger';
 
 export class RepositoryModel {
   /**
-     * Crée un nouveau repository
-     */
-  static async create(repoData: GitHubRepo, userId: string): Promise<PrismaRepository> {
+   * Crée un nouveau repository
+   */
+  static async create(
+    repoData: GitHubRepo,
+    userId: string,
+  ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -50,10 +53,12 @@ export class RepositoryModel {
           hasPages: repoData.hasPages ?? null,
           hasDownloads: repoData.hasDownloads ?? null,
           hasDiscussions: repoData.hasDiscussions ?? null,
-          vulnerabilityAlertsEnabled: repoData.vulnerabilityAlertsEnabled ?? null,
+          vulnerabilityAlertsEnabled:
+            repoData.vulnerabilityAlertsEnabled ?? null,
           securityPolicyEnabled: repoData.securityPolicyEnabled ?? null,
           codeOfConductEnabled: repoData.codeOfConductEnabled ?? null,
-          contributingGuidelinesEnabled: repoData.contributingGuidelinesEnabled ?? null,
+          contributingGuidelinesEnabled:
+            repoData.contributingGuidelinesEnabled ?? null,
           readmeEnabled: repoData.readmeEnabled ?? null,
           deployments: repoData.deployments,
           environments: repoData.environments,
@@ -86,16 +91,20 @@ export class RepositoryModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la création du repository', {
         nameWithOwner: repoData.nameWithOwner,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Création repository échouée: ${error.message}`);
+      throw new Error(
+        `Création repository échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
-     * Trouve un repository par nameWithOwner
-     */
-  static async findByNameWithOwner(nameWithOwner: string): Promise<PrismaRepository | null> {
+   * Trouve un repository par nameWithOwner
+   */
+  static async findByNameWithOwner(
+    nameWithOwner: string,
+  ): Promise<PrismaRepository | null> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -118,24 +127,24 @@ export class RepositoryModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche repository', {
         nameWithOwner,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
-     * Trouve des repositories par utilisateur
-     */
+   * Trouve des repositories par utilisateur
+   */
   static async findByUserId(
     userId: string,
     options: {
-            limit?: number;
-            offset?: number;
-            includePrivate?: boolean;
-            sortBy?: 'stars' | 'forks' | 'updated' | 'created';
-            sortOrder?: 'asc' | 'desc';
-        } = {},
+      limit?: number;
+      offset?: number;
+      includePrivate?: boolean;
+      sortBy?: 'stars' | 'forks' | 'updated' | 'created';
+      sortOrder?: 'asc' | 'desc';
+    } = {},
   ): Promise<{ repositories: PrismaRepository[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
@@ -151,7 +160,7 @@ export class RepositoryModel {
         sortOrder = 'desc',
       } = options;
 
-      const where: unknown = { userId };
+      const where: Record<string, unknown> = { userId };
 
       if (!includePrivate) {
         where.isPrivate = false;
@@ -194,16 +203,19 @@ export class RepositoryModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche repositories par utilisateur', {
         userId,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
-     * Met à jour un repository
-     */
-  static async update(id: string, updateData: Partial<GitHubRepo>): Promise<PrismaRepository> {
+   * Met à jour un repository
+   */
+  static async update(
+    id: string,
+    updateData: Partial<GitHubRepo>,
+  ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -215,16 +227,35 @@ export class RepositoryModel {
 
       // Mise à jour sélective des champs
       const fieldMappings = [
-        'description', 'stargazerCount', 'forkCount', 'watchersCount',
-        'openIssuesCount', 'primaryLanguage', 'languages', 'topics',
-        'pushedAt', 'homepageUrl', 'size', 'hasIssuesEnabled',
-        'hasProjectsEnabled', 'hasWikiEnabled', 'deployments',
-        'environments', 'commits', 'releases', 'issues', 'pullRequests',
-        'githubActions', 'security', 'packages', 'branchProtection',
-        'community', 'traffic',
+        'description',
+        'stargazerCount',
+        'forkCount',
+        'watchersCount',
+        'openIssuesCount',
+        'primaryLanguage',
+        'languages',
+        'topics',
+        'pushedAt',
+        'homepageUrl',
+        'size',
+        'hasIssuesEnabled',
+        'hasProjectsEnabled',
+        'hasWikiEnabled',
+        'deployments',
+        'environments',
+        'commits',
+        'releases',
+        'issues',
+        'pullRequests',
+        'githubActions',
+        'security',
+        'packages',
+        'branchProtection',
+        'community',
+        'traffic',
       ];
 
-      fieldMappings.forEach(field => {
+      fieldMappings.forEach((field) => {
         if (updateData[field as keyof GitHubRepo] !== undefined) {
           data[field] = updateData[field as keyof GitHubRepo];
         }
@@ -244,25 +275,27 @@ export class RepositoryModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour repository', {
         id,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Mise à jour repository échouée: ${error.message}`);
+      throw new Error(
+        `Mise à jour repository échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
-     * Enrichit un repository avec des données DevOps
-     */
+   * Enrichit un repository avec des données DevOps
+   */
   static async enrichWithDevOpsData(
     id: string,
     devOpsData: {
-            githubActions?: unknown;
-            security?: unknown;
-            packages?: unknown;
-            branchProtection?: unknown;
-            community?: unknown;
-            traffic?: unknown;
-        },
+      githubActions?: import('@/types/github').GitHubActions;
+      security?: import('@/types/github').GitHubSecurity;
+      packages?: import('@/types/github').GitHubPackages;
+      branchProtection?: import('@/types/github').GitHubBranchProtection;
+      community?: import('@/types/github').GitHubCommunity;
+      traffic?: import('@/types/github').GitHubTraffic;
+    },
   ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
@@ -270,11 +303,33 @@ export class RepositoryModel {
     }
 
     try {
+      const data: Record<string, unknown> = { updatedAt: new Date() };
+
+      // Ajouter les données DevOps seulement si elles sont fournies
+      if (devOpsData.githubActions) {
+        data.githubActions = devOpsData.githubActions;
+      }
+      if (devOpsData.security) {
+        data.security = devOpsData.security;
+      }
+      if (devOpsData.packages) {
+        data.packages = devOpsData.packages;
+      }
+      if (devOpsData.branchProtection) {
+        data.branchProtection = devOpsData.branchProtection;
+      }
+      if (devOpsData.community) {
+        data.community = devOpsData.community;
+      }
+      if (devOpsData.traffic) {
+        data.traffic = devOpsData.traffic;
+      }
+
       const repository = await prisma.repository.update({
         where: { id },
-        data: {
-          ...devOpsData,
-          updatedAt: new Date(),
+        data,
+        include: {
+          user: true,
         },
       });
 
@@ -286,17 +341,17 @@ export class RepositoryModel {
 
       return repository;
     } catch (_error: unknown) {
-      logger.error('Erreur lors de l\'enrichissement DevOps', {
+      logger.error("Erreur lors de l'enrichissement DevOps", {
         id,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
-     * Supprime un repository
-     */
+   * Supprime un repository
+   */
   static async delete(id: string): Promise<void> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
@@ -312,34 +367,36 @@ export class RepositoryModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la suppression repository', {
         id,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Suppression repository échouée: ${error.message}`);
+      throw new Error(
+        `Suppression repository échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
-     * Recherche avancée de repositories
-     */
+   * Recherche avancée de repositories
+   */
   static async search(filters: {
-        search?: string;
-        language?: string;
-        topics?: string[];
-        minStars?: number;
-        maxStars?: number;
-        isPrivate?: boolean;
-        hasActions?: boolean;
-        hasSecurityAlerts?: boolean;
-        limit?: number;
-        offset?: number;
-    }): Promise<{ repositories: PrismaRepository[]; total: number }> {
+    search?: string;
+    language?: string;
+    topics?: string[];
+    minStars?: number;
+    maxStars?: number;
+    isPrivate?: boolean;
+    hasActions?: boolean;
+    hasSecurityAlerts?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ repositories: PrismaRepository[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
     }
 
     try {
-      const where: unknown = {};
+      const where: Record<string, unknown> = {};
 
       if (filters.search) {
         where.OR = [
@@ -357,13 +414,13 @@ export class RepositoryModel {
         where.topics = { hasEvery: filters.topics };
       }
 
-      if (filters.minStars !== undefined ?? filters.maxStars !== undefined) {
+      if (filters.minStars !== undefined || filters.maxStars !== undefined) {
         where.stargazerCount = {};
         if (filters.minStars !== undefined) {
-          where.stargazerCount.gte = filters.minStars;
+          (where.stargazerCount as { gte?: number }).gte = filters.minStars;
         }
         if (filters.maxStars !== undefined) {
-          where.stargazerCount.lte = filters.maxStars;
+          (where.stargazerCount as { lte?: number }).lte = filters.maxStars;
         }
       }
 
@@ -402,65 +459,70 @@ export class RepositoryModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche avancée repositories', {
         filters,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
-     * Statistiques des repositories
-     */
+   * Statistiques des repositories
+   */
   static async getStats(): Promise<{
-        totalRepositories: number;
-        totalStars: number;
-        totalForks: number;
-        topLanguages: Array<{ language: string; count: number }>;
-        devOpsAdoption: {
-            githubActions: number;
-            security: number;
-            packages: number;
-            branchProtection: number;
-        };
-    }> {
+    totalRepositories: number;
+    totalStars: number;
+    totalForks: number;
+    topLanguages: Array<{ language: string; count: number }>;
+    devOpsAdoption: {
+      githubActions: number;
+      security: number;
+      packages: number;
+      branchProtection: number;
+    };
+  }> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
     }
 
     try {
-      const [
-        totalRepositories,
-        aggregates,
-        languageStats,
-        devOpsStats,
-      ] = await Promise.all([
-        prisma.repository.count(),
-        prisma.repository.aggregate({
-          _sum: {
-            stargazerCount: true,
-            forkCount: true,
-          },
-        }),
-        prisma.repository.groupBy({
-          by: ['primaryLanguage'],
-          _count: { primaryLanguage: true },
-          where: { primaryLanguage: { not: null } },
-          orderBy: { _count: { primaryLanguage: 'desc' } },
-          take: 10,
-        }),
-        Promise.all([
-          prisma.repository.count({ where: { githubActions: { not: null } } }),
-          prisma.repository.count({ where: { security: { not: null } } }),
-          prisma.repository.count({ where: { packages: { not: null } } }),
-          prisma.repository.count({ where: { branchProtection: { not: null } } }),
-        ]),
-      ]);
+      const [totalRepositories, aggregates, languageStats, devOpsStats] =
+        await Promise.all([
+          prisma.repository.count(),
+          prisma.repository.aggregate({
+            _sum: {
+              stargazerCount: true,
+              forkCount: true,
+            },
+          }),
+          prisma.repository.groupBy({
+            by: ['primaryLanguage'],
+            _count: { primaryLanguage: true },
+            where: { primaryLanguage: { not: null } },
+            orderBy: { _count: { primaryLanguage: 'desc' } },
+            take: 10,
+          }),
+          Promise.all([
+            prisma.repository.count({
+              where: { githubActions: { not: null } },
+            }),
+            prisma.repository.count({ where: { security: { not: null } } }),
+            prisma.repository.count({ where: { packages: { not: null } } }),
+            prisma.repository.count({
+              where: { branchProtection: { not: null } },
+            }),
+          ]),
+        ]);
 
-      const topLanguages = languageStats.map(stat => ({
-        language: stat.primaryLanguage ?? 'Unknown',
-        count: stat._count.primaryLanguage,
-      }));
+      const topLanguages = languageStats.map(
+        (stat: {
+          primaryLanguage: string | null;
+          _count: { primaryLanguage: number };
+        }) => ({
+          language: stat.primaryLanguage ?? 'Unknown',
+          count: stat._count.primaryLanguage,
+        }),
+      );
 
       return {
         totalRepositories,
@@ -476,16 +538,19 @@ export class RepositoryModel {
       };
     } catch (_error: unknown) {
       logger.error('Erreur lors du calcul des statistiques repositories', {
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
-     * Crée ou met à jour un repository (upsert)
-     */
-  static async upsert(repoData: GitHubRepo, userId: string): Promise<PrismaRepository> {
+   * Crée ou met à jour un repository (upsert)
+   */
+  static async upsert(
+    repoData: GitHubRepo,
+    userId: string,
+  ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -512,10 +577,14 @@ export class RepositoryModel {
           issues: repoData.issues,
           pullRequests: repoData.pullRequests,
           // Mise à jour des données DevOps si présentes
-          ...(repoData.githubActions && { githubActions: repoData.githubActions }),
+          ...(repoData.githubActions && {
+            githubActions: repoData.githubActions,
+          }),
           ...(repoData.security && { security: repoData.security }),
           ...(repoData.packages && { packages: repoData.packages }),
-          ...(repoData.branchProtection && { branchProtection: repoData.branchProtection }),
+          ...(repoData.branchProtection && {
+            branchProtection: repoData.branchProtection,
+          }),
           ...(repoData.community && { community: repoData.community }),
           ...(repoData.traffic && { traffic: repoData.traffic }),
         },
@@ -549,10 +618,12 @@ export class RepositoryModel {
           hasPages: repoData.hasPages ?? null,
           hasDownloads: repoData.hasDownloads ?? null,
           hasDiscussions: repoData.hasDiscussions ?? null,
-          vulnerabilityAlertsEnabled: repoData.vulnerabilityAlertsEnabled ?? null,
+          vulnerabilityAlertsEnabled:
+            repoData.vulnerabilityAlertsEnabled ?? null,
           securityPolicyEnabled: repoData.securityPolicyEnabled ?? null,
           codeOfConductEnabled: repoData.codeOfConductEnabled ?? null,
-          contributingGuidelinesEnabled: repoData.contributingGuidelinesEnabled ?? null,
+          contributingGuidelinesEnabled:
+            repoData.contributingGuidelinesEnabled ?? null,
           readmeEnabled: repoData.readmeEnabled ?? null,
           deployments: repoData.deployments,
           environments: repoData.environments,
@@ -582,11 +653,11 @@ export class RepositoryModel {
 
       return repository;
     } catch (_error: unknown) {
-      logger.error('Erreur lors de l\'upsert repository', {
+      logger.error("Erreur lors de l'upsert repository", {
         nameWithOwner: repoData.nameWithOwner,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Upsert repository échoué: ${error.message}`);
+      throw new Error(`Upsert repository échoué: ${(_error as Error).message}`);
     }
   }
 }

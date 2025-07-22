@@ -25,13 +25,16 @@ export default [
       // ESLint recommended overrides
       'no-unused-vars': 'off',
       'no-undef': 'off',
-      
+
       // TypeScript ESLint rules
-      '@typescript-eslint/no-unused-vars': ['error', { 
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_'
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-implicit-any-catch': 'off', // Deprecated rule
@@ -41,7 +44,7 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-inferrable-types': 'error',
       '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-      
+
       // General code quality
       'no-console': 'warn',
       'prefer-const': 'error',
@@ -49,20 +52,23 @@ export default [
       'object-shorthand': 'error',
       'prefer-arrow-callback': 'error',
       'prefer-template': 'error',
-      'quotes': ['error', 'single', { avoidEscape: true }],
-      'semi': ['error', 'always'],
+      quotes: ['error', 'single', { avoidEscape: true }],
+      semi: ['error', 'always'],
       'comma-dangle': ['error', 'always-multiline'],
       'no-trailing-spaces': 'error',
       'eol-last': 'error',
-      'indent': ['error', 2],
-      
+      indent: ['error', 2],
+
       // Import/Export
       'import/order': 'off', // Disabled as we don't have import plugin
-      'sort-imports': ['error', {
-        ignoreDeclarationSort: true,
-        ignoreMemberSort: false,
-        memberSyntaxSortOrder: ['none', 'all', 'multiple', 'single'],
-      }],
+      'sort-imports': [
+        'error',
+        {
+          ignoreDeclarationSort: true,
+          ignoreMemberSort: false,
+          memberSyntaxSortOrder: ['none', 'all', 'multiple', 'single'],
+        },
+      ],
     },
   },
   {
@@ -85,4 +91,4 @@ export default [
       '.cursor/**',
     ],
   },
-]; 
+];

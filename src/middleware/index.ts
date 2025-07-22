@@ -16,63 +16,84 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import logger from '@/utils/logger';
 import { sanitizeInput } from './validation';
-import { errorHandler, notFoundHandler, setupGlobalErrorHandlers } from './errorHandler';
+import {
+  errorHandler,
+  notFoundHandler,
+  setupGlobalErrorHandlers,
+} from './errorHandler';
 
 /**
  * Configuration des middlewares de sécurité
  */
 export const setupSecurityMiddlewares = (app: Express): void => {
   // Helmet pour la sécurité des headers HTTP
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://api.github.com', 'https://api.openai.com'],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            'https://fonts.googleapis.com',
+          ],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: [
+            "'self'",
+            'https://api.github.com',
+            'https://api.openai.com',
+          ],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-  }));
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // CORS configuration
-  app.use(cors({
-    origin: (origin: string | undefined, callback: (_error: Error | null, allow?: boolean) => void) => {
-      // Permettre les requêtes sans origin (mobile apps, etc.)
-      if (!origin) return callback(null, true);
+  app.use(
+    cors({
+      origin: (
+        origin: string | undefined,
+        callback: (_error: Error | null, allow?: boolean) => void,
+      ) => {
+        // Permettre les requêtes sans origin (mobile apps, etc.)
+        if (!origin) return callback(null, true);
 
-      // En développement, permettre localhost
-      if (process.env.NODE_ENV === 'development') {
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        // En développement, permettre localhost
+        if (process.env.NODE_ENV === 'development') {
+          if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            return callback(null, true);
+          }
+        }
+
+        // En production, vérifier les domaines autorisés
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [];
+        if (allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
-      }
 
-      // En production, vérifier les domaines autorisés
-      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [];
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      callback(new Error('Non autorisé par CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  }));
+        callback(new Error('Non autorisé par CORS'));
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    }),
+  );
 
   // Compression des réponses
-  app.use(compression({
-    filter: (req, res): boolean => {
-      if (req.headers['x-no-compression']) {
-        return false;
-      }
-      return compression.filter(req, res);
-    },
-    threshold: 1024, // Compresser seulement si > 1KB
-  }));
+  app.use(
+    compression({
+      filter: (req, res): boolean => {
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        return compression.filter(req, res);
+      },
+      threshold: 1024, // Compresser seulement si > 1KB
+    }),
+  );
 };
 
 /**
@@ -80,9 +101,8 @@ export const setupSecurityMiddlewares = (app: Express): void => {
  */
 export const setupLoggingMiddleware = (app: Express): void => {
   // Format personnalisé pour Morgan
-  const morganFormat = process.env.NODE_ENV === 'production'
-    ? 'combined'
-    : 'dev';
+  const morganFormat =
+    process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 
   // Stream personnalisé vers Winston
   const morganStream = {
@@ -91,13 +111,15 @@ export const setupLoggingMiddleware = (app: Express): void => {
     },
   };
 
-  app.use(morgan(morganFormat, {
-    stream: morganStream,
-    skip: (req: Request, _res: Response): boolean => {
-      // Ne pas logger les health checks
-      return req.path === '/health' || req.path === '/ping';
-    },
-  }));
+  app.use(
+    morgan(morganFormat, {
+      stream: morganStream,
+      skip: (req: Request, _res: Response): boolean => {
+        // Ne pas logger les health checks
+        return req.path === '/health' || req.path === '/ping';
+      },
+    }),
+  );
 };
 
 /**
@@ -111,7 +133,9 @@ export const setupRateLimiting = (app: Express): void => {
     message: {
       error: 'RATE_LIMIT_EXCEEDED',
       message: 'Trop de requêtes depuis cette IP, réessayez plus tard',
-      retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000),
+      retryAfter: Math.ceil(
+        parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000,
+      ),
       timestamp: new Date().toISOString(),
     },
     standardHeaders: true,
@@ -127,7 +151,9 @@ export const setupRateLimiting = (app: Express): void => {
       res.status(429).json({
         error: 'RATE_LIMIT_EXCEEDED',
         message: 'Trop de requêtes depuis cette IP, réessayez plus tard',
-        retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000),
+        retryAfter: Math.ceil(
+          parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000') / 1000,
+        ),
         timestamp: new Date().toISOString(),
       });
     },
@@ -152,7 +178,7 @@ export const setupRateLimiting = (app: Express): void => {
     max: 10, // 10 analyses par heure par IP
     message: {
       error: 'ANALYSIS_RATE_LIMIT_EXCEEDED',
-      message: 'Limite d\'analyses atteinte, réessayez dans 1 heure',
+      message: "Limite d'analyses atteinte, réessayez dans 1 heure",
       retryAfter: 3600,
       timestamp: new Date().toISOString(),
     },
@@ -171,23 +197,27 @@ export const setupRateLimiting = (app: Express): void => {
  */
 export const setupDataProcessingMiddlewares = (app: Express): void => {
   // Parsing JSON avec limite de taille
-  app.use(express.json({
-    limit: '10mb',
-    verify: (req: Request, _res: Response, buf: Buffer): void => {
-      // Vérification de la validité JSON
-      try {
-        JSON.parse(buf.toString());
-      } catch (_error) {
-        throw new Error('JSON invalide');
-      }
-    },
-  }));
+  app.use(
+    express.json({
+      limit: '10mb',
+      verify: (_req: Request, _res: Response, buf: Buffer): void => {
+        // Vérification de la validité JSON
+        try {
+          JSON.parse(buf.toString());
+        } catch (_error) {
+          throw new Error('JSON invalide');
+        }
+      },
+    }),
+  );
 
   // Parsing des données de formulaire
-  app.use(express.urlencoded({
-    extended: true,
-    limit: '10mb',
-  }));
+  app.use(
+    express.urlencoded({
+      extended: true,
+      limit: '10mb',
+    }),
+  );
 
   // Sanitisation des entrées
   app.use(sanitizeInput);

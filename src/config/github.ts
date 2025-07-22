@@ -4,7 +4,6 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { __GraphQLError } from '@octokit/graphql/dist-types/error';
 import { GitHubTokenValidationResult, RateLimitInfo } from '@/types/github';
 import logger from '@/utils/logger';
 
@@ -55,13 +54,15 @@ export class GitHubConfig {
   /**
    * Valide un token GitHub et vérifie les permissions
    */
-  public async validateToken(token?: string): Promise<GitHubTokenValidationResult> {
+  public async validateToken(
+    token?: string,
+  ): Promise<GitHubTokenValidationResult> {
     const authToken = token ?? this.token;
 
     if (!authToken) {
       return {
         valid: false,
-        _error: 'Aucun token GitHub fourni',
+        error: 'Aucun token GitHub fourni',
       };
     }
 
@@ -74,7 +75,9 @@ export class GitHubConfig {
         tempOctokit.rest.rateLimit.get(),
       ]);
 
-      const scopes = this.extractScopesFromHeaders(userResponse.headers);
+      const scopes = this.extractScopesFromHeaders(
+        userResponse.headers as Record<string, string | number | undefined>,
+      );
       const missingScopes = this.checkMissingScopes(scopes);
 
       if (missingScopes.length > 0) {
@@ -82,7 +85,7 @@ export class GitHubConfig {
           valid: false,
           username: userResponse.data.login,
           scopes,
-          _error: `Permissions manquantes: ${missingScopes.join(', ')}`,
+          error: `Permissions manquantes: ${missingScopes.join(', ')}`,
         };
       }
 
@@ -99,13 +102,12 @@ export class GitHubConfig {
         username: userResponse.data.login,
         scopes,
       };
-
     } catch (_error: unknown) {
-      logger.error('Erreur validation token GitHub', { _error: error.message });
+      logger.error('Erreur validation token GitHub', { error: (_error as Error).message });
 
       return {
         valid: false,
-        _error: error.message ?? 'Token invalide ou expiré',
+        error: (_error as Error).message ?? 'Token invalide ou expiré',
       };
     }
   }
@@ -113,26 +115,28 @@ export class GitHubConfig {
   /**
    * Extraction des scopes depuis les headers de réponse
    */
-  private extractScopesFromHeaders(headers: Record<string, string>): string[] {
+  private extractScopesFromHeaders(
+    headers: Record<string, string | number | undefined>,
+  ): string[] {
     const scopesHeader = headers['x-oauth-scopes'] ?? headers['X-OAuth-Scopes'];
-    if (!scopesHeader) return [];
+    if (!scopesHeader || typeof scopesHeader !== 'string') return [];
 
     return scopesHeader
       .split(',')
-      .map(scope => scope.trim())
-      .filter(scope => scope.length > 0);
+      .map((scope) => scope.trim())
+      .filter((scope) => scope.length > 0);
   }
 
   /**
    * Vérifie les scopes manquants
    */
   private checkMissingScopes(userScopes: string[]): string[] {
-    return REQUIRED_SCOPES.filter(requiredScope => {
+    return REQUIRED_SCOPES.filter((requiredScope) => {
       // Logique spéciale pour les scopes avec préfixes
       if (requiredScope.includes(':')) {
         const [prefix] = requiredScope.split(':');
-        return !userScopes.some(scope =>
-          scope === requiredScope ?? scope.startsWith(`${prefix}:`),
+        return !userScopes.some(
+          (scope) => scope === requiredScope || scope.startsWith(`${prefix}:`),
         );
       }
       return !userScopes.includes(requiredScope);
@@ -142,7 +146,7 @@ export class GitHubConfig {
   /**
    * Exécute une requête GraphQL avec gestion d'erreurs et retry
    */
-  public async executeGraphQLQuery<T = any>(
+  public async executeGraphQLQuery<T = Record<string, unknown>>(
     query: string,
     variables: Record<string, unknown> = {},
     maxRetries = 2,
@@ -151,7 +155,7 @@ export class GitHubConfig {
       throw new Error('GitHub client non initialisé');
     }
 
-    let lastError: Error;
+    let lastError: Error | undefined;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -160,17 +164,16 @@ export class GitHubConfig {
         const response = await this.octokit.graphql<T>(query, variables);
 
         logger.debug('Requête GraphQL exécutée avec succès', {
-          query: `${query.substring(0, 100)  }...`,
+          query: `${query.substring(0, 100)}...`,
           attempt: attempt + 1,
         });
 
         return response;
-
       } catch (_error: unknown) {
-        lastError = error;
+        lastError = _error as Error;
 
-        if (this.isRateLimitError(error) && attempt < maxRetries) {
-          const waitTime = this.calculateWaitTime(error);
+        if (this.isRateLimitError(_error) && attempt < maxRetries) {
+          const waitTime = this.calculateWaitTime(_error);
           logger.warn(`Rate limit atteinte, attente de ${waitTime}ms`, {
             attempt: attempt + 1,
             maxRetries,
@@ -182,7 +185,7 @@ export class GitHubConfig {
 
         if (attempt === maxRetries) {
           logger.error('Requête GraphQL échouée après tous les essais', {
-            _error: error.message,
+            error: (_error as Error).message,
             attempts: maxRetries + 1,
           });
           break;
@@ -193,13 +196,13 @@ export class GitHubConfig {
       }
     }
 
-    throw lastError!;
+    throw lastError ?? new Error('Requête GraphQL échouée');
   }
 
   /**
    * Exécute une requête REST API
    */
-  public async executeRestRequest<T = any>(
+  public async executeRestRequest<T = Record<string, unknown>>(
     endpoint: string,
     options: unknown = {},
     maxRetries = 2,
@@ -208,13 +211,16 @@ export class GitHubConfig {
       throw new Error('GitHub client non initialisé');
     }
 
-    let lastError: Error;
+    let lastError: Error | undefined;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         await this.checkRateLimit();
 
-        const response = await this.octokit.request(endpoint, options);
+        const response = await this.octokit.request(
+          endpoint,
+          options as Record<string, unknown>,
+        );
 
         logger.debug('Requête REST exécutée avec succès', {
           endpoint,
@@ -222,12 +228,11 @@ export class GitHubConfig {
         });
 
         return response.data;
-
       } catch (_error: unknown) {
-        lastError = error;
+        lastError = _error as Error;
 
-        if (this.isRateLimitError(error) && attempt < maxRetries) {
-          const waitTime = this.calculateWaitTime(error);
+        if (this.isRateLimitError(_error) && attempt < maxRetries) {
+          const waitTime = this.calculateWaitTime(_error);
           logger.warn(`Rate limit atteinte, attente de ${waitTime}ms`, {
             endpoint,
             attempt: attempt + 1,
@@ -240,7 +245,7 @@ export class GitHubConfig {
         if (attempt === maxRetries) {
           logger.error('Requête REST échouée après tous les essais', {
             endpoint,
-            _error: error.message,
+            error: (_error as Error).message,
             attempts: maxRetries + 1,
           });
           break;
@@ -250,7 +255,7 @@ export class GitHubConfig {
       }
     }
 
-    throw lastError!;
+    throw lastError ?? new Error('Requête REST échouée');
   }
 
   /**
@@ -278,8 +283,11 @@ export class GitHubConfig {
    * Vérifie si l'erreur est liée au rate limiting
    */
   private isRateLimitError(_error: unknown): boolean {
-    return error.status === 403 &&
-           (error.message?.includes('rate limit') ??             error.message?.includes('API rate limit'));
+    return (
+      (_error as { status?: number }).status === 403 &&
+      ((_error as Error).message?.includes('rate limit') ??
+        (_error as Error).message?.includes('API rate limit'))
+    );
   }
 
   /**
@@ -287,8 +295,9 @@ export class GitHubConfig {
    */
   private calculateWaitTime(_error: unknown): number {
     // Essaie d'extraire le temps de reset des headers
-    if (error.response?.headers?.['x-ratelimit-reset']) {
-      const resetTime = parseInt(error.response.headers['x-ratelimit-reset']) * 1000;
+    if ((_error as { response?: { headers?: Record<string, string> } }).response?.headers?.['x-ratelimit-reset']) {
+      const resetTime =
+        parseInt((_error as { response?: { headers?: Record<string, string> } }).response?.headers?.['x-ratelimit-reset'] ?? '0') * 1000;
       return Math.max(resetTime - Date.now(), 60000); // Minimum 1 minute
     }
 
@@ -299,7 +308,7 @@ export class GitHubConfig {
    * Attendre un certain temps
    */
   private wait(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

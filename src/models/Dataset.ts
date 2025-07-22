@@ -43,9 +43,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la création du dataset', {
         userProfileId,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw new Error(`Création dataset échouée: ${error.message}`);
+      throw new Error(`Création dataset échouée: ${(_error as Error).message}`);
     }
   }
 
@@ -75,9 +75,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche dataset', {
         id,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -124,16 +124,19 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche datasets par utilisateur', {
         userProfileId,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
    * Met à jour les métadonnées d'un dataset
    */
-  static async updateMetadata(id: string, metadata: DatasetMetadata): Promise<PrismaDataset> {
+  static async updateMetadata(
+    id: string,
+    metadata: DatasetMetadata,
+  ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -150,23 +153,27 @@ export class DatasetModel {
 
       logger.info('Métadonnées dataset mises à jour', {
         datasetId: dataset.id,
-        totalRepositories: (metadata as any)?.totalRepositories,
+        totalRepositories: (metadata as { totalRepositories?: number })
+          .totalRepositories,
       });
 
       return dataset;
     } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour métadonnées dataset', {
         id,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
    * Ajoute ou met à jour les analyses quantitatives
    */
-  static async updateAnalytics(id: string, _analytics: AnalyticsExtension): Promise<PrismaDataset> {
+  static async updateAnalytics(
+    id: string,
+    analytics: AnalyticsExtension,
+  ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -190,16 +197,19 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour analytics dataset', {
         id,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
    * Ajoute ou met à jour les insights IA
    */
-  static async updateInsights(id: string, insights: InsightsExtension): Promise<PrismaDataset> {
+  static async updateInsights(
+    id: string,
+    insights: InsightsExtension,
+  ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -224,9 +234,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour insights IA dataset', {
         id,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -248,16 +258,20 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la suppression dataset', {
         id,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw new Error(`Suppression dataset échouée: ${error.message}`);
+      throw new Error(
+        `Suppression dataset échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
    * Trouve le dataset le plus récent d'un utilisateur
    */
-  static async findLatestByUserId(userProfileId: string): Promise<PrismaDataset | null> {
+  static async findLatestByUserId(
+    userProfileId: string,
+  ): Promise<PrismaDataset | null> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -282,9 +296,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche du dataset le plus récent', {
         userProfileId,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -324,14 +338,22 @@ export class DatasetModel {
       let insightsUpToDate = false;
 
       if (hasAnalytics) {
-        const analyticsData = dataset.analytics as any;
-        const analyticsDate = new Date(analyticsData.analytics?.generatedAt ?? dataset.updatedAt);
+        const analyticsData = dataset.analytics as {
+          analytics?: { generatedAt?: string };
+        };
+        const analyticsDate = new Date(
+          analyticsData.analytics?.generatedAt ?? dataset.updatedAt,
+        );
         analyticsUpToDate = analyticsDate > cutoffTime;
       }
 
       if (hasInsights) {
-        const insightsData = dataset.aiInsights as any;
-        const insightsDate = new Date(insightsData.aiInsights?.generatedAt ?? dataset.updatedAt);
+        const insightsData = dataset.aiInsights as {
+          aiInsights?: { generatedAt?: string };
+        };
+        const insightsDate = new Date(
+          insightsData.aiInsights?.generatedAt ?? dataset.updatedAt,
+        );
         insightsUpToDate = insightsDate > cutoffTime;
       }
 
@@ -344,9 +366,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la vérification de fraîcheur des analyses', {
         id,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -393,11 +415,13 @@ export class DatasetModel {
         prisma.dataset.count({ where: { updatedAt: { gte: lastMonth } } }),
       ]);
 
-      const totalRepositories = allDatasets.reduce((sum, dataset) =>
-        sum + dataset.repositories.length, 0,
+      const totalRepositories = allDatasets.reduce(
+        (sum: number, dataset: { repositories: string[] }) =>
+          sum + dataset.repositories.length,
+        0,
       );
-      const averageRepositoriesPerDataset = totalDatasets > 0 ?
-        Math.round(totalRepositories / totalDatasets) : 0;
+      const averageRepositoriesPerDataset =
+        totalDatasets > 0 ? Math.round(totalRepositories / totalDatasets) : 0;
 
       return {
         totalDatasets,
@@ -412,9 +436,9 @@ export class DatasetModel {
       };
     } catch (_error: unknown) {
       logger.error('Erreur lors du calcul des statistiques datasets', {
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -439,7 +463,7 @@ export class DatasetModel {
     }
 
     try {
-      const where: unknown = {};
+      const where: Record<string, unknown> = {};
 
       if (filters.hasAnalytics !== undefined) {
         if (filters.hasAnalytics) {
@@ -471,7 +495,9 @@ export class DatasetModel {
           skip: filters.offset ?? 0,
           orderBy: { updatedAt: 'desc' },
           include: {
-            _userProfile: { select: { login: true, name: true, avatarUrl: true } },
+            _userProfile: {
+              select: { login: true, name: true, avatarUrl: true },
+            },
           },
         }),
         prisma.dataset.count({ where }),
@@ -480,20 +506,31 @@ export class DatasetModel {
       // Filtrage post-requête pour les critères sur les repositories
       let filteredDatasets = datasets;
 
-      if (filters.minRepositories !== filters.maxRepositories !== undefined) {
-        filteredDatasets = datasets.filter(dataset => {
-          const repoCount = dataset.repositories.length;
+      if (
+        filters.minRepositories !== undefined &&
+        filters.maxRepositories !== undefined
+      ) {
+        filteredDatasets = datasets.filter(
+          (dataset: { repositories: string[] }) => {
+            const repoCount = dataset.repositories.length;
 
-          if (filters.minRepositories !== undefined && repoCount < filters.minRepositories) {
-            return false;
-          }
+            if (
+              filters.minRepositories !== undefined &&
+              repoCount < filters.minRepositories
+            ) {
+              return false;
+            }
 
-          if (filters.maxRepositories !== undefined && repoCount > filters.maxRepositories) {
-            return false;
-          }
+            if (
+              filters.maxRepositories !== undefined &&
+              repoCount > filters.maxRepositories
+            ) {
+              return false;
+            }
 
-          return true;
-        });
+            return true;
+          },
+        );
       }
 
       logger.debug('Recherche avancée datasets', {
@@ -509,9 +546,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche avancée datasets', {
         filters,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -555,9 +592,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors du clonage dataset', {
         sourceId,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw new Error(`Clonage dataset échoué: ${error.message}`);
+      throw new Error(`Clonage dataset échoué: ${(_error as Error).message}`);
     }
   }
 
@@ -589,9 +626,9 @@ export class DatasetModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors du nettoyage datasets', {
         olderThanDays,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 }

@@ -3,7 +3,7 @@
  * Génère toutes les analyses statistiques des données GitHub
  */
 
-import { GitHubRepo, UserProfile } from '@/types/github';
+import { GitHubCommit, GitHubRepo, UserProfile } from '@/types/github';
 import {
   ActivityPattern,
   AnalyticsOverview,
@@ -13,7 +13,6 @@ import {
   PerformanceMetrics,
   ProductivityScore,
   ProjectComplexity,
-  _,_TrendAnalysis,
 } from '@/types/analytics';
 import logger from '@/utils/logger';
 
@@ -24,13 +23,13 @@ export class AnalyticsService {
   public async generateAnalyticsOverview(
     _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    timeframe?: { start: Date; end: Date },
+    _timeframe?: { start: Date; end: Date },
   ): Promise<AnalyticsOverview> {
     const startTime = Date.now();
 
     try {
       logger.info('Démarrage génération analytics', {
-        username: userProfile.login,
+        username: _userProfile.login,
         repositoriesCount: repositories.length,
       });
 
@@ -44,23 +43,38 @@ export class AnalyticsService {
         devops,
         collaboration,
       ] = await Promise.all([
-        this.calculatePerformanceMetrics(userProfile, repositories, timeframe),
-        this.calculateProductivityScore(userProfile, repositories, timeframe),
+        this.calculatePerformanceMetrics(
+          _userProfile,
+          repositories,
+          _timeframe,
+        ),
+        this.calculateProductivityScore(_userProfile, repositories, _timeframe),
         this.analyzeLanguages(repositories),
-        this.analyzeActivityPatterns(repositories, timeframe),
+        this.analyzeActivityPatterns(repositories, _timeframe),
         this.analyzeProjectComplexity(repositories),
         this.analyzeDevOpsMaturity(repositories),
-        this.analyzeCollaborationMetrics(userProfile, repositories),
+        this.analyzeCollaborationMetrics(_userProfile, repositories),
       ]);
 
-      const _analytics: AnalyticsOverview = {
-        userId: userProfile._id ?? '',
-        generatedAt: new Date(),
-        _timeframe: timeframe ?? {
-          start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
+      const now = new Date();
+      const timeframeObj = _timeframe
+        ? {
+          ..._timeframe,
+          totalDays: Math.ceil(
+            (_timeframe.end.getTime() - _timeframe.start.getTime()) /
+                (1000 * 60 * 60 * 24),
+          ),
+        }
+        : {
+          start: new Date(now.setFullYear(now.getFullYear() - 1)),
           end: new Date(),
           totalDays: 365,
-        },
+        };
+
+      const _analytics: AnalyticsOverview = {
+        userId: _userProfile._id ?? '',
+        generatedAt: new Date(),
+        timeframe: timeframeObj,
         performance,
         productivity,
         languages,
@@ -72,17 +86,19 @@ export class AnalyticsService {
 
       const processingTime = (Date.now() - startTime) / 1000;
       logger.info('Analytics générées avec succès', {
-        username: userProfile.login,
+        username: _userProfile.login,
         processingTime: `${processingTime}s`,
       });
 
-      return analytics;
+      return _analytics;
     } catch (_error: unknown) {
       logger.error('Erreur génération analytics', {
-        username: userProfile.login,
-        _error: error.message,
+        username: _userProfile.login,
+        _error: (_error as Error).message,
       });
-      throw new Error(`Génération analytics échouée: ${error.message}`);
+      throw new Error(
+        `Génération analytics échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -92,21 +108,23 @@ export class AnalyticsService {
   private async calculatePerformanceMetrics(
     _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    timeframe?: { start: Date; end: Date },
+    _timeframe?: { start: Date; end: Date },
   ): Promise<PerformanceMetrics> {
     try {
       // Agrégation de tous les commits
-      const allCommits = repositories.flatMap(repo => repo.commits.recent);
+      const allCommits = repositories.flatMap((repo) => repo.commits.recent);
 
       // Filtrage par timeframe si spécifié
-      const relevantCommits = timeframe ?
-        allCommits.filter(commit => {
+      const relevantCommits = _timeframe
+        ? allCommits.filter((commit) => {
           const commitDate = new Date(commit.committedDate);
-          return commitDate >= timeframe.start && commitDate <= timeframe.end;
-        }) : allCommits;
+          return (
+            commitDate >= _timeframe.start && commitDate <= _timeframe.end
+          );
+        })
+        : allCommits;
 
       // Calcul de la fréquence des commits
-      _now = new Date();
       const commitFrequency = {
         daily: this.calculateCommitFrequency(relevantCommits, 1),
         weekly: this.calculateCommitFrequency(relevantCommits, 7),
@@ -115,18 +133,28 @@ export class AnalyticsService {
       };
 
       // Analyse de la qualité du code
-      const averageCommitSize = relevantCommits.length > 0 ?
-        relevantCommits.reduce((sum, commit) =>
-          sum + (commit.additions ?? 0) + (commit.deletions ?? 0), 0,
-        ) / relevantCommits.length : 0;
+      const averageCommitSize =
+        relevantCommits.length > 0
+          ? relevantCommits.reduce(
+            (sum, commit) =>
+              sum + (commit.additions ?? 0) + (commit.deletions ?? 0),
+            0,
+          ) / relevantCommits.length
+          : 0;
 
-      const commitMessageQuality = this.analyzeCommitMessageQuality(relevantCommits);
+      const commitMessageQuality =
+        this.analyzeCommitMessageQuality(relevantCommits);
       const branchingStrategy = this.detectBranchingStrategy(repositories);
 
       // Métriques de collaboration
-      const pullRequestRatio = this.calculatePullRequestRatio(repositories, relevantCommits);
-      const codeReviewParticipation = this.calculateCodeReviewParticipation(repositories);
-      const issueResolutionTime = this.calculateAverageIssueResolutionTime(repositories);
+      const pullRequestRatio = this.calculatePullRequestRatio(
+        repositories,
+        relevantCommits,
+      );
+      const codeReviewParticipation =
+        this.calculateCodeReviewParticipation(repositories);
+      const issueResolutionTime =
+        this.calculateAverageIssueResolutionTime(repositories);
 
       return {
         commitFrequency,
@@ -142,8 +170,12 @@ export class AnalyticsService {
         },
       };
     } catch (_error: unknown) {
-      logger.error('Erreur calcul métriques performance', { _error: error.message });
-      throw error;
+      logger.error('Erreur calcul métriques performance', {
+        _error: (_error as Error).message,
+      });
+      throw new Error(
+        `Erreur calcul métriques performance: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -153,47 +185,68 @@ export class AnalyticsService {
   private async calculateProductivityScore(
     _userProfile: UserProfile,
     repositories: GitHubRepo[],
-    timeframe?: { start: Date; end: Date },
+    _timeframe?: { start: Date; end: Date },
   ): Promise<ProductivityScore> {
     try {
       // Métriques de base
-      const totalStars = repositories.reduce((sum, repo) => sum + repo.stargazerCount, 0);
-      const totalForks = repositories.reduce((sum, repo) => sum + repo.forkCount, 0);
-      const totalCommits = repositories.reduce((sum, repo) => sum + repo.commits.totalCount, 0);
-      const activeRepos = repositories.filter(repo => !repo.isArchived).length;
+      const totalStars = repositories.reduce(
+        (sum, repo) => sum + repo.stargazerCount,
+        0,
+      );
+      const totalForks = repositories.reduce(
+        (sum, repo) => sum + repo.forkCount,
+        0,
+      );
+      const totalCommits = repositories.reduce(
+        (sum, repo) => sum + repo.commits.totalCount,
+        0,
+      );
+      const activeRepos = repositories.filter(
+        (repo) => !repo.isArchived,
+      ).length;
 
       // Score de consistance basé sur la régularité des commits
       const consistency = this.calculateConsistencyScore(repositories);
 
       // Score de volume basé sur la quantité de code
-      const volume = Math.min(100, Math.round((totalCommits / 100) * 20 + (activeRepos / 10) * 30));
+      const volume = Math.min(
+        100,
+        Math.round((totalCommits / 100) * 20 + (activeRepos / 10) * 30),
+      );
 
       // Score d'impact basé sur l'engagement (stars, forks)
-      const impact = Math.min(100, Math.round((totalStars / 50) * 40 + (totalForks / 20) * 60));
+      const impact = Math.min(
+        100,
+        Math.round((totalStars / 50) * 40 + (totalForks / 20) * 60),
+      );
 
       // Score de maintenance basé sur l'activité récente
-      const recentActivity = repositories.filter(repo => {
+      const recentActivity = repositories.filter((repo) => {
         const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         return lastPush > sixMonthsAgo;
       }).length;
 
-      const maintenance = Math.min(100, Math.round((recentActivity / repositories.length) * 100));
+      const maintenance = Math.min(
+        100,
+        Math.round((recentActivity / repositories.length) * 100),
+      );
 
       // Score global pondéré
       const overall = Math.round(
-        consistency * 0.25 +
-        volume * 0.25 +
-        impact * 0.25 +
-        maintenance * 0.25,
+        consistency * 0.25 + volume * 0.25 + impact * 0.25 + maintenance * 0.25,
       );
 
       // Détection de la tendance
       const trend = this.detectProductivityTrend(repositories);
 
       // Benchmarking (simulation basée sur les métriques)
-      const benchmarkPercentile = this.calculateBenchmarkPercentile(overall, totalStars, totalCommits);
+      const benchmarkPercentile = this.calculateBenchmarkPercentile(
+        overall,
+        totalStars,
+        totalCommits,
+      );
 
       return {
         overall,
@@ -207,24 +260,33 @@ export class AnalyticsService {
         benchmarkPercentile,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur calcul score productivité', { _error: error.message });
-      throw error;
+      logger.error('Erreur calcul score productivité', {
+        _error: (_error as Error).message,
+      });
+      throw new Error(
+        `Erreur calcul score productivité: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
    * Analyse les langages de programmation utilisés
    */
-  private async analyzeLanguages(repositories: GitHubRepo[]): Promise<LanguageAnalytics> {
+  private async analyzeLanguages(
+    repositories: GitHubRepo[],
+  ): Promise<LanguageAnalytics> {
     try {
-      const languageStats: Record<string, {
-        count: number;
-        totalSize: number;
-        repositories: string[];
-      }> = {};
+      const languageStats: Record<
+        string,
+        {
+          count: number;
+          totalSize: number;
+          repositories: string[];
+        }
+      > = {};
 
       // Agrégation des statistiques par langage
-      repositories.forEach(repo => {
+      repositories.forEach((repo) => {
         if (repo.primaryLanguage) {
           if (!languageStats[repo.primaryLanguage]) {
             languageStats[repo.primaryLanguage] = {
@@ -234,11 +296,13 @@ export class AnalyticsService {
             };
           }
           languageStats[repo.primaryLanguage].count++;
-          languageStats[repo.primaryLanguage].repositories.push(repo.nameWithOwner);
+          languageStats[repo.primaryLanguage].repositories.push(
+            repo.nameWithOwner,
+          );
         }
 
         // Ajout des langages secondaires
-        repo.languages.nodes.forEach(lang => {
+        repo.languages.nodes.forEach((lang) => {
           if (!languageStats[lang.name]) {
             languageStats[lang.name] = {
               count: 0,
@@ -247,21 +311,30 @@ export class AnalyticsService {
             };
           }
           languageStats[lang.name].totalSize += lang.size;
-          if (!languageStats[lang.name].repositories.includes(repo.nameWithOwner)) {
+          if (
+            !languageStats[lang.name].repositories.includes(repo.nameWithOwner)
+          ) {
             languageStats[lang.name].repositories.push(repo.nameWithOwner);
           }
         });
       });
 
       // Calcul des pourcentages et scores de proficiency
-      const totalSize = Object.values(languageStats).reduce((sum, stat) => sum + stat.totalSize, 0);
+      const totalSize = Object.values(languageStats).reduce(
+        (sum, stat) => sum + stat.totalSize,
+        0,
+      );
       const distribution = Object.entries(languageStats)
         .map(([language, stat]) => ({
           language,
           percentage: Math.round((stat.totalSize / totalSize) * 100),
           linesOfCode: stat.totalSize,
           repositoriesCount: stat.repositories.length,
-          proficiencyScore: this.calculateLanguageProficiency(language, stat.count, stat.totalSize),
+          proficiencyScore: this.calculateLanguageProficiency(
+            language,
+            stat.count,
+            stat.totalSize,
+          ),
         }))
         .sort((a, b) => b.percentage - a.percentage);
 
@@ -281,8 +354,10 @@ export class AnalyticsService {
         expertise,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur analyse langages', { _error: error.message });
-      throw error;
+      logger.error('Erreur analyse langages', {
+        _error: (_error as Error).message,
+      });
+      throw new Error(`Erreur analyse langages: ${(_error as Error).message}`);
     }
   }
 
@@ -291,10 +366,10 @@ export class AnalyticsService {
    */
   private async analyzeActivityPatterns(
     repositories: GitHubRepo[],
-    timeframe?: { start: Date; end: Date },
+    _timeframe?: { start: Date; end: Date },
   ): Promise<ActivityPattern> {
     try {
-      const allCommits = repositories.flatMap(repo => repo.commits.recent);
+      const allCommits = repositories.flatMap((repo) => repo.commits.recent);
 
       // Distribution horaire (simulation basée sur les commits)
       const hourlyDistribution = this.calculateHourlyDistribution(allCommits);
@@ -303,7 +378,8 @@ export class AnalyticsService {
       const dailyDistribution = this.calculateDailyDistribution(allCommits);
 
       // Distribution mensuelle
-      const monthlyDistribution = this.calculateMonthlyDistribution(repositories);
+      const monthlyDistribution =
+        this.calculateMonthlyDistribution(repositories);
 
       // Analyse de la saisonnalité
       const seasonality = this.analyzeSeasonality(allCommits);
@@ -315,15 +391,21 @@ export class AnalyticsService {
         seasonality,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur analyse patterns d\'activité', { _error: error.message });
-      throw error;
+      logger.error("Erreur analyse patterns d'activité", {
+        _error: (_error as Error).message,
+      });
+      throw new Error(
+        `Erreur analyse patterns d'activité: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
    * Analyse la complexité des projets
    */
-  private async analyzeProjectComplexity(repositories: GitHubRepo[]): Promise<ProjectComplexity> {
+  private async analyzeProjectComplexity(
+    repositories: GitHubRepo[],
+  ): Promise<ProjectComplexity> {
     try {
       let simple = 0;
       let moderate = 0;
@@ -333,17 +415,20 @@ export class AnalyticsService {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const maintainedProjects = repositories.filter(repo => {
+      const maintainedProjects = repositories.filter((repo) => {
         const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
         return lastPush > sixMonthsAgo;
       }).length;
 
-      repositories.forEach(repo => {
+      repositories.forEach((repo) => {
         const commitCount = repo.commits.totalCount;
         const languageCount = repo.languages.nodes.length;
-        const hasCI = !!repo.githubActions?.workflowsCount;
-        const hasSecurity = !!repo.security;
-        const isTeamProject = repo.forkCount > 5 ?? repo.stargazerCount > 20;
+        const hasCI = (repo.githubActions?.workflowsCount ?? 0) > 0;
+        const hasSecurity =
+          (repo.security?.dependabotAlerts?.totalCount ?? 0) > 0 ||
+          (repo.security?.hasSecurityPolicy ?? false) ||
+          (repo.branchProtection?.rules?.length ?? 0) > 0;
+        const isTeamProject = repo.forkCount > 5 || repo.stargazerCount > 20;
 
         if (commitCount < 10 && languageCount <= 1) {
           simple++;
@@ -351,7 +436,10 @@ export class AnalyticsService {
           moderate++;
         } else if (commitCount < 1000 && languageCount > 3) {
           complex++;
-        } else if (commitCount >= 1000 && (hasCI ?? hasSecurity ?? isTeamProject)) {
+        } else if (
+          commitCount >= 1000 &&
+          (hasCI || hasSecurity || isTeamProject)
+        ) {
           enterprise++;
         } else {
           complex++;
@@ -359,8 +447,13 @@ export class AnalyticsService {
       });
 
       const total = repositories.length;
-      const averageComplexity = total > 0 ?
-        Math.round(((simple * 25) + (moderate * 50) + (complex * 75) + (enterprise * 100)) / total) : 0;
+      const averageComplexity =
+        total > 0
+          ? Math.round(
+            (simple * 25 + moderate * 50 + complex * 75 + enterprise * 100) /
+                total,
+          )
+          : 0;
 
       return {
         simple,
@@ -371,15 +464,21 @@ export class AnalyticsService {
         maintainedProjects,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur analyse complexité projets', { _error: error.message });
-      throw error;
+      logger.error('Erreur analyse complexité projets', {
+        _error: (_error as Error).message,
+      });
+      throw new Error(
+        `Erreur analyse complexité projets: ${(_error as Error).message}`,
+      );
     }
   }
 
   /**
    * Analyse la maturité DevOps
    */
-  private async analyzeDevOpsMaturity(repositories: GitHubRepo[]): Promise<DevOpsMaturity> {
+  private async analyzeDevOpsMaturity(
+    repositories: GitHubRepo[],
+  ): Promise<DevOpsMaturity> {
     try {
       const totalRepos = repositories.length;
       if (totalRepos === 0) {
@@ -394,38 +493,62 @@ export class AnalyticsService {
       }
 
       // Adoption CI/CD (GitHub Actions)
-      const reposWithCI = repositories.filter(repo => repo.githubActions?.workflowsCount > 0).length;
+      const reposWithCI = repositories.filter(
+        (repo) => (repo.githubActions?.workflowsCount ?? 0) > 0,
+      ).length;
       const cicdAdoption = Math.round((reposWithCI / totalRepos) * 100);
 
       // Culture de tests (approximation basée sur les workflows)
-      const reposWithTests = repositories.filter(repo =>
-        repo.githubActions?.workflows?.some(workflow =>
-          workflow.name.toLowerCase().includes('test') ??           workflow.name.toLowerCase().includes('ci'),
+      const reposWithTests = repositories.filter((repo) =>
+        repo.githubActions?.workflows?.some(
+          (workflow) =>
+            workflow.name.toLowerCase().includes('test') ||
+            workflow.name.toLowerCase().includes('ci'),
         ),
       ).length;
       const testingCulture = Math.round((reposWithTests / totalRepos) * 100);
 
       // Pratiques de sécurité
-      const reposWithSecurity = repositories.filter(repo =>
-        repo.security?.dependabotAlerts.totalCount > 0 ??         repo.security?.hasSecurityPolicy ??         repo.branchProtection?.rules.length > 0,
+      const reposWithSecurity = repositories.filter(
+        (repo) =>
+          (repo.security?.dependabotAlerts?.totalCount ?? 0) > 0 ||
+          (repo.security?.hasSecurityPolicy ?? false) ||
+          (repo.branchProtection?.rules?.length ?? 0) > 0,
       ).length;
-      const securityPractices = Math.round((reposWithSecurity / totalRepos) * 100);
+      const securityPractices = Math.round(
+        (reposWithSecurity / totalRepos) * 100,
+      );
 
       // Qualité de la documentation
-      const reposWithDocs = repositories.filter(repo =>
-        repo.community?.hasReadme ??         repo.community?.hasContributing ??         repo.hasWikiEnabled,
+      const reposWithDocs = repositories.filter(
+        (repo) =>
+          repo.community?.hasReadme ??
+          repo.community?.hasContributing ??
+          repo.hasWikiEnabled,
       ).length;
-      const documentationQuality = Math.round((reposWithDocs / totalRepos) * 100);
+      const documentationQuality = Math.round(
+        (reposWithDocs / totalRepos) * 100,
+      );
 
       // Engagement communautaire
-      const reposWithEngagement = repositories.filter(repo =>
-        repo.stargazerCount > 0 ??         repo.forkCount > 0 ??         repo.issues.totalCount > 0,
+      const reposWithEngagement = repositories.filter(
+        (repo) =>
+          repo.stargazerCount > 0 ||
+          repo.forkCount > 0 ||
+          (repo.issues.totalCount ?? 0) > 0,
       ).length;
-      const communityEngagement = Math.round((reposWithEngagement / totalRepos) * 100);
+      const communityEngagement = Math.round(
+        (reposWithEngagement / totalRepos) * 100,
+      );
 
       // Score global
-      const overallScore = (cicdAdoption + testingCulture + securityPractices +
-                          documentationQuality + communityEngagement) / 5;
+      const overallScore =
+        (cicdAdoption +
+          testingCulture +
+          securityPractices +
+          documentationQuality +
+          communityEngagement) /
+        5;
 
       let overallMaturity: 'beginner' | 'intermediate' | 'advanced' | 'expert';
       if (overallScore >= 80) overallMaturity = 'expert';
@@ -442,8 +565,12 @@ export class AnalyticsService {
         overallMaturity,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur analyse maturité DevOps', { _error: error.message });
-      throw error;
+      logger.error('Erreur analyse maturité DevOps', {
+        _error: (_error as Error).message,
+      });
+      throw new Error(
+        `Erreur analyse maturité DevOps: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -456,26 +583,36 @@ export class AnalyticsService {
   ): Promise<CollaborationMetrics> {
     try {
       // Classification des projets
-      const teamProjects = repositories.filter(repo =>
-        repo.forkCount > 0 ?? repo.stargazerCount > 5 ?? repo.collaborators.totalCount > 1,
+      const teamProjects = repositories.filter(
+        (repo) =>
+          repo.forkCount > 0 ||
+          repo.stargazerCount > 5 ||
+          (repo.collaborators.totalCount ?? 0) > 1,
       ).length;
       const soloProjects = repositories.length - teamProjects;
 
       // Contributions externes (approximation)
-      const contributionsToOthers = repositories.filter(repo =>
-        repo.isFork && repo.commits.totalCount > 0,
+      const contributionsToOthers = repositories.filter(
+        (repo) => repo.isFork && (repo.commits.totalCount ?? 0) > 0,
       ).length;
 
       // Pull Requests
-      const pullRequestsReceived = repositories.reduce((sum, repo) =>
-        sum + repo.pullRequests.totalCount, 0,
+      const pullRequestsReceived = repositories.reduce(
+        (sum, repo) => sum + (repo.pullRequests.totalCount ?? 0),
+        0,
       );
       const pullRequestsMade = contributionsToOthers * 2; // Estimation
 
       // Scores de leadership et mentorat (basés sur l'activité)
       const codeReviewsGiven = Math.round(pullRequestsReceived * 0.3); // Estimation
-      const mentorshipActivity = this.calculateMentorshipScore(userProfile, repositories);
-      const leadershipScore = this.calculateLeadershipScore(userProfile, repositories);
+      const mentorshipActivity = this.calculateMentorshipScore(
+        _userProfile,
+        repositories,
+      );
+      const leadershipScore = this.calculateLeadershipScore(
+        _userProfile,
+        repositories,
+      );
 
       return {
         teamProjects,
@@ -488,20 +625,27 @@ export class AnalyticsService {
         leadershipScore,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur analyse métriques collaboration', { _error: error.message });
-      throw error;
+      logger.error('Erreur analyse métriques collaboration', {
+        _error: (_error as Error).message,
+      });
+      throw new Error(
+        `Erreur analyse métriques collaboration: ${(_error as Error).message}`,
+      );
     }
   }
 
   // Méthodes utilitaires privées
 
-  private calculateCommitFrequency(commits: Record<string, unknown>[], days: number): number {
+  private calculateCommitFrequency(
+    commits: GitHubCommit[],
+    days: number,
+  ): number {
     if (commits.length === 0) return 0;
 
-    _now = new Date();
-    const startDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    const recentCommits = commits.filter(commit => {
+    const recentCommits = commits.filter((commit) => {
       const commitDate = new Date(commit.committedDate);
       return commitDate >= startDate;
     });
@@ -509,18 +653,22 @@ export class AnalyticsService {
     return Math.round((recentCommits.length / days) * 10) / 10;
   }
 
-  private analyzeCommitMessageQuality(commits: Record<string, unknown>[]): number {
+  private analyzeCommitMessageQuality(commits: GitHubCommit[]): number {
     if (commits.length === 0) return 0;
 
     const qualityScore = commits.reduce((score, commit) => {
-      const message = commit.message ?? '';
+      const message = (commit.message as string) ?? '';
       let points = 0;
 
       // Longueur appropriée (entre 20 et 100 caractères)
       if (message.length >= 20 && message.length <= 100) points += 30;
 
       // Présence de mots-clés structurés
-      if (/^(feat|fix|docs|style|refactor|test|chore)[:(\[]/.test(message.toLowerCase())) {
+      if (
+        /^(feat|fix|docs|style|refactor|test|chore)[:([]/.test(
+          message.toLowerCase(),
+        )
+      ) {
         points += 40;
       }
 
@@ -536,44 +684,72 @@ export class AnalyticsService {
     return Math.round(qualityScore / commits.length);
   }
 
-  private detectBranchingStrategy(repositories: GitHubRepo[]): 'gitflow' | 'feature' | 'trunk' | 'mixed' {
+  private detectBranchingStrategy(
+    repositories: GitHubRepo[],
+  ): 'gitflow' | 'feature' | 'trunk' | 'mixed' {
     // Logique simplifiée basée sur les noms de branches par défaut et l'activité
-    const mainBranches = repositories.map(repo => repo.defaultBranchRef).filter(Boolean);
-    const hasMain = mainBranches.some(branch => branch === 'main');
-    const hasMaster = mainBranches.some(branch => branch === 'master');
-    const hasDevelop = repositories.some(repo =>
-      repo.branchProtection?.rules.some(rule => rule.pattern.includes('develop')),
+    const mainBranches = repositories
+      .map((repo) => repo.defaultBranchRef)
+      .filter(Boolean);
+    const hasMain = mainBranches.some((branch) => branch === 'main');
+    const hasMaster = mainBranches.some((branch) => branch === 'master');
+    const hasDevelop = repositories.some((repo) =>
+      repo.branchProtection?.rules.some((rule) =>
+        rule.pattern.includes('develop'),
+      ),
     );
 
     if (hasDevelop) return 'gitflow';
-    if (hasMain ?? hasMaster) return 'feature';
+    if (hasMain || hasMaster) return 'feature';
     return 'mixed';
   }
 
-  private calculatePullRequestRatio(repositories: GitHubRepo[], commits: Record<string, unknown>[]): number {
-    const totalPRs = repositories.reduce((sum, repo) => sum + repo.pullRequests.totalCount, 0);
+  private calculatePullRequestRatio(
+    repositories: GitHubRepo[],
+    commits: GitHubCommit[],
+  ): number {
+    const totalPRs = repositories.reduce(
+      (sum, repo) => sum + (repo.pullRequests.totalCount ?? 0),
+      0,
+    );
     const totalCommits = commits.length;
 
-    return totalCommits > 0 ? Math.round((totalPRs / totalCommits) * 100) / 100 : 0;
+    return totalCommits > 0
+      ? Math.round((totalPRs / totalCommits) * 100) / 100
+      : 0;
   }
 
   private calculateCodeReviewParticipation(repositories: GitHubRepo[]): number {
     // Score basé sur la présence de PRs et la configuration de protection de branche
-    const reposWithPRs = repositories.filter(repo => repo.pullRequests.totalCount > 0).length;
-    const reposWithReviewRules = repositories.filter(repo =>
-      repo.branchProtection?.rules.some(rule => rule.requiresCodeOwnerReviews),
+    const reposWithPRs = repositories.filter(
+      (repo) => (repo.pullRequests.totalCount ?? 0) > 0,
+    ).length;
+    const reposWithReviewRules = repositories.filter((repo) =>
+      repo.branchProtection?.rules.some(
+        (rule) => rule.requiresCodeOwnerReviews,
+      ),
     ).length;
 
     const total = repositories.length;
     if (total === 0) return 0;
 
-    return Math.round(((reposWithPRs + reposWithReviewRules) / (total * 2)) * 100);
+    return Math.round(
+      ((reposWithPRs + reposWithReviewRules) / (total * 2)) * 100,
+    );
   }
 
-  private calculateAverageIssueResolutionTime(repositories: GitHubRepo[]): number {
+  private calculateAverageIssueResolutionTime(
+    repositories: GitHubRepo[],
+  ): number {
     // Estimation basée sur le ratio issues ouvertes/fermées
-    const totalIssues = repositories.reduce((sum, repo) => sum + repo.issues.totalCount, 0);
-    const openIssues = repositories.reduce((sum, repo) => sum + repo.issues.openCount, 0);
+    const totalIssues = repositories.reduce(
+      (sum, repo) => sum + (repo.issues.totalCount ?? 0),
+      0,
+    );
+    const openIssues = repositories.reduce(
+      (sum, repo) => sum + (repo.issues.openCount ?? 0),
+      0,
+    );
 
     if (totalIssues === 0) return 0;
 
@@ -586,28 +762,30 @@ export class AnalyticsService {
     if (repositories.length === 0) return 0;
 
     // Basé sur la régularité des dernières activités
-    _now = new Date();
-    const recentlyActive = repositories.filter(repo => {
+    const now = new Date();
+    const recentlyActive = repositories.filter((repo) => {
       const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
-      const monthsAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      const monthsAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       return lastPush > monthsAgo;
     }).length;
 
     return Math.round((recentlyActive / repositories.length) * 100);
   }
 
-  private detectProductivityTrend(repositories: GitHubRepo[]): 'increasing' | 'stable' | 'decreasing' {
+  private detectProductivityTrend(
+    repositories: GitHubRepo[],
+  ): 'increasing' | 'stable' | 'decreasing' {
     // Analyse basée sur l'activité récente vs historique
-    _now = new Date();
-    const sixMonthsAgo = new Date(now.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
-    const oneYearAgo = new Date(now.getTime() - (12 * 30 * 24 * 60 * 60 * 1000));
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
 
-    const recentActivity = repositories.filter(repo => {
+    const recentActivity = repositories.filter((repo) => {
       const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
       return lastPush > sixMonthsAgo;
     }).length;
 
-    const oldActivity = repositories.filter(repo => {
+    const oldActivity = repositories.filter((repo) => {
       const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
       return lastPush > oneYearAgo && lastPush <= sixMonthsAgo;
     }).length;
@@ -617,7 +795,11 @@ export class AnalyticsService {
     return 'stable';
   }
 
-  private calculateBenchmarkPercentile(overall: number, stars: number, commits: number): number {
+  private calculateBenchmarkPercentile(
+    overall: number,
+    stars: number,
+    commits: number,
+  ): number {
     // Simulation d'un benchmarking basé sur les métriques
     let percentile = 50; // Base
 
@@ -634,7 +816,11 @@ export class AnalyticsService {
     return Math.min(95, Math.max(5, percentile));
   }
 
-  private calculateLanguageProficiency(language: string, repoCount: number, totalSize: number): number {
+  private calculateLanguageProficiency(
+    language: string,
+    repoCount: number,
+    totalSize: number,
+  ): number {
     // Score de 0-100 basé sur l'usage et la taille de code
     let score = 0;
 
@@ -647,7 +833,16 @@ export class AnalyticsService {
     else if (totalSize > 1000) score += 10;
 
     // Bonus pour les langages populaires
-    const popularLanguages = ['JavaScript', 'Python', 'Java', 'TypeScript', 'C++', 'C#', 'Go', 'Rust'];
+    const popularLanguages = [
+      'JavaScript',
+      'Python',
+      'Java',
+      'TypeScript',
+      'C++',
+      'C#',
+      'Go',
+      'Rust',
+    ];
     if (popularLanguages.includes(language)) score += 10;
 
     return Math.min(100, score);
@@ -659,12 +854,13 @@ export class AnalyticsService {
     monthlyGrowth: number;
   }> {
     // Simulation basée sur l'activité récente par langage
-    const languageActivity: Record<string, { recent: number; total: number }> = {};
+    const languageActivity: Record<string, { recent: number; total: number }> =
+      {};
 
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    repositories.forEach(repo => {
+    repositories.forEach((repo) => {
       if (repo.primaryLanguage) {
         if (!languageActivity[repo.primaryLanguage]) {
           languageActivity[repo.primaryLanguage] = { recent: 0, total: 0 };
@@ -712,29 +908,29 @@ export class AnalyticsService {
       expert: [] as string[],
     };
 
-    distribution.forEach(lang => {
-      if (lang.proficiencyScore >= 80) {
-        expertise.expert.push(lang.language);
-      } else if (lang.proficiencyScore >= 60) {
-        expertise.advanced.push(lang.language);
-      } else if (lang.proficiencyScore >= 30) {
-        expertise.intermediate.push(lang.language);
+    distribution.forEach((lang) => {
+      if ((lang.proficiencyScore as number) >= 80) {
+        expertise.expert.push(lang.language as string);
+      } else if ((lang.proficiencyScore as number) >= 60) {
+        expertise.advanced.push(lang.language as string);
+      } else if ((lang.proficiencyScore as number) >= 30) {
+        expertise.intermediate.push(lang.language as string);
       } else {
-        expertise.beginner.push(lang.language);
+        expertise.beginner.push(lang.language as string);
       }
     });
 
     return expertise;
   }
 
-  private calculateHourlyDistribution(commits: Record<string, unknown>[]): Array<{
+  private calculateHourlyDistribution(commits: GitHubCommit[]): Array<{
     hour: number;
     commits: number;
     intensity: 'low' | 'medium' | 'high';
   }> {
     const hourlyStats: number[] = new Array(24).fill(0);
 
-    commits.forEach(commit => {
+    commits.forEach((commit) => {
       const hour = new Date(commit.committedDate).getHours();
       hourlyStats[hour]++;
     });
@@ -744,33 +940,51 @@ export class AnalyticsService {
     return hourlyStats.map((commits, hour) => ({
       hour,
       commits,
-      intensity: commits === 0 ? 'low' :
-        commits < maxCommits * 0.3 ? 'low' :
-          commits < maxCommits * 0.7 ? 'medium' : 'high',
+      intensity:
+        commits === 0
+          ? 'low'
+          : commits < maxCommits * 0.3
+            ? 'low'
+            : commits < maxCommits * 0.7
+              ? 'medium'
+              : 'high',
     }));
   }
 
-  private calculateDailyDistribution(commits: Record<string, unknown>[]): Array<{
+  private calculateDailyDistribution(commits: GitHubCommit[]): Array<{
     day: string;
     commits: number;
     intensity: 'low' | 'medium' | 'high';
   }> {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     const dailyStats: number[] = new Array(7).fill(0);
 
-    commits.forEach(commit => {
+    commits.forEach((commit) => {
       const dayIndex = new Date(commit.committedDate).getDay();
       dailyStats[dayIndex]++;
     });
 
     const maxCommits = Math.max(...dailyStats);
 
-    return dailyStats.map((commits, index) => ({
-      day: days[index],
+    return dailyStats.map((commits, _index) => ({
+      day: days[_index],
       commits,
-      intensity: commits === 0 ? 'low' :
-        commits < maxCommits * 0.3 ? 'low' :
-          commits < maxCommits * 0.7 ? 'medium' : 'high',
+      intensity:
+        commits === 0
+          ? 'low'
+          : commits < maxCommits * 0.3
+            ? 'low'
+            : commits < maxCommits * 0.7
+              ? 'medium'
+              : 'high',
     }));
   }
 
@@ -782,11 +996,21 @@ export class AnalyticsService {
   }> {
     // Simulation de distribution mensuelle
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
-    return months.map((month, index) => ({
+    return months.map((month, _index) => ({
       month,
       commits: Math.floor(Math.random() * 50) + 10, // Simulation
       repositories: Math.floor(repositories.length / 12),
@@ -794,7 +1018,7 @@ export class AnalyticsService {
     }));
   }
 
-  private analyzeSeasonality(commits: Record<string, unknown>[]): {
+  private analyzeSeasonality(commits: GitHubCommit[]): {
     mostActiveQuarter: string;
     consistency: number;
     vacationPeriods: Array<{
@@ -807,7 +1031,7 @@ export class AnalyticsService {
     const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
     const quarterCounts = [0, 0, 0, 0];
 
-    commits.forEach(commit => {
+    commits.forEach((commit) => {
       const month = new Date(commit.committedDate).getMonth();
       const quarter = Math.floor(month / 3);
       quarterCounts[quarter]++;
@@ -818,8 +1042,13 @@ export class AnalyticsService {
 
     // Calcul de la consistance
     const avg = quarterCounts.reduce((sum, count) => sum + count, 0) / 4;
-    const variance = quarterCounts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / 4;
-    const consistency = Math.max(0, 100 - Math.round(Math.sqrt(variance) / avg * 100));
+    const variance =
+      quarterCounts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) /
+      4;
+    const consistency = Math.max(
+      0,
+      100 - Math.round((Math.sqrt(variance) / avg) * 100),
+    );
 
     return {
       mostActiveQuarter,
@@ -828,24 +1057,42 @@ export class AnalyticsService {
     };
   }
 
-  private calculateMentorshipScore(_userProfile: UserProfile, repositories: GitHubRepo[]): number {
+  private calculateMentorshipScore(
+    _userProfile: UserProfile,
+    repositories: GitHubRepo[],
+  ): number {
     // Score basé sur l'aide apportée à la communauté
-    const publicRepos = repositories.filter(repo => !repo.isPrivate).length;
-    const docsRepos = repositories.filter(repo =>
-      repo.community?.hasReadme ?? repo.community?.hasContributing,
+    const publicRepos = repositories.filter((repo) => !repo.isPrivate).length;
+    const docsRepos = repositories.filter(
+      (repo) => repo.community?.hasReadme ?? repo.community?.hasContributing,
     ).length;
-    const starredRepos = repositories.filter(repo => repo.stargazerCount > 0).length;
+    const starredRepos = repositories.filter(
+      (repo) => repo.stargazerCount > 0,
+    ).length;
 
-    return Math.min(100, Math.round((publicRepos * 10 + docsRepos * 20 + starredRepos * 15) / 3));
+    return Math.min(
+      100,
+      Math.round((publicRepos * 10 + docsRepos * 20 + starredRepos * 15) / 3),
+    );
   }
 
-  private calculateLeadershipScore(_userProfile: UserProfile, repositories: GitHubRepo[]): number {
+  private calculateLeadershipScore(
+    _userProfile: UserProfile,
+    repositories: GitHubRepo[],
+  ): number {
     // Score basé sur l'ownership et l'influence
-    const ownedRepos = repositories.filter(repo => !repo.isFork).length;
-    const popularRepos = repositories.filter(repo => repo.stargazerCount > 5).length;
-    const teamRepos = repositories.filter(repo => repo.collaborators.totalCount > 1).length;
+    const ownedRepos = repositories.filter((repo) => !repo.isFork).length;
+    const popularRepos = repositories.filter(
+      (repo) => repo.stargazerCount > 5,
+    ).length;
+    const teamRepos = repositories.filter(
+      (repo) => (repo.collaborators.totalCount ?? 0) > 1,
+    ).length;
 
-    return Math.min(100, Math.round((ownedRepos * 15 + popularRepos * 25 + teamRepos * 20) / 3));
+    return Math.min(
+      100,
+      Math.round((ownedRepos * 15 + popularRepos * 25 + teamRepos * 20) / 3),
+    );
   }
 }
 

@@ -7,13 +7,23 @@ import type { GitHubRepo, UserProfile } from './github';
 import type { AnalyticsOverview } from './analytics';
 
 export interface DeveloperPersonality {
-  archetype: 'innovator' | 'builder' | 'optimizer' | 'maintainer' | 'explorer' | 'teacher';
+  archetype:
+    | 'innovator'
+    | 'builder'
+    | 'optimizer'
+    | 'maintainer'
+    | 'explorer'
+    | 'teacher';
   description: string;
   strengths: string[];
   workingStyle: {
     preferredProjectSize: 'small' | 'medium' | 'large' | 'mixed';
     collaborationStyle: 'solo' | 'pair' | 'team_lead' | 'contributor';
-    learningApproach: 'experimenter' | 'methodical' | 'research_driven' | 'hands_on';
+    learningApproach:
+      | 'experimenter'
+      | 'methodical'
+      | 'research_driven'
+      | 'hands_on';
     problemSolving: 'analytical' | 'creative' | 'systematic' | 'intuitive';
   };
   motivations: string[];
@@ -23,7 +33,12 @@ export interface DeveloperPersonality {
 export interface SkillAssessment {
   technical: Array<{
     skill: string;
-    proficiency: 'novice' | 'advanced_beginner' | 'competent' | 'proficient' | 'expert';
+    proficiency:
+      | 'novice'
+      | 'advanced_beginner'
+      | 'competent'
+      | 'proficient'
+      | 'expert';
     confidence: number; // Score 0-100
     evidenceStrength: 'weak' | 'moderate' | 'strong' | 'very_strong';
     evidence: string[];
@@ -37,14 +52,24 @@ export interface SkillAssessment {
     impactOnCareer: 'minor' | 'moderate' | 'significant' | 'critical';
   }>;
   leadership: {
-    current: 'individual_contributor' | 'informal_leader' | 'team_lead' | 'senior_leader';
+    current:
+      | 'individual_contributor'
+      | 'informal_leader'
+      | 'team_lead'
+      | 'senior_leader';
     potential: 'limited' | 'emerging' | 'strong' | 'exceptional';
     indicators: string[];
   };
 }
 
 export interface CareerInsights {
-  currentLevel: 'junior' | 'mid_level' | 'senior' | 'staff' | 'principal' | 'distinguished';
+  currentLevel:
+    | 'junior'
+    | 'mid_level'
+    | 'senior'
+    | 'staff'
+    | 'principal'
+    | 'distinguished';
   experienceIndicators: string[];
   trajectory: {
     direction: 'ascending' | 'stable' | 'transitioning' | 'exploring';
@@ -59,7 +84,11 @@ export interface CareerInsights {
     growthPath: string;
   }>;
   marketPosition: {
-    competitiveness: 'below_average' | 'average' | 'above_average' | 'exceptional';
+    competitiveness:
+      | 'below_average'
+      | 'average'
+      | 'above_average'
+      | 'exceptional';
     uniqueValueProposition: string;
     differentiators: string[];
     gaps: string[];
@@ -75,7 +104,11 @@ export interface ProductivityAnalysis {
       reasoning: string;
     };
     consistency: {
-      level: 'irregular' | 'somewhat_consistent' | 'consistent' | 'highly_consistent';
+      level:
+        | 'irregular'
+        | 'somewhat_consistent'
+        | 'consistent'
+        | 'highly_consistent';
       factors: string[];
       recommendations: string[];
     };
@@ -175,13 +208,20 @@ export interface AIAnalysisPrompt {
     repositories: GitHubRepo[];
     analytics: AnalyticsOverview;
   };
-  analysisType: 'personality' | 'skills' | 'career' | 'productivity' | 'recommendations' | 'strengths' | 'growth';
+  analysisType:
+    | 'personality'
+    | 'skills'
+    | 'career'
+    | 'productivity'
+    | 'recommendations'
+    | 'strengths'
+    | 'growth';
 }
 
 export interface AIInsightsSummary {
   userId: string;
   generatedAt: Date;
-  model: string; // "gpt-4" etc.
+  model: string; // 'gpt-4' etc.
   confidence: number; // Score global 0-100
   personality: DeveloperPersonality;
   skills: SkillAssessment;
@@ -211,7 +251,15 @@ export interface AIInsightsSummary {
 // Types pour les endpoints API
 export interface InsightsRequest {
   username: string;
-  analysisTypes?: ('personality' | 'skills' | 'career' | 'productivity' | 'recommendations' | 'strengths' | 'growth')[];
+  analysisTypes?: (
+    | 'personality'
+    | 'skills'
+    | 'career'
+    | 'productivity'
+    | 'recommendations'
+    | 'strengths'
+    | 'growth'
+  )[];
   refreshCache?: boolean;
 }
 
@@ -225,6 +273,34 @@ export interface InsightsResponse {
     generatedAt: Date;
     expiresAt: Date;
   };
+}
+
+// Interface spécifique pour la réponse de génération d'insights IA complète
+export interface InsightsGenerationResponse {
+  message: string;
+  insights: {
+    summary: AIInsightsSummary;
+    overallAssessment: string;
+  };
+  metadata: {
+    datasetId: string;
+    generatedAt: string;
+    repositoriesAnalyzed: number;
+  };
+  timestamp: string;
+}
+
+// Interface pour les réponses d'insights spécialisés
+export interface InsightsDetailResponse {
+  success: boolean;
+  type: 'summary' | 'recommendations' | 'strengths' | 'growth';
+  data: AIInsightsSummary[keyof AIInsightsSummary];
+  metadata: {
+    datasetId: string;
+    generatedAt: string;
+    cached: boolean;
+  };
+  timestamp: string;
 }
 
 // Types pour les prompts structurés

@@ -82,7 +82,12 @@ export const logWithContext = {
   /**
    * Log d'une requête API entrante
    */
-  apiRequest: (method: string, url: string, ip: string, meta?: LogMeta): void => {
+  apiRequest: (
+    method: string,
+    url: string,
+    ip: string,
+    meta?: LogMeta,
+  ): void => {
     logger.info('API Request', {
       type: 'api_request',
       method,
@@ -95,7 +100,13 @@ export const logWithContext = {
   /**
    * Log d'une réponse API
    */
-  apiResponse: (method: string, url: string, statusCode: number, responseTime: number, meta?: LogMeta): void => {
+  apiResponse: (
+    method: string,
+    url: string,
+    statusCode: number,
+    responseTime: number,
+    meta?: LogMeta,
+  ): void => {
     const level = statusCode >= 400 ? 'warn' : 'info';
     logger.log(level, 'API Response', {
       type: 'api_response',
@@ -110,7 +121,11 @@ export const logWithContext = {
   /**
    * Log d'une requête GitHub API
    */
-  githubRequest: (endpoint: string, type: 'graphql' | 'rest', meta?: LogMeta): void => {
+  githubRequest: (
+    endpoint: string,
+    type: 'graphql' | 'rest',
+    meta?: LogMeta,
+  ): void => {
     logger.debug('GitHub API Request', {
       type: 'github_request',
       endpoint,
@@ -134,7 +149,11 @@ export const logWithContext = {
   /**
    * Log d'une analyse IA
    */
-  aiAnalysis: (analysisType: string, status: 'start' | 'success' | 'error', meta?: LogMeta): void => {
+  aiAnalysis: (
+    analysisType: string,
+    status: 'start' | 'success' | 'error',
+    meta?: LogMeta,
+  ): void => {
     const level = status === 'error' ? 'error' : 'info';
     logger.log(level, 'AI Analysis', {
       type: 'ai_analysis',
@@ -147,7 +166,12 @@ export const logWithContext = {
   /**
    * Log d'authentification
    */
-  auth: (action: string, username: string, success: boolean, meta?: LogMeta): void => {
+  auth: (
+    action: string,
+    username: string,
+    success: boolean,
+    meta?: LogMeta,
+  ): void => {
     const level = success ? 'info' : 'warn';
     logger.log(level, 'Authentication', {
       type: 'auth',
@@ -174,7 +198,12 @@ export const logWithContext = {
   /**
    * Log d'API générique
    */
-  api: (action: string, endpoint: string, success: boolean, meta?: LogMeta): void => {
+  api: (
+    action: string,
+    endpoint: string,
+    success: boolean,
+    meta?: LogMeta,
+  ): void => {
     const level = success ? 'info' : 'warn';
     logger.log(level, 'API Action', {
       type: 'api_action',
@@ -188,8 +217,13 @@ export const logWithContext = {
   /**
    * Log de sécurité
    */
-  security: (event: string, severity: 'low' | 'medium' | 'high' | 'critical', meta?: LogMeta): void => {
-    const level = severity === 'critical' ? 'error' : severity === 'high' ? 'warn' : 'info';
+  security: (
+    event: string,
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    meta?: LogMeta,
+  ): void => {
+    const level =
+      severity === 'critical' ? 'error' : severity === 'high' ? 'warn' : 'info';
     logger.log(level, 'Security Event', {
       type: 'security',
       event,

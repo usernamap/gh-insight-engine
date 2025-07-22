@@ -376,6 +376,13 @@ export interface JWTPayload {
   exp: number;
 }
 
+// Interface pour l'utilisateur authentifié dans les requêtes Express
+export interface AuthenticatedUser {
+  id: string;
+  username: string;
+  githubToken: string;
+}
+
 // Rate Limiting Types
 export interface RateLimitInfo {
   limit: number;
@@ -390,4 +397,350 @@ export interface APIError {
   message: string;
   details?: Record<string, unknown>;
   stack?: string;
+}
+
+// ============================================
+// GitHub GraphQL Response Interfaces
+// ============================================
+
+// Common GraphQL edge/node structure
+export interface GitHubGraphQLEdge<T> {
+  node: T;
+  size?: number;
+}
+
+export interface GitHubGraphQLConnection<T> {
+  totalCount: number;
+  nodes?: T[];
+  edges?: GitHubGraphQLEdge<T>[];
+  pageInfo?: {
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor: string;
+    endCursor: string;
+  };
+}
+
+// Language response structures
+export interface GitHubGraphQLLanguageNode {
+  name: string;
+  color: string;
+}
+
+export interface GitHubGraphQLLanguageEdge {
+  node: GitHubGraphQLLanguageNode;
+  size: number;
+}
+
+export interface GitHubGraphQLLanguages {
+  totalSize: number;
+  edges: GitHubGraphQLLanguageEdge[];
+}
+
+// Topic response structures
+export interface GitHubGraphQLTopicNode {
+  name: string;
+}
+
+export interface GitHubGraphQLRepositoryTopic {
+  topic: GitHubGraphQLTopicNode;
+}
+
+export interface GitHubGraphQLRepositoryTopics {
+  nodes: GitHubGraphQLRepositoryTopic[];
+}
+
+// Commit response structures
+export interface GitHubGraphQLCommitNode {
+  oid: string;
+  message: string;
+  committedDate: string;
+  author: {
+    name: string;
+    email: string;
+    user?: {
+      login: string;
+    };
+  };
+  additions: number;
+  deletions: number;
+  changedFiles: number;
+}
+
+export interface GitHubGraphQLCommitHistory {
+  totalCount: number;
+  nodes: GitHubGraphQLCommitNode[];
+}
+
+export interface GitHubGraphQLCommits {
+  target: {
+    history: GitHubGraphQLCommitHistory;
+  };
+}
+
+// Organization response structures
+export interface GitHubGraphQLOrganizationNode {
+  login: string;
+  name: string;
+  description: string;
+  avatarUrl: string;
+}
+
+// License response structures
+export interface GitHubGraphQLLicense {
+  name: string;
+  spdxId: string;
+  url: string;
+}
+
+// User profile response structures
+export interface GitHubGraphQLUserBasic {
+  login: string;
+  name: string;
+  email: string;
+  avatarUrl: string;
+  bio: string;
+  company: string;
+  location: string;
+  websiteUrl: string;
+  twitterUsername: string;
+  createdAt: string;
+  updatedAt: string;
+  __typename: string;
+  isSiteAdmin: boolean;
+  isHireable: boolean;
+}
+
+export interface GitHubGraphQLUserCounters {
+  followers: { totalCount: number };
+  following: { totalCount: number };
+  repositories: { totalCount: number };
+  gists: { totalCount: number };
+}
+
+export interface GitHubGraphQLUserOrganizations {
+  organizations: GitHubGraphQLConnection<GitHubGraphQLOrganizationNode>;
+}
+
+// Repository response structures
+export interface GitHubGraphQLRepositoryNode {
+  nameWithOwner: string;
+  name: string;
+  description: string;
+  isPrivate: boolean;
+  isArchived: boolean;
+  isFork: boolean;
+  isTemplate: boolean;
+  stargazerCount: number;
+  forkCount: number;
+  watchers: { totalCount: number };
+  subscriberCount: number;
+  networkCount: number;
+  openIssuesCount: number;
+  primaryLanguage: GitHubGraphQLLanguageNode | null;
+  languages: GitHubGraphQLLanguages;
+  repositoryTopics: GitHubGraphQLRepositoryTopics;
+  pushedAt: string;
+  updatedAt: string;
+  createdAt: string;
+  homepageUrl: string;
+  diskUsage: number;
+  defaultBranchRef: { name: string } | null;
+  licenseInfo: GitHubGraphQLLicense | null;
+  hasIssuesEnabled: boolean;
+  hasProjectsEnabled: boolean;
+  hasWikiEnabled: boolean;
+  hasPages: boolean;
+  hasDownloads: boolean;
+  hasDiscussions: boolean;
+  vulnerabilityAlertsEnabled: boolean;
+  securityPolicyEnabled: boolean;
+  codeOfConductEnabled: boolean;
+  contributingGuidelinesEnabled: boolean;
+  readmeEnabled: boolean;
+  deployments: { totalCount: number };
+  environments: { totalCount: number };
+  commits: GitHubGraphQLCommits;
+  releases: {
+    totalCount: number;
+    nodes: Array<{
+      name: string;
+      tagName: string;
+      publishedAt: string;
+      isLatest: boolean;
+    }>;
+  };
+  issues: {
+    totalCount: number;
+    openCount: number;
+    closedCount: number;
+  };
+  pullRequests: {
+    totalCount: number;
+    openCount: number;
+    closedCount: number;
+    mergedCount: number;
+  };
+  branchProtectionRules: { totalCount: number };
+  collaborators: { totalCount: number };
+  owner: {
+    login: string;
+    type: string;
+    avatarUrl: string;
+  };
+}
+
+// Main GraphQL response wrappers
+export interface GitHubGraphQLUserResponse {
+  viewer: GitHubGraphQLUserBasic & GitHubGraphQLUserCounters & GitHubGraphQLUserOrganizations;
+}
+
+export interface GitHubGraphQLUserBasicResponse {
+  viewer: GitHubGraphQLUserBasic;
+}
+
+export interface GitHubGraphQLUserCountersResponse {
+  viewer: GitHubGraphQLUserCounters;
+}
+
+export interface GitHubGraphQLUserOrganizationsResponse {
+  viewer: GitHubGraphQLUserOrganizations;
+}
+
+export interface GitHubGraphQLRepositoriesResponse {
+  viewer: {
+    repositories: GitHubGraphQLConnection<GitHubGraphQLRepositoryNode>;
+  };
+}
+
+export interface GitHubGraphQLOrganizationRepositoriesResponse {
+  organization: {
+    repositories: GitHubGraphQLConnection<GitHubGraphQLRepositoryNode>;
+  };
+}
+
+// ============================================
+// GitHub REST API Response Interfaces
+// ============================================
+
+// Workflow response structures
+export interface GitHubRestWorkflow {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitHubRestWorkflowRun {
+  id: number;
+  conclusion: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitHubRestWorkflowsResponse {
+  total_count: number;
+  workflows: GitHubRestWorkflow[];
+}
+
+export interface GitHubRestWorkflowRunsResponse {
+  total_count: number;
+  workflow_runs: GitHubRestWorkflowRun[];
+}
+
+// Security alert structures
+export interface GitHubRestSecurityAlert {
+  state: 'open' | 'fixed' | 'dismissed' | 'resolved';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitHubRestDependabotAlert extends GitHubRestSecurityAlert {
+  security_advisory: {
+    ghsa_id: string;
+    severity: string;
+  };
+}
+
+export interface GitHubRestCodeScanningAlert extends GitHubRestSecurityAlert {
+  rule: {
+    id: string;
+    severity: string;
+  };
+}
+
+// Package structures
+export interface GitHubRestPackage {
+  id: number;
+  name: string;
+  package_type: string;
+  repository?: {
+    id: number;
+    name: string;
+  };
+}
+
+// Branch protection structures
+export interface GitHubRestBranchProtection {
+  url: string;
+  required_status_checks: {
+    strict: boolean;
+    contexts: string[];
+  } | null;
+  required_pull_request_reviews: {
+    dismiss_stale_reviews: boolean;
+    require_code_owner_reviews: boolean;
+  } | null;
+  restrictions: {
+    users: Array<{ login: string }>;
+    teams: Array<{ slug: string }>;
+  } | null;
+}
+
+// Community health structures
+export interface GitHubRestCommunityProfile {
+  health_percentage: number;
+  files: {
+    readme: { url: string; html_url: string } | null;
+    license: { url: string; html_url: string } | null;
+    contributing: { url: string; html_url: string } | null;
+    code_of_conduct: { url: string; html_url: string } | null;
+    issue_template: { url: string; html_url: string } | null;
+    pull_request_template: { url: string; html_url: string } | null;
+  };
+}
+
+// Traffic structures
+export interface GitHubRestTrafficViews {
+  count: number;
+  uniques: number;
+  views: Array<{
+    timestamp: string;
+    count: number;
+    uniques: number;
+  }>;
+}
+
+export interface GitHubRestTrafficClones {
+  count: number;
+  uniques: number;
+  clones: Array<{
+    timestamp: string;
+    count: number;
+    uniques: number;
+  }>;
+}
+
+export interface GitHubRestPopularPath {
+  path: string;
+  title: string;
+  count: number;
+  uniques: number;
+}
+
+export interface GitHubRestTrafficPaths {
+  paths: GitHubRestPopularPath[];
 }

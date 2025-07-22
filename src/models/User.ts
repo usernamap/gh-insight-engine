@@ -54,11 +54,13 @@ export class UserModel {
 
       return user;
     } catch (_error: unknown) {
-      logger.error('Erreur lors de la création de l\'utilisateur', {
+      logger.error("Erreur lors de la création de l'utilisateur", {
         login: userData.login,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Création utilisateur échouée: ${error.message}`);
+      throw new Error(
+        `Création utilisateur échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -95,9 +97,9 @@ export class UserModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche utilisateur', {
         login,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -124,16 +126,19 @@ export class UserModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la recherche utilisateur par ID', {
         id,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
   /**
    * Met à jour un utilisateur
    */
-  static async update(id: string, updateData: Partial<UserProfile>): Promise<PrismaUser> {
+  static async update(
+    id: string,
+    updateData: Partial<UserProfile>,
+  ): Promise<PrismaUser> {
     const prisma = databaseConfig.getPrismaClient();
     if (!prisma) {
       throw new Error('Base de données non initialisée');
@@ -147,17 +152,37 @@ export class UserModel {
           ...(updateData.email && { email: updateData.email }),
           ...(updateData.avatarUrl && { avatarUrl: updateData.avatarUrl }),
           ...(updateData.bio !== undefined && { bio: updateData.bio }),
-          ...(updateData.company !== undefined && { company: updateData.company }),
-          ...(updateData.location !== undefined && { location: updateData.location }),
+          ...(updateData.company !== undefined && {
+            company: updateData.company,
+          }),
+          ...(updateData.location !== undefined && {
+            location: updateData.location,
+          }),
           ...(updateData.blog !== undefined && { blog: updateData.blog }),
-          ...(updateData.twitterUsername !== undefined && { twitterUsername: updateData.twitterUsername }),
-          ...(updateData.followers !== undefined && { followers: updateData.followers }),
-          ...(updateData.following !== undefined && { following: updateData.following }),
-          ...(updateData.publicRepos !== undefined && { publicRepos: updateData.publicRepos }),
-          ...(updateData.publicGists !== undefined && { publicGists: updateData.publicGists }),
-          ...(updateData.privateRepos !== undefined && { privateRepos: updateData.privateRepos }),
-          ...(updateData.hireable !== undefined && { hireable: updateData.hireable }),
-          ...(updateData.organizations && { organizations: updateData.organizations }),
+          ...(updateData.twitterUsername !== undefined && {
+            twitterUsername: updateData.twitterUsername,
+          }),
+          ...(updateData.followers !== undefined && {
+            followers: updateData.followers,
+          }),
+          ...(updateData.following !== undefined && {
+            following: updateData.following,
+          }),
+          ...(updateData.publicRepos !== undefined && {
+            publicRepos: updateData.publicRepos,
+          }),
+          ...(updateData.publicGists !== undefined && {
+            publicGists: updateData.publicGists,
+          }),
+          ...(updateData.privateRepos !== undefined && {
+            privateRepos: updateData.privateRepos,
+          }),
+          ...(updateData.hireable !== undefined && {
+            hireable: updateData.hireable,
+          }),
+          ...(updateData.organizations && {
+            organizations: updateData.organizations,
+          }),
           updatedAt: new Date(),
         },
       });
@@ -171,9 +196,11 @@ export class UserModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la mise à jour utilisateur', {
         id,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Mise à jour utilisateur échouée: ${error.message}`);
+      throw new Error(
+        `Mise à jour utilisateur échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -208,9 +235,11 @@ export class UserModel {
     } catch (_error: unknown) {
       logger.error('Erreur lors de la suppression utilisateur', {
         id,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Suppression utilisateur échouée: ${error.message}`);
+      throw new Error(
+        `Suppression utilisateur échouée: ${(_error as Error).message}`,
+      );
     }
   }
 
@@ -232,7 +261,7 @@ export class UserModel {
     }
 
     try {
-      const where: unknown = {};
+      const where: Record<string, unknown> = {};
 
       if (filters.search) {
         where.OR = [
@@ -250,13 +279,16 @@ export class UserModel {
         where.company = { contains: filters.company, mode: 'insensitive' };
       }
 
-      if (filters.minFollowers !== undefined ?? filters.maxFollowers !== undefined) {
+      if (
+        filters.minFollowers !== undefined ||
+        filters.maxFollowers !== undefined
+      ) {
         where.followers = {};
         if (filters.minFollowers !== undefined) {
-          where.followers.gte = filters.minFollowers;
+          (where.followers as { gte?: number }).gte = filters.minFollowers;
         }
         if (filters.maxFollowers !== undefined) {
-          where.followers.lte = filters.maxFollowers;
+          (where.followers as { lte?: number }).lte = filters.maxFollowers;
         }
       }
 
@@ -270,7 +302,7 @@ export class UserModel {
         prisma.user.count({ where }),
       ]);
 
-      logger.debug('Recherche d\'utilisateurs', {
+      logger.debug("Recherche d'utilisateurs", {
         filtersCount: Object.keys(filters).length,
         resultsCount: users.length,
         total,
@@ -278,11 +310,11 @@ export class UserModel {
 
       return { users, total };
     } catch (_error: unknown) {
-      logger.error('Erreur lors de la recherche d\'utilisateurs', {
+      logger.error("Erreur lors de la recherche d'utilisateurs", {
         filters,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -315,17 +347,23 @@ export class UserModel {
         select: { primaryLanguage: true },
       });
 
-      const languageCount = repositories.reduce((acc: Record<string, number>, repo) => {
-        if (repo.primaryLanguage) {
-          acc[repo.primaryLanguage] = (acc[repo.primaryLanguage] ?? 0) + 1;
-        }
-        return acc;
-      }, {});
+      const languageCount = repositories.reduce(
+        (
+          acc: Record<string, number>,
+          repo: { primaryLanguage: string | null },
+        ) => {
+          if (repo.primaryLanguage) {
+            acc[repo.primaryLanguage] = (acc[repo.primaryLanguage] ?? 0) + 1;
+          }
+          return acc;
+        },
+        {},
+      );
 
       const topLanguages = Object.entries(languageCount)
-        .sort(([, a], [, b]) => b - a)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
         .slice(0, 10)
-        .map(([language, count]) => ({ language, count }));
+        .map(([language, count]) => ({ language, count: count as number }));
 
       return {
         totalUsers,
@@ -335,9 +373,9 @@ export class UserModel {
       };
     } catch (_error: unknown) {
       logger.error('Erreur lors du calcul des statistiques', {
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw error;
+      throw _error as Error;
     }
   }
 
@@ -358,9 +396,9 @@ export class UserModel {
 
       return !!user;
     } catch (_error: unknown) {
-      logger.error('Erreur lors de la vérification d\'existence utilisateur', {
+      logger.error("Erreur lors de la vérification d'existence utilisateur", {
         login,
-        error: error.message,
+        error: (_error as Error).message,
       });
       return false;
     }
@@ -430,11 +468,13 @@ export class UserModel {
 
       return user;
     } catch (_error: unknown) {
-      logger.error('Erreur lors de l\'upsert utilisateur', {
+      logger.error("Erreur lors de l'upsert utilisateur", {
         login: userData.login,
-        error: error.message,
+        error: (_error as Error).message,
       });
-      throw new Error(`Upsert utilisateur échoué: ${error.message}`);
+      throw new Error(
+        `Upsert utilisateur échoué: ${(_error as Error).message}`,
+      );
     }
   }
 }

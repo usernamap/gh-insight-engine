@@ -41,27 +41,35 @@ export const validateGitHubToken = async (
       : authHeader;
 
     if (!githubToken) {
-      logWithContext.auth('validate_github_token', req.ip, false, {
+      logWithContext.auth('validate_github_token', req.ip ?? '', false, {
         reason: 'missing_token',
       });
 
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Token GitHub requis',
-        message: 'Veuillez fournir votre token GitHub Classic dans le header Authorization',
-        documentation: 'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token',
+        message:
+          'Veuillez fournir votre token GitHub Classic dans le header Authorization',
+        documentation:
+          'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token',
       });
       return;
     }
 
     // Validation du token avec l'API GitHub
-    const validation: GitHubTokenValidationResult = await githubConfig.validateToken(githubToken);
+    const validation: GitHubTokenValidationResult =
+      await githubConfig.validateToken(githubToken);
 
     if (!validation.valid) {
-      logWithContext.auth('validate_github_token', validation.username ?? 'unknown', false, {
-        reason: validation.error,
-      });
+      logWithContext.auth(
+        'validate_github_token',
+        validation.username ?? 'unknown',
+        false,
+        {
+          reason: validation.error,
+        },
+      );
 
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Token GitHub invalide',
         message: validation.error,
         help: 'Vérifiez que votre token est correct et possède les permissions requises',
@@ -72,22 +80,29 @@ export const validateGitHubToken = async (
     // Ajout des informations utilisateur à la requête
     req.user = { id: '', username: '', fullName: '', githubToken: '' };
 
-    logWithContext.auth('validate_github_token', validation.username ?? 'unknown', true, {
-      scopes: validation.scopes,
-    });
+    logWithContext.auth(
+      'validate_github_token',
+      validation.username ?? 'unknown',
+      true,
+      {
+        scopes: validation.scopes,
+      },
+    );
 
-    next();
+    _next();
   } catch (_error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
+    const errorMessage =
+      _error instanceof Error ? _error.message : 'Unknown validation error';
     logWithContext.auth('validate_github_token', req.ip ?? 'unknown', false, {
       reason: 'validation_error',
       _error: errorMessage,
     });
 
-    res.status(500).json({
+    _res.status(500).json({
       _error: 'Erreur validation token',
       message: 'Impossible de valider le token GitHub',
-      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      details:
+        process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     });
   }
 };
@@ -108,12 +123,12 @@ export const authenticateJWT = async (
       : null;
 
     if (!token) {
-      logWithContext.auth('authenticate_jwt', req.ip, false, {
+      logWithContext.auth('authenticate_jwt', req.ip ?? '', false, {
         reason: 'missing_token',
       });
 
-      res.status(401).json({
-        _error: 'Token d\'authentification requis',
+      _res.status(401).json({
+        _error: "Token d'authentification requis",
         message: 'Veuillez vous connecter pour accéder à cette ressource',
       });
       return;
@@ -134,7 +149,7 @@ export const authenticateJWT = async (
         reason: 'token_expired',
       });
 
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Token expiré',
         message: 'Veuillez vous reconnecter',
       });
@@ -148,9 +163,9 @@ export const authenticateJWT = async (
         reason: 'user_not_found',
       });
 
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Utilisateur non trouvé',
-        message: 'Le compte utilisateur associé à ce token n\'existe plus',
+        message: "Le compte utilisateur associé à ce token n'existe plus",
       });
       return;
     }
@@ -163,26 +178,26 @@ export const authenticateJWT = async (
       userId: decoded.userId,
     });
 
-    next();
+    _next();
   } catch (_error: unknown) {
-    if (error.name === 'JsonWebTokenError') {
+    if (_error instanceof Error && _error.name === 'JsonWebTokenError') {
       logWithContext.auth('authenticate_jwt', 'unknown', false, {
         reason: 'invalid_token',
       });
 
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Token JWT invalide',
         message: 'Token malformé ou corrompu',
       });
       return;
     }
 
-    if (error.name === 'TokenExpiredError') {
+    if (_error instanceof Error && _error.name === 'TokenExpiredError') {
       logWithContext.auth('authenticate_jwt', 'unknown', false, {
         reason: 'token_expired',
       });
 
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Token expiré',
         message: 'Veuillez vous reconnecter',
       });
@@ -190,12 +205,12 @@ export const authenticateJWT = async (
     }
 
     logger.error('Erreur authentification JWT', {
-      _error: error.message,
-      stack: error.stack,
+      _error: (_error as Error).message,
+      stack: (_error as Error).stack,
     });
 
-    res.status(500).json({
-      _error: 'Erreur d\'authentification',
+    _res.status(500).json({
+      _error: "Erreur d'authentification",
       message: 'Erreur interne du serveur',
     });
   }
@@ -218,22 +233,18 @@ export const optionalJWT = async (
 
     if (!token) {
       // Pas de token, continuer sans authentification
-      next();
+      _next();
       return;
     }
 
     // Si un token est fourni, tenter l'authentification
-    await authenticateJWT(req, res, (error) => {
-      if (error) {
-        // Ignorer les erreurs d'authentification en mode optionnel
-        next();
-      } else {
-        next();
-      }
+    await authenticateJWT(req, _res, () => {
+      // Ignorer les erreurs d'authentification en mode optionnel
+      _next();
     });
-  } catch (_error) {
+  } catch (_error: unknown) {
     // Ignorer les erreurs en mode optionnel
-    next();
+    _next();
   }
 };
 
@@ -253,7 +264,7 @@ export const generateJWT = (payload: {
     userId: payload.userId,
     username: payload.username,
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 heures
+    exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 heures
   };
 
   return jwt.sign(jwtPayload, jwtSecret);
@@ -263,18 +274,20 @@ export const generateJWT = (payload: {
  * Middleware de vérification des rôles (pour usage futur)
  */
 export const requireRole = (_roles: string[]) => {
-  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    _res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
     if (!req.user) {
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Authentification requise',
         message: 'Veuillez vous authentifier pour accéder à cette ressource',
       });
       return;
     }
-
-    // Pour l'instant, tous les utilisateurs authentifiés ont accès
-    // Cette logique peut être étendue avec un système de rôles
-    next();
+    // TODO: étendre la logique de rôle ici
+    _next();
   };
 };
 
@@ -283,9 +296,13 @@ export const requireRole = (_roles: string[]) => {
  * Vérifie que l'utilisateur peut accéder aux données demandées
  */
 export const requireOwnership = (paramName = 'username') => {
-  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    _res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
     if (!req.user) {
-      res.status(401).json({
+      _res.status(401).json({
         _error: 'Authentification requise',
         message: 'Veuillez vous authentifier pour accéder à cette ressource',
       });
@@ -304,14 +321,14 @@ export const requireOwnership = (paramName = 'username') => {
         ip: req.ip,
       });
 
-      res.status(403).json({
+      _res.status(403).json({
         _error: 'Accès interdit',
-        message: 'Vous ne pouvez accéder qu\'à vos propres données',
+        message: "Vous ne pouvez accéder qu'à vos propres données",
       });
       return;
     }
 
-    next();
+    _next();
   };
 };
 
@@ -324,15 +341,22 @@ export const userRateLimit = (options: {
   maxRequests: number;
   skipSuccessfulRequests?: boolean;
 }) => {
-  const userRequestCounts = new Map<string, {
-    count: number;
-    resetTime: number;
-  }>();
+  const userRequestCounts = new Map<
+    string,
+    {
+      count: number;
+      resetTime: number;
+    }
+  >();
 
-  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    _res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
     if (!req.user) {
       // Si pas d'utilisateur authentifié, laisser passer (sera géré par d'autres middlewares)
-      next();
+      _next();
       return;
     }
 
@@ -370,7 +394,7 @@ export const userRateLimit = (options: {
         resetIn,
       });
 
-      res.status(429).json({
+      _res.status(429).json({
         _error: 'Trop de requêtes',
         message: `Limite de ${maxRequests} requêtes par ${Math.ceil(windowMs / 60000)} minutes atteinte`,
         retryAfter: resetIn,
@@ -382,13 +406,13 @@ export const userRateLimit = (options: {
     userData.count++;
 
     // Ajouter les headers informatifs
-    res.set({
+    _res.set({
       'X-RateLimit-Limit': maxRequests.toString(),
       'X-RateLimit-Remaining': (maxRequests - userData.count).toString(),
       'X-RateLimit-Reset': Math.ceil(userData.resetTime / 1000).toString(),
     });
 
-    next();
+    _next();
   };
 };
 
@@ -399,9 +423,13 @@ export const userRateLimit = (options: {
 export const refreshGitHubValidation = (intervalMinutes = 60) => {
   const lastValidations = new Map<string, number>();
 
-  return async (req: Request, _res: Response, _next: NextFunction): Promise<void> => {
-    if (!req.user?.githubToken ?? !req.user?.username) {
-      next();
+  return async (
+    req: Request,
+    _res: Response,
+    _next: NextFunction,
+  ): Promise<void> => {
+    if (!req.user?.githubToken || !req.user.username) {
+      _next();
       return;
     }
 
@@ -412,7 +440,7 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
 
     // Vérifier si une revalidation est nécessaire
     if (now - lastValidation < intervalMs) {
-      next();
+      _next();
       return;
     }
 
@@ -425,7 +453,7 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
           reason: validation.error,
         });
 
-        res.status(401).json({
+        _res.status(401).json({
           _error: 'Token GitHub expiré ou révoqué',
           message: 'Veuillez renouveler votre token GitHub',
           action: 'refresh_token_required',
@@ -437,16 +465,15 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
       lastValidations.set(username, now);
 
       logWithContext.auth('github_token_refreshed', username, true);
-      next();
-
+      _next();
     } catch (_error: unknown) {
       logger.warn('Erreur lors de la revalidation du token GitHub', {
         username,
-        _error: error.message,
+        _error: (_error as Error).message,
       });
 
       // En cas d'erreur de validation, laisser passer mais logger
-      next();
+      _next();
     }
   };
 };
