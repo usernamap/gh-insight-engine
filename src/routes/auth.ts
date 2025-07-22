@@ -12,7 +12,7 @@ const router = Router();
  * @access  Public
  * @body    { username: string, fullName: string, githubToken: string }
  */
-router.post('/login', validateAuth, validateGitHubToken, AuthController.login);
+router.post('/login', validateAuth, AuthController.login);
 
 /**
  * @route   POST /api/auth/refresh

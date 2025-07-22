@@ -1,4 +1,4 @@
-import { Express, Response, Router } from 'express';
+import { Express, Request, Response, Router } from 'express';
 import analyticsRoutes from './analytics';
 import authRoutes from './auth';
 import insightsRoutes from './insights';
@@ -13,7 +13,7 @@ export const setupRoutes = (app: Express): void => {
   const apiRouter = Router();
 
   // Route de santé (health check)
-  apiRouter.get('/health', (res: Response) => {
+  apiRouter.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({
       status: 'healthy',
       service: 'GitHub Insight Engine API',
@@ -25,7 +25,7 @@ export const setupRoutes = (app: Express): void => {
   });
 
   // Route ping simple
-  apiRouter.get('/ping', (res: Response) => {
+  apiRouter.get('/ping', (_req: Request, res: Response) => {
     res
       .status(200)
       .json({ message: 'pong', timestamp: new Date().toISOString() });
@@ -52,7 +52,7 @@ export const setupRoutes = (app: Express): void => {
   app.use('/api', apiRouter);
 
   // Route racine avec documentation basique
-  app.get('/', (res: Response) => {
+  app.get('/', (_req: Request, res: Response) => {
     res.status(200).json({
       name: 'GitHub Insight Engine API',
       description:

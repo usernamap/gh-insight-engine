@@ -27,7 +27,7 @@ import {
   UserProfile,
 } from '@/types/github';
 
-import githubConfig from '@/config/github';
+import githubConfig, { GitHubConfig } from '@/config/github';
 import logger from '@/utils/logger';
 
 // Fonction utilitaire stricte pour transformer un node GraphQL en GitHubRepo
@@ -149,6 +149,19 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
 }
 
 export class GitHubService {
+  private githubConfig: GitHubConfig;
+
+  private constructor(token: string) {
+    this.githubConfig = new GitHubConfig();
+    // L'initialisation asynchrone se fait dans la méthode create
+  }
+
+  static async create(token: string): Promise<GitHubService> {
+    const service = new GitHubService(token);
+    await service.githubConfig.initialize(token);
+    return service;
+  }
+
   /**
    * Récupère les organisations de l'utilisateur authentifié
    * GraphQL: viewer.organizations(first: 50)
@@ -168,7 +181,7 @@ export class GitHubService {
 
     try {
       const response: GraphQLResponse =
-        await githubConfig.executeGraphQLQuery(query);
+        await this.githubConfig.executeGraphQLQuery(query);
 
       if (Array.isArray(response.errors) && response.errors.length > 0) {
         throw new Error(
@@ -255,13 +268,11 @@ export class GitHubService {
     `;
 
     try {
-      const [basicResponse, countersResponse, orgsResponse] = await Promise.all(
-        [
-          githubConfig.executeGraphQLQuery(basicQuery),
-          githubConfig.executeGraphQLQuery(countersQuery),
-          githubConfig.executeGraphQLQuery(orgsQuery),
-        ],
-      );
+      const [basicResponse, countersResponse, orgsResponse] = await Promise.all([
+        this.githubConfig.executeGraphQLQuery(basicQuery),
+        this.githubConfig.executeGraphQLQuery(countersQuery),
+        this.githubConfig.executeGraphQLQuery(orgsQuery),
+      ]);
 
       // Vérification des erreurs
       const responses = [basicResponse, countersResponse, orgsResponse];
@@ -273,9 +284,9 @@ export class GitHubService {
         }
       }
 
-      const basic = (basicResponse.data as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
-      const counters = (countersResponse.data as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
-      const orgs = (orgsResponse.data as GitHubGraphQLUserOrganizationsResponse)?.viewer ?? {} as GitHubGraphQLUserOrganizations;
+      const basic = (basicResponse as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
+      const counters = (countersResponse as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
+      const orgs = (orgsResponse as GitHubGraphQLUserOrganizationsResponse)?.viewer ?? {} as GitHubGraphQLUserOrganizations;
 
       const userProfile: UserProfile = {
         login: basic.login,
@@ -423,7 +434,7 @@ export class GitHubService {
 
     try {
       const variables = cursor != null && cursor !== '' ? { cursor } : {};
-      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(
+      const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
         query,
         variables,
       );
@@ -559,7 +570,7 @@ export class GitHubService {
 
     try {
       const variables = orgName && cursor != null && cursor !== '' ? { orgName, cursor } : { orgName };
-      const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(
+      const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
         query,
         variables,
       );
@@ -611,10 +622,10 @@ export class GitHubService {
   ): Promise<Record<string, unknown>> {
     try {
       const [workflowsResponse, runsResponse] = await Promise.all([
-        githubConfig.executeRestRequest(
+        this.githubConfig.executeRestRequest(
           `GET /repos/${owner}/${repo}/actions/workflows`,
         ),
-        githubConfig.executeRestRequest(
+        this.githubConfig.executeRestRequest(
           `GET /repos/${owner}/${repo}/actions/runs`,
           {
             per_page: 20,
@@ -707,7 +718,7 @@ export class GitHubService {
       ];
 
       const responses = await Promise.allSettled(
-        endpoints.map((endpoint) => githubConfig.executeRestRequest(endpoint)),
+        endpoints.map((endpoint) => this.githubConfig.executeRestRequest(endpoint)),
       );
 
       const dependabotAlerts =
@@ -795,7 +806,7 @@ export class GitHubService {
     repo: string,
   ): Promise<Record<string, unknown>> {
     try {
-      const response = await githubConfig.executeRestRequest(
+      const response = await this.githubConfig.executeRestRequest(
         `GET /users/${owner}/packages`,
       );
       const packages = ((response as unknown) as GitHubRestPackage[]) ?? [];
@@ -849,7 +860,7 @@ export class GitHubService {
   ): Promise<Record<string, unknown>> {
     try {
       const branch = defaultBranch ?? 'main';
-      const response = await githubConfig.executeRestRequest(
+      const response = await this.githubConfig.executeRestRequest(
         `GET /repos/${owner}/${repo}/branches/${branch}/protection`,
       );
 
@@ -900,7 +911,7 @@ export class GitHubService {
     repo: string,
   ): Promise<Record<string, unknown>> {
     try {
-      const response = await githubConfig.executeRestRequest(
+      const response = await this.githubConfig.executeRestRequest(
         `GET /repos/${owner}/${repo}/community/profile`,
       );
 
@@ -958,13 +969,13 @@ export class GitHubService {
     try {
       const [viewsResponse, clonesResponse, pathsResponse] =
         await Promise.allSettled([
-          githubConfig.executeRestRequest(
+          this.githubConfig.executeRestRequest(
             `GET /repos/${owner}/${repo}/traffic/views`,
           ),
-          githubConfig.executeRestRequest(
+          this.githubConfig.executeRestRequest(
             `GET /repos/${owner}/${repo}/traffic/clones`,
           ),
-          githubConfig.executeRestRequest(
+          this.githubConfig.executeRestRequest(
             `GET /repos/${owner}/${repo}/traffic/popular/paths`,
           ),
         ]);

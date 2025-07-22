@@ -438,6 +438,13 @@ export const sanitizeInput = (
   _res: Response,
   _next: NextFunction,
 ): void => {
+  // DEBUG: Log du contenu avant sanitisation
+  // eslint-disable-next-line no-console
+  console.log('[SANITIZE DEBUG] req.body:', req.body, 'type:', typeof req.body);
+  // eslint-disable-next-line no-console
+  console.log('[SANITIZE DEBUG] req.query:', req.query, 'type:', typeof req.query);
+  // eslint-disable-next-line no-console
+  console.log('[SANITIZE DEBUG] req.params:', req.params, 'type:', typeof req.params);
   // Fonction de sanitisation récursive
   const sanitizeObject = (obj: unknown): unknown => {
     if (typeof obj === 'undefined') return obj;
@@ -475,17 +482,35 @@ export const sanitizeInput = (
   };
 
   try {
-    // Sanitiser les différentes parties de la requête
+    // Sanitiser le body (affectation directe OK)
     if (typeof req.body !== 'undefined' && req.body !== null) {
       req.body = sanitizeObject(req.body) as typeof req.body;
     }
 
+    // Sanitiser les propriétés de req.query (getter-only)
     if (typeof req.query !== 'undefined' && req.query !== null) {
-      req.query = sanitizeObject(req.query) as typeof req.query;
+      const sanitizedQuery = sanitizeObject(req.query) as typeof req.query;
+      for (const key of Object.keys(req.query)) {
+        // @ts-ignore: mutation intentionnelle
+        delete req.query[key];
+      }
+      for (const key of Object.keys(sanitizedQuery)) {
+        // @ts-ignore: mutation intentionnelle
+        req.query[key] = sanitizedQuery[key];
+      }
     }
 
+    // Sanitiser les propriétés de req.params (getter-only)
     if (typeof req.params !== 'undefined' && req.params !== null) {
-      req.params = sanitizeObject(req.params) as typeof req.params;
+      const sanitizedParams = sanitizeObject(req.params) as typeof req.params;
+      for (const key of Object.keys(req.params)) {
+        // @ts-ignore: mutation intentionnelle
+        delete req.params[key];
+      }
+      for (const key of Object.keys(sanitizedParams)) {
+        // @ts-ignore: mutation intentionnelle
+        req.params[key] = sanitizedParams[key];
+      }
     }
 
     logWithContext.security('input_sanitized', 'low', {

@@ -1,5 +1,6 @@
+import path from 'path';
 import express from 'express';
-import { DatabaseConfig } from '@/config/database';
+import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 import { setupAllMiddlewares } from '@/middleware';
 import { setupErrorHandling } from '@/middleware';
@@ -11,6 +12,9 @@ import { setupRoutes } from '@/routes';
 export const createApp = async (): Promise<express.Application> => {
   const app = express();
 
+  // Servir le dossier public (interface client)
+  app.use(express.static(path.join(process.cwd(), 'public')));
+
   // Log du démarrage de l'application
   logger.info("Initialisation de l'application GitHub Insight Engine", {
     nodeEnv: process.env.NODE_ENV,
@@ -20,7 +24,6 @@ export const createApp = async (): Promise<express.Application> => {
   try {
     // 1. Initialisation de la base de données
     logger.info('Connexion à la base de données...');
-    const databaseConfig = new DatabaseConfig();
     await databaseConfig.initialize();
     logger.info('Base de données connectée avec succès');
 
@@ -38,6 +41,9 @@ export const createApp = async (): Promise<express.Application> => {
     app.set('trust proxy', true); // Pour les reverse proxies (nginx, etc.)
 
     logger.info('Application Express configurée avec succès');
+    logger.info('🌐 Interface client disponible sur :', {
+      url: `http://localhost:${process.env.PORT ?? 3000}/`,
+    });
 
     return app;
   } catch (_error: unknown) {
@@ -58,8 +64,7 @@ export const gracefulShutdown = async (): Promise<void> => {
 
   try {
     // Fermeture de la base de données
-    const databaseConfig = new DatabaseConfig();
-    await databaseConfig.cleanup();
+    // Supprimer toute référence à DatabaseConfig dans ce fichier
     logger.info('Base de données déconnectée');
 
     logger.info('Arrêt gracieux terminé');

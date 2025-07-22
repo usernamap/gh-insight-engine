@@ -301,6 +301,7 @@ export const errorHandler: ErrorRequestHandler = (
   _error: Error,
   _req: Request,
   _res: Response,
+  _next: NextFunction,
 ): void => {
   // Classifier et normaliser l'erreur
   const classifiedError = classifyError(_error);

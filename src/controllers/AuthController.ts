@@ -6,6 +6,7 @@ import { githubConfig } from '@/config/github';
 import { logWithContext } from '@/utils/logger';
 import { UserModel } from '@/models/User';
 import { GitHubService } from '@/services/GitHubService';
+import logger from '@/utils/logger';
 
 interface LoginRequestBody {
   username: string;
@@ -28,86 +29,97 @@ export class AuthController {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
       });
-      try {
-        const tokenValidation = await githubConfig.validateToken(githubToken);
-        if (!tokenValidation.valid) {
-          logWithContext.auth('github_token_invalid', username, false, {
-            reason: tokenValidation.error,
-            scopes: tokenValidation.scopes,
-          });
-          throw createError.authentication(
-            `Token GitHub invalide: ${tokenValidation.error}`,
-          );
-        }
-        // Utiliser GitHubService pour récupérer le profil
-        const githubService = new GitHubService();
-        const userProfile = await githubService.getUserProfile();
-        if (userProfile == null) {
-          logWithContext.auth('github_user_not_found', username, false);
-          throw createError.notFound('Utilisateur GitHub');
-        }
-        if (userProfile.login !== username) {
-          logWithContext.auth('token_username_mismatch', username, false, {
-            tokenOwner: userProfile.login,
-          });
-          throw createError.authorization(
-            "Le token GitHub ne correspond pas au nom d'utilisateur fourni",
-          );
-        }
-        // Mise à jour ou création du profil utilisateur en base
-        const user = await UserModel.upsert(userProfile);
-        // Génération du JWT (adapter le payload au schéma attendu)
-        const jwtPayload = {
-          userId: user.id,
-          username: userProfile.login,
-        };
-        const accessToken = generateJWT(jwtPayload);
-        const responseData = {
-          message: 'Authentification réussie',
-          user: {
-            id: user.id,
-            username: userProfile.login,
-            name: userProfile.name,
-            fullName,
-            email: userProfile.email,
-            avatarUrl: userProfile.avatarUrl,
-            bio: userProfile.bio,
-            company: userProfile.company,
-            location: userProfile.location,
-            publicRepos: userProfile.publicRepos,
-            followers: userProfile.followers,
-            following: userProfile.following,
-            createdAt: userProfile.createdAt,
-            hasValidToken: true,
-            tokenScopes: tokenValidation.scopes ?? [],
-          },
-          tokens: {
-            accessToken,
-            tokenType: 'Bearer',
-            expiresIn: '24h',
-          },
-          permissions: {
-            canAccessPrivateRepos:
-              tokenValidation.scopes?.includes('repo') ?? false,
-            canReadOrgs: tokenValidation.scopes?.includes('read:org') ?? false,
-            canReadUser: tokenValidation.scopes?.includes('user') ?? false,
-          },
-          timestamp: new Date().toISOString(),
-        };
-        logWithContext.auth('login_success', username, true, {
-          userId: user.id,
-          tokenScopes: tokenValidation.scopes,
-          hasPrivateAccess: tokenValidation.scopes?.includes('repo'),
+
+      const tokenValidation = await githubConfig.validateToken(githubToken);
+      if (!tokenValidation.valid) {
+        logWithContext.auth('github_token_invalid', username, false, {
+          reason: tokenValidation.error,
+          scopes: tokenValidation.scopes,
         });
-        res.status(200).json(responseData);
-        return;
-      } catch (_error: unknown) {
-        logWithContext.auth('login_failed', username, false, {
-          error: String(_error),
-          errorType: (_error as Error).constructor.name,
-        });
-        throw _error;
+        throw createError.authentication(
+          `Token GitHub invalide: ${tokenValidation.error}`,
+        );
       }
+
+      // Initialiser la configuration GitHub avec le token
+      await githubConfig.initialize(githubToken);
+
+      // Utiliser GitHubService pour récupérer le profil
+      const githubService = await GitHubService.create(githubToken);
+      const userProfile = await githubService.getUserProfile();
+      const cleanUsername = username.trim();
+      logger.info(`[DEBUG] Login du token GitHub: ${userProfile?.login} | Username saisi: ${cleanUsername}`);
+      if (userProfile == null) {
+        logWithContext.auth('github_user_not_found', username, false);
+        throw createError.notFound('Utilisateur GitHub');
+      }
+      // Logs de débogage détaillé
+      console.log('🔍 [DEBUG] Comparaison des usernames:');
+      console.log('🔍 [DEBUG] userProfile.login:', JSON.stringify(userProfile.login));
+      console.log('🔍 [DEBUG] username from request:', JSON.stringify(username));
+      console.log('🔍 [DEBUG] typeof userProfile.login:', typeof userProfile.login);
+      console.log('🔍 [DEBUG] typeof username:', typeof username);
+      console.log('🔍 [DEBUG] Equality check:', userProfile.login === username);
+      console.log('🔍 [DEBUG] Strict comparison:', userProfile.login !== username);
+
+      if (userProfile.login !== cleanUsername) {
+        logWithContext.auth('token_username_mismatch', username, false, {
+          tokenOwner: userProfile.login,
+        });
+        throw createError.authorization(
+          "Le token GitHub ne correspond pas au nom d'utilisateur fourni",
+        );
+      }
+
+      // Mise à jour ou création du profil utilisateur en base
+      const user = await UserModel.upsert(userProfile);
+
+      // Génération du JWT (adapter le payload au schéma attendu)
+      const jwtPayload = {
+        userId: user.id,
+        username: userProfile.login,
+      };
+      const accessToken = generateJWT(jwtPayload);
+      const responseData = {
+        message: 'Authentification réussie',
+        user: {
+          id: user.id,
+          username: userProfile.login,
+          name: userProfile.name,
+          fullName,
+          email: userProfile.email,
+          avatarUrl: userProfile.avatarUrl,
+          bio: userProfile.bio,
+          company: userProfile.company,
+          location: userProfile.location,
+          publicRepos: userProfile.publicRepos,
+          followers: userProfile.followers,
+          following: userProfile.following,
+          createdAt: userProfile.createdAt,
+          hasValidToken: true,
+          tokenScopes: tokenValidation.scopes ?? [],
+        },
+        tokens: {
+          accessToken,
+          tokenType: 'Bearer',
+          expiresIn: '24h',
+        },
+        permissions: {
+          canAccessPrivateRepos:
+            tokenValidation.scopes?.includes('repo') ?? false,
+          canReadOrgs: tokenValidation.scopes?.includes('read:org') ?? false,
+          canReadUser: tokenValidation.scopes?.includes('user') ?? false,
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      logWithContext.auth('login_success', username, true, {
+        userId: user.id,
+        tokenScopes: tokenValidation.scopes,
+        hasPrivateAccess: tokenValidation.scopes?.includes('repo'),
+      });
+
+      res.status(200).json(responseData);
     },
   );
 

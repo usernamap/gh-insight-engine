@@ -17,7 +17,6 @@ export const REQUIRED_SCOPES = [
   'read:org',
   'read:packages',
   'security_events',
-  'actions:read',
   'admin:repo_hook',
   'repo:status',
 ] as const;
@@ -77,6 +76,12 @@ export class GitHubConfig {
         tempOctokit.rest.rateLimit.get(),
       ]);
 
+      // DEBUG: Log du header x-oauth-scopes brut
+      logger.info('DEBUG x-oauth-scopes', {
+        headers: userResponse.headers,
+        xOAuthScopes: userResponse.headers['x-oauth-scopes'] ?? userResponse.headers['X-OAuth-Scopes'],
+      });
+
       const scopes = this.extractScopesFromHeaders(
         userResponse.headers as Record<string, string | number | undefined>,
       );
@@ -133,15 +138,20 @@ export class GitHubConfig {
    * Vérifie les scopes manquants
    */
   private checkMissingScopes(userScopes: string[]): string[] {
+    const hasUser = userScopes.includes('user');
+    const hasRepo = userScopes.includes('repo');
     return REQUIRED_SCOPES.filter((requiredScope) => {
-      // Logique spéciale pour les scopes avec préfixes
+      if (userScopes.includes(requiredScope)) return false;
+      // user couvre tous les user:* et read:user
+      if (hasUser && (requiredScope.startsWith('user:') || requiredScope === 'read:user')) return false;
+      // repo couvre tous les repo:* et read:org, read:packages, security_events, repo:status
+      if (hasRepo && (requiredScope.startsWith('repo:') || requiredScope === 'read:org' || requiredScope === 'read:packages' || requiredScope === 'security_events' || requiredScope === 'repo:status')) return false;
+      // parent direct
       if (requiredScope.includes(':')) {
-        const [prefix] = requiredScope.split(':');
-        return !userScopes.some(
-          (scope) => scope === requiredScope || scope.startsWith(`${prefix}:`),
-        );
+        const [parent] = requiredScope.split(':');
+        if (userScopes.includes(parent)) return false;
       }
-      return !userScopes.includes(requiredScope);
+      return true;
     });
   }
 
@@ -164,14 +174,14 @@ export class GitHubConfig {
         await this.checkRateLimit();
 
         const response = await this.octokit.graphql<T>(query, variables);
-
-        logger.debug('Requête GraphQL exécutée avec succès', {
-          query: `${query.substring(0, 100)}...`,
-          attempt: attempt + 1,
-        });
-
+        logger.info('[DEBUG] GraphQL response:', JSON.stringify(response));
         return response;
       } catch (_error: unknown) {
+        logger.error('[DEBUG] GraphQL error:', {
+          error: (_error as Error).message,
+          stack: (_error as Error).stack,
+          raw: JSON.stringify(_error)
+        });
         lastError = _error as Error;
 
         if (this.isRateLimitError(_error) && attempt < maxRetries) {
