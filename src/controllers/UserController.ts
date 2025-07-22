@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
+import {
+  Repository as PrismaRepository,
+  User as PrismaUser,
+} from '@prisma/client';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { createError } from '@/middleware/errorHandler';
 import { databaseService } from '@/services/DatabaseService';
 import { logWithContext } from '@/utils/logger';
-import {
-  Repository as PrismaRepository,
-  User as PrismaUser,
-} from '@/generated/prisma';
 import { UserModel } from '@/models/User';
 import { AuthenticatedUser } from '@/types/github';
 
@@ -49,7 +49,7 @@ export class UserController {
         // Récupération des données utilisateur
         const userData = await UserModel.findByLogin(username);
 
-        if (!userData) {
+        if (userData == null) {
           throw createError.notFound('Utilisateur');
         }
 
@@ -242,7 +242,7 @@ export class UserController {
         // Vérification de l'existence de l'utilisateur
         const userData = await UserModel.findByLogin(username);
 
-        if (!userData) {
+        if (userData == null) {
           throw createError.notFound('Utilisateur');
         }
 
@@ -331,7 +331,7 @@ export class UserController {
         // Vérification de l'existence de l'utilisateur
         const userData = await UserModel.findByLogin(username);
 
-        if (!userData) {
+        if (userData == null) {
           throw createError.notFound('Utilisateur');
         }
 

@@ -12,4 +12,4 @@ export type {
   User as PrismaUser,
   Repository as PrismaRepository,
   Dataset as PrismaDataset,
-} from '@/generated/prisma';
+} from '@prisma/client';

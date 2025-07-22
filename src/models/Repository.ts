@@ -2,10 +2,13 @@
  * Modèle Repository - Collection repositories
  * CRUD operations et enrichissement DevOps pour les repositories GitHub
  */
+import { Prisma, Repository as PrismaRepository } from '@prisma/client';
 import { GitHubRepo } from '@/types/github';
-import { Repository as PrismaRepository } from '@/generated/prisma';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
+
+// Helper pour forcer la compatibilité JSON Prisma
+const toJson = (value: unknown): Prisma.InputJsonValue => (value !== undefined ? JSON.parse(JSON.stringify(value)) : null as unknown as Prisma.InputJsonValue);
 
 export class RepositoryModel {
   /**
@@ -37,7 +40,7 @@ export class RepositoryModel {
           networkCount: repoData.networkCount ?? null,
           openIssuesCount: repoData.openIssuesCount,
           primaryLanguage: repoData.primaryLanguage ?? null,
-          languages: repoData.languages,
+          languages: repoData.languages as unknown as Prisma.InputJsonValue,
           topics: repoData.topics,
           pushedAt: repoData.pushedAt ?? null,
           updatedAt: repoData.updatedAt,
@@ -45,7 +48,7 @@ export class RepositoryModel {
           homepageUrl: repoData.homepageUrl ?? null,
           size: repoData.size,
           defaultBranchRef: repoData.defaultBranchRef ?? null,
-          license: repoData.license ?? null,
+          license: toJson(repoData.license),
           hasIssuesEnabled: repoData.hasIssuesEnabled,
           hasProjectsEnabled: repoData.hasProjectsEnabled,
           hasWikiEnabled: repoData.hasWikiEnabled,
@@ -61,21 +64,21 @@ export class RepositoryModel {
           readmeEnabled: repoData.readmeEnabled ?? null,
           deployments: repoData.deployments,
           environments: repoData.environments,
-          commits: repoData.commits,
+          commits: toJson(repoData.commits),
           releases: repoData.releases,
           issues: repoData.issues,
           pullRequests: repoData.pullRequests,
           branchProtectionRules: repoData.branchProtectionRules,
           collaborators: repoData.collaborators,
           // DevOps data (optionnel)
-          githubActions: repoData.githubActions ?? null,
-          security: repoData.security ?? null,
-          packages: repoData.packages ?? null,
-          branchProtection: repoData.branchProtection ?? null,
-          community: repoData.community ?? null,
-          traffic: repoData.traffic ?? null,
+          githubActions: toJson(repoData.githubActions),
+          security: toJson(repoData.security),
+          packages: toJson(repoData.packages),
+          branchProtection: toJson(repoData.branchProtection),
+          community: toJson(repoData.community),
+          traffic: toJson(repoData.traffic),
           diskUsage: repoData.diskUsage ?? null,
-          owner: repoData.owner,
+          owner: toJson(repoData.owner),
           userId,
         },
       });
@@ -166,7 +169,7 @@ export class RepositoryModel {
       }
 
       // Configuration du tri
-      let orderBy: unknown;
+      let orderBy: Prisma.RepositoryOrderByWithRelationInput | Prisma.RepositoryOrderByWithRelationInput[] | undefined;
       switch (sortBy) {
       case 'stars':
         orderBy = { stargazerCount: sortOrder };
@@ -306,22 +309,22 @@ export class RepositoryModel {
 
       // Ajouter les données DevOps seulement si elles sont fournies
       if (devOpsData.githubActions) {
-        data.githubActions = devOpsData.githubActions;
+        data.githubActions = toJson(devOpsData.githubActions);
       }
       if (devOpsData.security) {
-        data.security = devOpsData.security;
+        data.security = toJson(devOpsData.security);
       }
       if (devOpsData.packages) {
-        data.packages = devOpsData.packages;
+        data.packages = toJson(devOpsData.packages);
       }
       if (devOpsData.branchProtection) {
-        data.branchProtection = devOpsData.branchProtection;
+        data.branchProtection = toJson(devOpsData.branchProtection);
       }
       if (devOpsData.community) {
-        data.community = devOpsData.community;
+        data.community = toJson(devOpsData.community);
       }
       if (devOpsData.traffic) {
-        data.traffic = devOpsData.traffic;
+        data.traffic = toJson(devOpsData.traffic);
       }
 
       const repository = await prisma.repository.update({
@@ -565,27 +568,27 @@ export class RepositoryModel {
           watchersCount: repoData.watchersCount,
           openIssuesCount: repoData.openIssuesCount,
           primaryLanguage: repoData.primaryLanguage ?? null,
-          languages: repoData.languages,
+          languages: repoData.languages as unknown as Prisma.InputJsonValue,
           topics: repoData.topics,
           pushedAt: repoData.pushedAt ?? null,
           updatedAt: new Date(),
           homepageUrl: repoData.homepageUrl ?? null,
           size: repoData.size,
-          commits: repoData.commits,
+          commits: toJson(repoData.commits),
           releases: repoData.releases,
           issues: repoData.issues,
           pullRequests: repoData.pullRequests,
           // Mise à jour des données DevOps si présentes
           ...(repoData.githubActions && {
-            githubActions: repoData.githubActions,
+            githubActions: toJson(repoData.githubActions),
           }),
-          ...(repoData.security && { security: repoData.security }),
-          ...(repoData.packages && { packages: repoData.packages }),
+          ...(repoData.security && { security: toJson(repoData.security) }),
+          ...(repoData.packages && { packages: toJson(repoData.packages) }),
           ...(repoData.branchProtection && {
-            branchProtection: repoData.branchProtection,
+            branchProtection: toJson(repoData.branchProtection),
           }),
-          ...(repoData.community && { community: repoData.community }),
-          ...(repoData.traffic && { traffic: repoData.traffic }),
+          ...(repoData.community && { community: toJson(repoData.community) }),
+          ...(repoData.traffic && { traffic: toJson(repoData.traffic) }),
         },
         create: {
           nameWithOwner: repoData.nameWithOwner,
@@ -602,7 +605,7 @@ export class RepositoryModel {
           networkCount: repoData.networkCount ?? null,
           openIssuesCount: repoData.openIssuesCount,
           primaryLanguage: repoData.primaryLanguage ?? null,
-          languages: repoData.languages,
+          languages: repoData.languages as unknown as Prisma.InputJsonValue,
           topics: repoData.topics,
           pushedAt: repoData.pushedAt ?? null,
           updatedAt: repoData.updatedAt,
@@ -610,7 +613,7 @@ export class RepositoryModel {
           homepageUrl: repoData.homepageUrl ?? null,
           size: repoData.size,
           defaultBranchRef: repoData.defaultBranchRef ?? null,
-          license: repoData.license ?? null,
+          license: toJson(repoData.license),
           hasIssuesEnabled: repoData.hasIssuesEnabled,
           hasProjectsEnabled: repoData.hasProjectsEnabled,
           hasWikiEnabled: repoData.hasWikiEnabled,
@@ -626,20 +629,20 @@ export class RepositoryModel {
           readmeEnabled: repoData.readmeEnabled ?? null,
           deployments: repoData.deployments,
           environments: repoData.environments,
-          commits: repoData.commits,
+          commits: toJson(repoData.commits),
           releases: repoData.releases,
           issues: repoData.issues,
           pullRequests: repoData.pullRequests,
           branchProtectionRules: repoData.branchProtectionRules,
           collaborators: repoData.collaborators,
-          githubActions: repoData.githubActions ?? null,
-          security: repoData.security ?? null,
-          packages: repoData.packages ?? null,
-          branchProtection: repoData.branchProtection ?? null,
-          community: repoData.community ?? null,
-          traffic: repoData.traffic ?? null,
+          githubActions: toJson(repoData.githubActions),
+          security: toJson(repoData.security),
+          packages: toJson(repoData.packages),
+          branchProtection: toJson(repoData.branchProtection),
+          community: toJson(repoData.community),
+          traffic: toJson(repoData.traffic),
           diskUsage: repoData.diskUsage ?? null,
-          owner: repoData.owner,
+          owner: toJson(repoData.owner),
           userId,
         },
       });

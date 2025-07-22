@@ -1,5 +1,5 @@
-import { User as PrismaUser } from '@/generated/prisma';
-import { UserProfile } from '@/types/github';
+import { User as PrismaUser } from '@prisma/client';
+import { UserProfile } from '@/types';
 export declare class UserModel {
     static create(userData: UserProfile): Promise<PrismaUser>;
     static findByLogin(login: string): Promise<PrismaUser | null>;

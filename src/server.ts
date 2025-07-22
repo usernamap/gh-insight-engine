@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import http from 'http';
+import { fileURLToPath } from 'url';
+import chalk from 'chalk';
 import { createApp, gracefulShutdown } from './app';
 import logger from '@/utils/logger';
 
@@ -190,9 +192,28 @@ process.on('warning', (warning) => {
 });
 
 /**
+ * Header stylé au démarrage
+ */
+function printHeader(): void {
+  // eslint-disable-next-line no-console
+  console.log(`\n${  chalk.bgBlueBright.bold.white('  GitHub Insight Engine  ')  }  ${  chalk.bold.gray(`v${process.env.npm_package_version ?? 'dev'}`)}`);
+  // eslint-disable-next-line no-console
+  console.log(chalk.gray('='.repeat(60)));
+  // eslint-disable-next-line no-console
+  console.log(chalk.white('Mode:'), chalk.bold.yellow(process.env.NODE_ENV ?? 'development'), chalk.white('Port:'), chalk.bold.green(process.env.PORT ?? '3000'), chalk.white('Date:'), chalk.bold.cyan(new Date().toLocaleString()));
+  // eslint-disable-next-line no-console
+  console.log(chalk.white('API:'), chalk.underline(`http://localhost:${process.env.PORT ?? '3000'}/api`));
+  // eslint-disable-next-line no-console
+  console.log(chalk.white('Docs:'), chalk.underline(`http://localhost:${process.env.PORT ?? '3000'}/`));
+  // eslint-disable-next-line no-console
+  console.log(`${chalk.gray('='.repeat(60))  }\n`);
+}
+
+/**
  * Démarrage du serveur
  */
-if (require.main === module) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  printHeader();
   startServer().catch((error) => {
     logger.error('Erreur fatale', {
       error: error.message,

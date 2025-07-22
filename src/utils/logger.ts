@@ -5,6 +5,7 @@
 
 import path from 'path';
 import winston from 'winston';
+import chalk from 'chalk';
 
 // Création du dossier logs s'il n'existe pas
 const logsDir = path.join(process.cwd(), 'logs');
@@ -16,14 +17,54 @@ const logFormat = winston.format.combine(
   winston.format.json(),
 );
 
+// Format console custom
+const customConsoleFormat = winston.format.printf(({ timestamp, level, message, ...meta }) => {
+  // Coloration niveau
+  let levelColor = level;
+  switch (level) {
+  case 'error':
+    levelColor = chalk.bold.red(level.toUpperCase());
+    break;
+  case 'warn':
+    levelColor = chalk.bold.yellow(level.toUpperCase());
+    break;
+  case 'info':
+    levelColor = chalk.bold.green(level.toUpperCase());
+    break;
+  case 'debug':
+    levelColor = chalk.bold.cyan(level.toUpperCase());
+    break;
+  default:
+    levelColor = chalk.bold.white(level.toUpperCase());
+  }
+  // Timestamp
+  const ts = chalk.gray(typeof timestamp === 'string' && timestamp ? `[${timestamp}]` : '');
+  // Message principal
+  const mainMsg = chalk.bold.white(message);
+  // Contexte/meta
+  let context = '';
+  if (Object.keys(meta ?? {}).length > 0) {
+    // Masquage infos sensibles
+    const safeMeta = JSON.parse(JSON.stringify(meta));
+    if (typeof safeMeta.url === 'string') {
+      safeMeta.url = safeMeta.url.replace(/(mongodb:\/\/)(.*):(.*)@/, '$1****:****@');
+    }
+    if (Object.prototype.hasOwnProperty.call(safeMeta, 'token')) safeMeta.token = '****';
+    if (Object.prototype.hasOwnProperty.call(safeMeta, 'GH_TOKEN')) safeMeta.GH_TOKEN = '****';
+    if (Object.prototype.hasOwnProperty.call(safeMeta, 'OPENAI_API_KEY')) safeMeta.OPENAI_API_KEY = '****';
+    context = `\n${chalk.dim(JSON.stringify(safeMeta, null, 2))}`;
+  }
+  return `${ts} ${levelColor} ${mainMsg}${context}`;
+});
+
 // Configuration des transports
 const transports: winston.transport[] = [
   // Console pour développement
   new winston.transports.Console({
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple(),
+      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+      customConsoleFormat,
     ),
   }),
 

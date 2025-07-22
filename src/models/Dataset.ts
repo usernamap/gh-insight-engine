@@ -2,12 +2,14 @@
  * Modèle Dataset - Collection datasets
  * CRUD operations pour les datasets avec métadonnées, analyses quantitatives et IA
  */
+import { Dataset, Prisma } from '@prisma/client';
 import { AnalyticsExtension } from '@/types/analytics';
 import { DatasetMetadata } from '@/types/github';
 import { InsightsExtension } from '@/types/insights';
-import { Dataset as PrismaDataset } from '@/generated/prisma';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
+
+export type PrismaDataset = Dataset;
 
 
 export class DatasetModel {
@@ -28,7 +30,7 @@ export class DatasetModel {
       const dataset = await prisma.dataset.create({
         data: {
           userProfileId,
-          metadata,
+          metadata: metadata as unknown as Prisma.InputJsonValue,
           repositories,
         },
       });
@@ -62,7 +64,7 @@ export class DatasetModel {
       const dataset = await prisma.dataset.findUnique({
         where: { id },
         include: {
-          _userProfile: true,
+          userProfile: true,
         },
       });
 
@@ -108,7 +110,7 @@ export class DatasetModel {
           skip: offset,
           orderBy: { updatedAt: 'desc' },
           include: {
-            _userProfile: { select: { login: true, name: true } },
+            userProfile: { select: { login: true, name: true } },
           },
         }),
         prisma.dataset.count({ where: { userProfileId } }),
@@ -146,7 +148,7 @@ export class DatasetModel {
       const dataset = await prisma.dataset.update({
         where: { id },
         data: {
-          metadata,
+          metadata: metadata as unknown as Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
       });
@@ -183,7 +185,7 @@ export class DatasetModel {
       const dataset = await prisma.dataset.update({
         where: { id },
         data: {
-          analytics,
+          analytics: analytics as unknown as Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
       });
@@ -219,7 +221,7 @@ export class DatasetModel {
       const dataset = await prisma.dataset.update({
         where: { id },
         data: {
-          aiInsights: insights,
+          aiInsights: insights as unknown as Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
       });
@@ -282,7 +284,7 @@ export class DatasetModel {
         where: { userProfileId },
         orderBy: { updatedAt: 'desc' },
         include: {
-          _userProfile: { select: { login: true, name: true } },
+          userProfile: { select: { login: true, name: true } },
         },
       });
 
@@ -322,7 +324,7 @@ export class DatasetModel {
     try {
       const dataset = await prisma.dataset.findUnique({
         where: { id },
-        select: { _analytics: true, aiInsights: true, updatedAt: true },
+        select: { analytics: true, aiInsights: true, updatedAt: true },
       });
 
       if (dataset == null) {
@@ -407,7 +409,7 @@ export class DatasetModel {
         activityMonth,
       ] = await Promise.all([
         prisma.dataset.count(),
-        prisma.dataset.count({ where: { _analytics: { not: null } } }),
+        prisma.dataset.count({ where: { analytics: { not: null } } }),
         prisma.dataset.count({ where: { aiInsights: { not: null } } }),
         prisma.dataset.findMany({ select: { repositories: true } }),
         prisma.dataset.count({ where: { updatedAt: { gte: last24h } } }),
@@ -495,7 +497,7 @@ export class DatasetModel {
           skip: filters.offset ?? 0,
           orderBy: { updatedAt: 'desc' },
           include: {
-            _userProfile: {
+            userProfile: {
               select: { login: true, name: true, avatarUrl: true },
             },
           },
@@ -576,7 +578,7 @@ export class DatasetModel {
       const clonedDataset = await prisma.dataset.create({
         data: {
           userProfileId: newUserProfileId ?? sourceDataset.userProfileId,
-          metadata: sourceDataset.metadata,
+          metadata: sourceDataset.metadata as unknown as Prisma.InputJsonValue,
           repositories: sourceDataset.repositories,
           // Ne pas copier les analyses - elles devront être régénérées
         },

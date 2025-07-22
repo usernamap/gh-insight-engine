@@ -3,7 +3,7 @@
  * CRUD operations et validation pour les profils utilisateur GitHub
  */
 
-import { PrismaClient, User as PrismaUser } from '@/generated/prisma';
+import { Prisma, PrismaClient, User as PrismaUser } from '@prisma/client';
 import { UserProfile } from '@/types/github';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
@@ -43,7 +43,7 @@ export class UserModel {
           type: userData.type,
           siteAdmin: userData.siteAdmin ?? false,
           hireable: userData.hireable ?? null,
-          organizations: userData.organizations ?? { totalCount: 0, nodes: [] },
+          organizations: userData.organizations as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -181,7 +181,7 @@ export class UserModel {
             hireable: updateData.hireable,
           }),
           ...(updateData.organizations && {
-            organizations: updateData.organizations,
+            organizations: updateData.organizations as unknown as Prisma.InputJsonValue,
           }),
           updatedAt: new Date(),
         },
@@ -431,7 +431,7 @@ export class UserModel {
           publicGists: userData.publicGists ?? 0,
           privateRepos: userData.privateRepos ?? null,
           hireable: userData.hireable ?? null,
-          organizations: userData.organizations ?? { totalCount: 0, nodes: [] },
+          organizations: userData.organizations as unknown as Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
         create: {
@@ -457,7 +457,7 @@ export class UserModel {
           type: userData.type,
           siteAdmin: userData.siteAdmin ?? false,
           hireable: userData.hireable ?? null,
-          organizations: userData.organizations ?? { totalCount: 0, nodes: [] },
+          organizations: userData.organizations as unknown as Prisma.InputJsonValue,
         },
       });
 

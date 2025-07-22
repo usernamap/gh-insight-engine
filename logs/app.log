@@ -1,0 +1,141 @@
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:11:02"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:11:02"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:11:02"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:11:03"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:11:04","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:11:04"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:11:04"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:11:04"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:11:04","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:11:04"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11493,"timestamp":"2025-07-22 20:11:04"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:11:13"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:11:13"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:11:13"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:11:13"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:11:13","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Signal SIGINT reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:11:26"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:11:31"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:11:32"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:11:32"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:11:32"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:11:32","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:11:32"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:11:32"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:11:32"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:11:32","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:11:32"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11553,"timestamp":"2025-07-22 20:11:32"}
+{"_error":"Cannot set property query of #<IncomingMessage> which has only a getter","event":"sanitization_error","level":"info","message":"Security Event","method":"GET","path":"/","severity":"medium","success":false,"timestamp":"2025-07-22 20:11:49","type":"security"}
+{"_error":"Cannot set property query of #<IncomingMessage> which has only a getter","event":"sanitization_error","level":"info","message":"Security Event","method":"GET","path":"/api","severity":"medium","success":false,"timestamp":"2025-07-22 20:11:53","type":"security"}
+{"_error":"Cannot set property query of #<IncomingMessage> which has only a getter","event":"sanitization_error","level":"info","message":"Security Event","method":"GET","path":"/index.html","severity":"medium","success":false,"timestamp":"2025-07-22 20:11:58","type":"security"}
+{"level":"info","message":"Signal SIGINT reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:12:21"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:14:57","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:14:57"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:14:57","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:14:57"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11813,"timestamp":"2025-07-22 20:14:58"}
+{"level":"info","message":"Signal SIGINT reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:15:08"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:15:12","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:15:12"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:15:12","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:15:12"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11842,"timestamp":"2025-07-22 20:15:12"}
+{"_error":"Cannot set property query of #<IncomingMessage> which has only a getter","event":"sanitization_error","level":"info","message":"Security Event","method":"GET","path":"/","severity":"medium","success":false,"timestamp":"2025-07-22 20:15:22","type":"security"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:17:04"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:17:10","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:17:10","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:17:10"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11899,"timestamp":"2025-07-22 20:17:10"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:18:07"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:18:12","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:18:12","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:18:12"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11923,"timestamp":"2025-07-22 20:18:12"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:18:36"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:18:38","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:18:38","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:18:38"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11936,"timestamp":"2025-07-22 20:18:38"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:18:40"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:18:43","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:18:43","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:18:43"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11943,"timestamp":"2025-07-22 20:18:43"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:18:44"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:18:47","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:18:47","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:18:47"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11952,"timestamp":"2025-07-22 20:18:47"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:18:50"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:18:56","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:18:56","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:18:56"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11964,"timestamp":"2025-07-22 20:18:56"}
+{"level":"info","message":"Signal SIGTERM reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:18:59"}
+{"host":"0.0.0.0","level":"info","message":"Démarrage du serveur GitHub Insight Engine...","nodeVersion":"v22.17.1","port":3000,"timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Initialisation de l'application GitHub Insight Engine","timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Connexion à la base de données...","timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Connexion Prisma établie avec succès","timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Configuration base de données initialisée avec succès","providers":["Prisma","Mongoose"],"timestamp":"2025-07-22 20:19:02","url":"mongodb://localhost:27017/github_insight_engine"}
+{"level":"info","message":"Base de données connectée avec succès","timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Configuration des middlewares en cours...","timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Middlewares configurés avec succès","timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Routes API configurées","routes":["/api/health","/api/ping","/api/auth/*","/api/users/*","/api/repositories/*","/api/analytics/*","/api/insights/*"],"timestamp":"2025-07-22 20:19:02","totalRoutes":7}
+{"level":"info","message":"Application Express configurée avec succès","timestamp":"2025-07-22 20:19:02"}
+{"address":"port 3000","endpoints":{"api":"http://0.0.0.0:3000/api","docs":"http://0.0.0.0:3000/","health":"http://0.0.0.0:3000/api/health"},"host":"0.0.0.0","level":"info","message":"🚀 Serveur GitHub Insight Engine démarré","port":3000,"processId":11972,"timestamp":"2025-07-22 20:19:02"}
+{"level":"info","message":"Signal SIGINT reçu, arrêt du serveur en cours...","timestamp":"2025-07-22 20:19:09"}
