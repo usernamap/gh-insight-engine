@@ -1,11 +1,9 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { InsightsController } from '@/controllers';
-import {
-  authenticateJWT,
-  optionalJWT,
-  requireOwnership,
-  validateUserParams,
-} from '@/middleware';
+import { authenticateJWT } from '@/middleware';
+import { optionalJWT } from '@/middleware';
+import { requireOwnership } from '@/middleware';
+import { validateUserParams } from '@/middleware';
 
 const router = Router();
 
@@ -19,7 +17,7 @@ router.post(
   // Rate limiting spécialisé pour les analyses IA (très coûteuses)
   (req: Request, res: Response, next: NextFunction) => {
     const analysisLimiter = req.app.get('analysisLimiter');
-    if (analysisLimiter) {
+    if (typeof analysisLimiter === 'function') {
       analysisLimiter(req, res, next);
     } else {
       next();

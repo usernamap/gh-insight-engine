@@ -76,7 +76,7 @@ const startServer = async () => {
 exports.startServer = startServer;
 const stopServer = async (signal) => {
     logger_1.default.info(`Signal ${signal} reçu, arrêt du serveur en cours...`);
-    if (server) {
+    if (typeof server !== 'undefined' && server !== null) {
         server.close(async (error) => {
             if (error) {
                 logger_1.default.error('Erreur lors de la fermeture du serveur', {

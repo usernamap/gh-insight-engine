@@ -25,7 +25,7 @@ export default [
     },
     rules: {
       // TypeScript ESLint rules
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
       '@typescript-eslint/strict-boolean-expressions': 'error',
@@ -51,7 +51,7 @@ export default [
 
       // Import/Export
       'import/order': 'error',
-      'sort-imports': 'error',
+      'sort-imports': 'off',
     },
   },
   {

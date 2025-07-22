@@ -55,7 +55,7 @@ export class RepoController {
           if (authenticatedUser?.githubToken) {
             try {
               throw createError.notFound('Repository');
-            } catch (_error) {
+            } catch {
               throw createError.notFound('Repository');
             }
           } else {
@@ -116,10 +116,10 @@ export class RepoController {
             branchProtectionRules: repositoryData.branchProtectionRules,
           },
           devops:
-            (repositoryData.githubActions ??
-              repositoryData.security ??
-              repositoryData.packages ??
-              repositoryData.branchProtection)
+            (repositoryData.githubActions != null ||
+              repositoryData.security != null ||
+              repositoryData.packages != null ||
+              repositoryData.branchProtection != null)
               ? {
                 githubActions: repositoryData.githubActions,
                 security: repositoryData.security,
@@ -177,7 +177,7 @@ export class RepoController {
         // Construction des filtres de recherche
         const searchFilters: Record<string, unknown> = {};
 
-        if (searchParams.query) {
+        if (searchParams.query != null && searchParams.query !== '') {
           searchFilters.$or = [
             { name: { $regex: searchParams.query, $options: 'i' } },
             { nameWithOwner: { $regex: searchParams.query, $options: 'i' } },
@@ -186,10 +186,10 @@ export class RepoController {
           ];
         }
 
-        if (searchParams.language) {
+        if (searchParams.language != null && searchParams.language !== '') {
           const orArray = Array.isArray(searchFilters.$or)
             ? searchFilters.$or
-            : searchFilters.$or
+            : (typeof searchFilters.$or !== 'undefined' && searchFilters.$or != null)
               ? [searchFilters.$or]
               : [];
           searchFilters.$or = [
@@ -206,7 +206,7 @@ export class RepoController {
           ];
         }
 
-        if (searchParams.topic) {
+        if (searchParams.topic != null && searchParams.topic !== '') {
           searchFilters.topics = { $in: [new RegExp(searchParams.topic, 'i')] };
         }
 
@@ -230,7 +230,7 @@ export class RepoController {
         const result = await RepositoryModel.search({
           search: searchParams.query,
           language: searchParams.language,
-          topics: searchParams.topic ? [searchParams.topic] : undefined,
+          topics: searchParams.topic != null && searchParams.topic !== '' ? [searchParams.topic] : undefined,
           minStars: searchParams.minStars,
           isPrivate: searchParams.isPrivate,
           limit: searchParams.limit,
@@ -248,11 +248,12 @@ export class RepoController {
           .filter((repo): repo is GitHubRepo => {
             const r = repo as Partial<GitHubRepo>;
             return (
-              r &&
+              typeof r === 'object' && r != null &&
               typeof r.nameWithOwner === 'string' &&
               typeof r.name === 'string' &&
               typeof r.description !== 'undefined' &&
-              r.languages !== undefined &&
+              typeof r.languages !== 'undefined' &&
+              r.languages != null &&
               typeof r.languages.totalSize === 'number' &&
               Array.isArray(r.languages.nodes)
             );
@@ -396,7 +397,7 @@ export class RepoController {
           },
         );
 
-        if (!enrichedData) {
+        if (enrichedData == null) {
           throw createError.externalService(
             'GitHub API',
             new Error("Impossible d'enrichir le repository"),
@@ -416,7 +417,7 @@ export class RepoController {
         logWithContext.api('enrich_repository', req.path, true, {
           nameWithOwner,
           enrichedFields: Object.keys(enrichedData).filter(
-            (key) => !!enrichedData[key as keyof typeof enrichedData],
+            (key) => enrichedData[key as keyof typeof enrichedData] != null,
           ),
         });
 
@@ -535,7 +536,7 @@ export class RepoController {
           stargazerCount: { $gte: 1 }, // Au moins 1 star
         };
 
-        if (language) {
+        if (language != null && language !== '') {
           trendingFilters.primaryLanguage = language;
         }
 

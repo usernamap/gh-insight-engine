@@ -1,10 +1,8 @@
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import { ZodError, ZodIssue } from 'zod';
-import {
-  PrismaClientKnownRequestError,
-  PrismaClientValidationError,
-} from '@prisma/client/runtime/library';
 import { MongooseError } from 'mongoose';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PrismaClientValidationError } from '@prisma/client/runtime/library';
 import logger from '@/utils/logger';
 
 // Types pour les erreurs HTTP
@@ -37,11 +35,6 @@ interface ErrorResponseData {
   supportMessage?: string;
 }
 
-// Interface pour les erreurs avec retryAfter
-interface RateLimitErrorWithRetryAfter extends Error {
-  retryAfter?: number;
-}
-
 /**
  * Interface pour les erreurs API personnalisées
  */
@@ -62,7 +55,8 @@ export class ValidationError extends Error implements APIError {
 
   constructor(
     message: string,
-    public details?: unknown,
+    // eslint-disable-next-line no-unused-vars
+    public _details?: unknown,
   ) {
     super(message);
     this.name = 'ValidationError';
@@ -125,7 +119,8 @@ export class RateLimitError extends Error implements APIError {
 
   constructor(
     message = 'Trop de requêtes',
-    public retryAfter?: number,
+    // eslint-disable-next-line no-unused-vars
+    public _retryAfter?: number,
   ) {
     super(message);
     this.name = 'RateLimitError';
@@ -235,15 +230,15 @@ const classifyError = (_error: Error): APIError => {
   }
 
   // Erreurs HTTP connues
-  if ((_error as HTTPError).response?.status) {
-    const status = (_error as HTTPError).response?.status;
+  const status = (_error as HTTPError).response?.status;
+  if (status != null) {
     switch (true) {
-    case status && status >= 400 && status < 500:
+    case status >= 400 && status < 500:
       return new ValidationError('Erreur dans la requête externe', {
         status,
         data: (_error as HTTPError).response?.data,
       });
-    case status && status >= 500:
+    case status >= 500:
       return new ExternalServiceError('Service externe', _error);
     }
   }
@@ -283,7 +278,7 @@ const formatErrorResponse = (_error: APIError, req: Request): ErrorResponseData 
     return {
       ...baseResponse,
       stack: _error.stack,
-      details: _error.details,
+      details: ('details' in _error) ? (_error as { details?: unknown }).details : undefined,
       statusCode: _error.statusCode,
     };
   }
@@ -292,7 +287,7 @@ const formatErrorResponse = (_error: APIError, req: Request): ErrorResponseData 
   const response: ErrorResponseData = { ...baseResponse };
 
   // Ajouter les détails seulement pour les erreurs opérationnelles
-  if (_error.isOperational && _error.details) {
+  if (_error.isOperational === true && _error.details != null) {
     response.details = _error.details;
   }
 
@@ -304,9 +299,8 @@ const formatErrorResponse = (_error: APIError, req: Request): ErrorResponseData 
  */
 export const errorHandler: ErrorRequestHandler = (
   _error: Error,
-  req: Request,
+  _req: Request,
   _res: Response,
-  _next: NextFunction,
 ): void => {
   // Classifier et normaliser l'erreur
   const classifiedError = classifyError(_error);
@@ -317,18 +311,18 @@ export const errorHandler: ErrorRequestHandler = (
   // Logger l'erreur avec contexte complet
   const logData = {
     errorId,
-    userId: req.user?.id,
-    username: req.user?.username,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    body: req.body,
-    query: req.query,
-    params: req.params,
+    userId: _req.user?.id,
+    username: _req.user?.username,
+    ip: _req.ip,
+    userAgent: _req.get('User-Agent'),
+    body: _req.body,
+    query: _req.query,
+    params: _req.params,
     headers: {
-      authorization: req.headers.authorization ? '[REDACTED]' : undefined,
-      'content-type': req.headers['content-type'],
-      origin: req.headers.origin,
-      referer: req.headers.referer,
+      authorization: _req.headers.authorization != null ? '[REDACTED]' : undefined,
+      'content-type': _req.headers['content-type'],
+      origin: _req.headers.origin,
+      referer: _req.headers.referer,
     },
     statusCode: classifiedError.statusCode,
     errorName: classifiedError.name,
@@ -341,7 +335,7 @@ export const errorHandler: ErrorRequestHandler = (
   // Log selon la gravité
   if (
     (classifiedError.statusCode ?? 500) >= 500 ||
-    !classifiedError.isOperational
+    classifiedError.isOperational === false
   ) {
     logger.error('Erreur serveur critique', logData);
   } else if ((classifiedError.statusCode ?? 500) >= 400) {
@@ -352,7 +346,7 @@ export const errorHandler: ErrorRequestHandler = (
 
   // Contexte de logging spécialisé
   logger.info('error_handled', {
-    path: req.path,
+    path: _req.path,
     errorId,
     errorCode: classifiedError.code,
     statusCode: classifiedError.statusCode,
@@ -360,7 +354,7 @@ export const errorHandler: ErrorRequestHandler = (
   });
 
   // Formatage de la réponse
-  const responseData: ErrorResponseData = formatErrorResponse(classifiedError, req);
+  const responseData: ErrorResponseData = formatErrorResponse(classifiedError, _req);
 
   // Ajouter l'ID d'erreur pour le support
   if ((classifiedError.statusCode ?? 500) >= 500) {
@@ -370,8 +364,12 @@ export const errorHandler: ErrorRequestHandler = (
   }
 
   // Headers spéciaux selon le type d'erreur
-  if (_error instanceof RateLimitError && (_error as RateLimitErrorWithRetryAfter).retryAfter) {
-    _res.set('Retry-After', ((_error as RateLimitErrorWithRetryAfter).retryAfter ?? 0).toString());
+  if (
+    _error instanceof RateLimitError &&
+    _error._retryAfter != null &&
+    !Number.isNaN(_error._retryAfter)
+  ) {
+    _res.set('Retry-After', (_error._retryAfter ?? 0).toString());
   }
 
   // Envoi de la réponse d'erreur
@@ -450,8 +448,11 @@ export const setupGlobalErrorHandlers = (): void => {
  */
 export const asyncHandler = (
   fn: (
-    req: Request,
+     // eslint-disable-next-line no-unused-vars
+    _req: Request,
+     // eslint-disable-next-line no-unused-vars
     _res: Response,
+     // eslint-disable-next-line no-unused-vars
     _next: NextFunction,
   ) => Promise<Record<string, unknown> | void>,
 ) => {

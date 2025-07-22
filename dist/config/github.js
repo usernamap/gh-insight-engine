@@ -44,7 +44,7 @@ class GitHubConfig {
     }
     async validateToken(token) {
         const authToken = token ?? this.token;
-        if (!authToken) {
+        if (authToken == null) {
             return {
                 valid: false,
                 error: 'Aucun token GitHub fourni',
@@ -88,7 +88,7 @@ class GitHubConfig {
     }
     extractScopesFromHeaders(headers) {
         const scopesHeader = headers['x-oauth-scopes'] ?? headers['X-OAuth-Scopes'];
-        if (!scopesHeader || typeof scopesHeader !== 'string')
+        if (scopesHeader == null || typeof scopesHeader !== 'string')
             return [];
         return scopesHeader
             .split(',')
@@ -201,7 +201,7 @@ class GitHubConfig {
                 _error.message?.includes('API rate limit')));
     }
     calculateWaitTime(_error) {
-        if (_error.response?.headers?.['x-ratelimit-reset']) {
+        if (_error.response?.headers?.['x-ratelimit-reset'] != null) {
             const resetTime = parseInt(_error.response?.headers?.['x-ratelimit-reset'] ?? '0') * 1000;
             return Math.max(resetTime - Date.now(), 60000);
         }

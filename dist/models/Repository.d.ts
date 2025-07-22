@@ -1,5 +1,5 @@
-import { Repository as PrismaRepository } from '@/generated/prisma';
 import { GitHubRepo } from '@/types/github';
+import { Repository as PrismaRepository } from '@/generated/prisma';
 export declare class RepositoryModel {
     static create(repoData: GitHubRepo, userId: string): Promise<PrismaRepository>;
     static findByNameWithOwner(nameWithOwner: string): Promise<PrismaRepository | null>;

@@ -120,7 +120,7 @@ class OpenAIConfig {
         return `${prompt.userPrompt}\n\nCONTEXTE DES DONNÉES:\n${JSON.stringify(contextData, null, 2)}`;
     }
     sanitizeDataForPrompt(data) {
-        if (!data)
+        if (data == null)
             return null;
         const sensitiveFields = ['email', 'token', 'apiKey', '_id', 'password'];
         if (Array.isArray(data)) {
@@ -217,7 +217,7 @@ class OpenAIConfig {
             },
         };
         const template = templates[name];
-        if (!template) {
+        if (template == null) {
             throw new Error(`Template de prompt '${name}' non trouvé`);
         }
         return template;

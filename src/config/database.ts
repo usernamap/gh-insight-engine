@@ -5,6 +5,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import mongoose from 'mongoose';
+
 import logger from '@/utils/logger';
 
 export class DatabaseConfig {
@@ -18,7 +19,7 @@ export class DatabaseConfig {
   public async initialize(): Promise<void> {
     const databaseUrl = process.env.DATABASE_URL;
 
-    if (!databaseUrl) {
+    if (databaseUrl == null || databaseUrl === '') {
       throw new Error(
         "DATABASE_URL non définie dans les variables d'environnement",
       );
@@ -133,7 +134,7 @@ export class DatabaseConfig {
 
     // Test Prisma
     try {
-      if (this.prismaClient) {
+      if (this.prismaClient != null) {
         await this.prismaClient.$queryRaw`SELECT 1`;
         health.prisma = true;
       }
@@ -145,7 +146,7 @@ export class DatabaseConfig {
 
     // Test Mongoose
     try {
-      if (this.mongooseConnection && this.mongooseConnection.readyState === 1) {
+      if (this.mongooseConnection != null && this.mongooseConnection.readyState === 1) {
         health.mongoose = true;
       }
     } catch (_error: unknown) {
@@ -160,23 +161,21 @@ export class DatabaseConfig {
   }
 
   /**
-   * Exécute une transaction Prisma
+   * La signature de cette méthode doit accepter (prisma: PrismaClient) => Promise<T>
+   * pour être compatible avec l'API transactionnelle de Prisma et les usages transactionnels du codebase.
+   * Le paramètre 'prisma' peut ne pas être utilisé ici, mais il est requis par l'appelant.
    */
   public async transaction<T>(
-    operations: (prisma: PrismaClient) => Promise<T>,
+    operations: (prisma: PrismaClient) => Promise<T>, // eslint-disable-line no-unused-vars
   ): Promise<T> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
     const startTime = Date.now();
 
     try {
-      const result = await this.prismaClient.$transaction(
-        async (tx: PrismaClient) => {
-          return await operations(tx);
-        },
-      );
+      const result = await this.prismaClient.$transaction(operations);
 
       const duration = Date.now() - startTime;
       logger.debug('Transaction Prisma terminée', {
@@ -198,7 +197,7 @@ export class DatabaseConfig {
    * Crée les indexes nécessaires pour optimiser les performances
    */
   public async createIndexes(): Promise<void> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
@@ -220,13 +219,13 @@ export class DatabaseConfig {
    */
   public async cleanup(): Promise<void> {
     try {
-      if (this.prismaClient) {
+      if (this.prismaClient != null) {
         await this.prismaClient.$disconnect();
         this.prismaClient = null;
         logger.info('Connexion Prisma fermée');
       }
 
-      if (this.mongooseConnection) {
+      if (this.mongooseConnection != null) {
         await mongoose.disconnect();
         this.mongooseConnection = null;
         logger.info('Connexion Mongoose fermée');
@@ -248,7 +247,7 @@ export class DatabaseConfig {
       throw new Error('Nettoyage des données autorisé uniquement en mode test');
     }
 
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
@@ -304,7 +303,7 @@ export class DatabaseConfig {
     model: string,
     options: Record<string, unknown> = {},
   ): Promise<T[]> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
@@ -335,7 +334,7 @@ export class DatabaseConfig {
     model: string,
     where: Record<string, unknown>,
   ): Promise<T | null> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
@@ -348,7 +347,7 @@ export class DatabaseConfig {
       const duration = Date.now() - startTime;
       logger.debug('Find unique operation', {
         model,
-        found: !!result,
+        found: result != null,
         duration: `${duration}ms`,
       });
 
@@ -366,7 +365,7 @@ export class DatabaseConfig {
     model: string,
     data: Record<string, unknown>,
   ): Promise<T> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
@@ -397,7 +396,7 @@ export class DatabaseConfig {
     where: Record<string, unknown>,
     data: Record<string, unknown>,
   ): Promise<T> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 
@@ -427,7 +426,7 @@ export class DatabaseConfig {
     model: string,
     where: Record<string, unknown>,
   ): Promise<T> {
-    if (!this.prismaClient) {
+    if (this.prismaClient == null) {
       throw new Error('Client Prisma non initialisé');
     }
 

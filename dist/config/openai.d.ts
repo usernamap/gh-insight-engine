@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
 import { AIAnalysisPrompt } from '@/types/insights';
-import type { GitHubRepo, UserProfile } from '@/types/github';
 import type { AnalyticsOverview } from '@/types/analytics';
+import type { GitHubRepo } from '@/types/github';
+import type { UserProfile } from '@/types/github';
 export declare class OpenAIConfig {
     private client;
     initialize(apiKey: string): Promise<void>;

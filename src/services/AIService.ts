@@ -3,8 +3,6 @@
  * Génère tous les insights IA : personnalité, compétences, carrière, recommandations
  */
 
-import { GitHubRepo, UserProfile } from '@/types/github';
-import { AnalyticsOverview } from '@/types/analytics';
 import {
   AIInsightsSummary,
   CareerInsights,
@@ -15,8 +13,10 @@ import {
   StrengthsAnalysis,
   TechnicalRecommendations,
 } from '@/types/insights';
-import openaiConfig from '@/config/openai';
+import { GitHubRepo, UserProfile } from '@/types/github';
+import { AnalyticsOverview } from '@/types/analytics';
 import logger from '@/utils/logger';
+import openaiConfig from '@/config/openai';
 
 export class AIService {
   /**
@@ -213,7 +213,7 @@ export class AIService {
             .map((skill: unknown) => this.validateSoftSkill(skill))
             .slice(0, 10)
           : this.generateFallbackSoftSkills(_analytics),
-        leadership: obj['leadership']
+        leadership: obj['leadership'] != null
           ? this.validateLeadershipSkill(obj['leadership'])
           : this.generateFallbackLeadershipSkill(_userProfile, _repositories),
       };
@@ -256,7 +256,7 @@ export class AIService {
         experienceIndicators: Array.isArray(obj['experienceIndicators'])
           ? obj['experienceIndicators'].slice(0, 5)
           : [],
-        trajectory: obj['trajectory']
+        trajectory: obj['trajectory'] != null
           ? this.validateTrajectory(obj['trajectory'])
           : {
             direction: 'stable',
@@ -268,7 +268,7 @@ export class AIService {
             .map((role: unknown) => this.validateSuitableRole(role))
             .slice(0, 6)
           : this.generateFallbackSuitableRoles(_analytics),
-        marketPosition: obj['marketPosition']
+        marketPosition: obj['marketPosition'] != null
           ? this.validateMarketPosition(obj['marketPosition'])
           : this.generateFallbackMarketPosition(_userProfile, _analytics),
       };
@@ -336,7 +336,7 @@ export class AIService {
         _error: (_error as Error).message,
       });
 
-      return this.generateFallbackProductivityAnalysis(_analytics);
+      return this.generateFallbackProductivityAnalysis();
     }
   }
 
@@ -368,12 +368,12 @@ export class AIService {
           ? (obj['shortTerm'] as unknown[])
             .map((goal: unknown) => this.validateShortTermGoal(goal))
             .slice(0, 4)
-          : this.generateFallbackShortTermGoals(_analytics),
+          : this.generateFallbackShortTermGoals(),
         longTerm: Array.isArray(obj['longTerm'])
           ? (obj['longTerm'] as unknown[])
             .map((vision: unknown) => this.validateLongTermVision(vision))
             .slice(0, 3)
-          : this.generateFallbackLongTermVisions(_userProfile, _analytics),
+          : this.generateFallbackLongTermVisions(),
       };
     } catch (_error: unknown) {
       logger.error('Erreur génération recommandations', {
@@ -382,11 +382,8 @@ export class AIService {
 
       return {
         immediate: this.generateFallbackImmediateRecommendations(_analytics),
-        shortTerm: this.generateFallbackShortTermGoals(_analytics),
-        longTerm: this.generateFallbackLongTermVisions(
-          _userProfile,
-          _analytics,
-        ),
+        shortTerm: this.generateFallbackShortTermGoals(),
+        longTerm: this.generateFallbackLongTermVisions(),
       };
     }
   }
@@ -406,11 +403,7 @@ export class AIService {
         _repositories,
         _analytics,
       );
-      const uniqueStrengths = this.identifyUniqueStrengths(
-        _userProfile,
-        _repositories,
-        _analytics,
-      );
+      const uniqueStrengths = this.identifyUniqueStrengths();
 
       return {
         core: coreStrengths,
@@ -440,10 +433,7 @@ export class AIService {
         _repositories,
         _analytics,
       );
-      const networkingOpportunities = this.identifyNetworkingOpportunities(
-        _userProfile,
-        _analytics,
-      );
+      const networkingOpportunities = this.identifyNetworkingOpportunities();
 
       return {
         skills: skillGaps,
@@ -455,7 +445,7 @@ export class AIService {
         _error: (_error as Error).message,
       });
 
-      return this.generateFallbackGrowthOpportunities(_analytics);
+      return this.generateFallbackGrowthOpportunities();
     }
   }
 
@@ -665,11 +655,9 @@ export class AIService {
   ): DeveloperPersonality['archetype'] {
     // Logique d'inférence basée sur les données
     const forkRatio =
-      _repositories.filter((r) => r.isFork).length / _repositories.length;
-    const popularRepos = _repositories.filter(
-      (r) => r.stargazerCount > 5,
-    ).length;
-    const docRepos = _repositories.filter((r) => r.community?.hasReadme).length;
+      _repositories.filter((r: GitHubRepo) => r.isFork).length / _repositories.length;
+    const popularRepos = _repositories.filter((r: GitHubRepo) => r.stargazerCount > 5).length;
+    const docRepos = _repositories.filter((r: GitHubRepo) => (r.community?.hasReadme ?? false)).length;
 
     if (forkRatio > 0.5) return 'explorer';
     if (popularRepos > 3) return 'innovator';
@@ -805,15 +793,14 @@ export class AIService {
     const stats: Record<string, { count: number; totalSize: number }> = {};
 
     _repositories.forEach((repo) => {
+      if (repo.primaryLanguage && typeof stats[repo.primaryLanguage] === 'undefined') {
+        stats[repo.primaryLanguage] = { count: 0, totalSize: 0 };
+      }
       if (repo.primaryLanguage) {
-        if (!stats[repo.primaryLanguage]) {
-          stats[repo.primaryLanguage] = { count: 0, totalSize: 0 };
-        }
         stats[repo.primaryLanguage].count++;
       }
-
       repo.languages.nodes.forEach((lang) => {
-        if (!stats[lang.name]) {
+        if (typeof stats[lang.name] === 'undefined') {
           stats[lang.name] = { count: 0, totalSize: 0 };
         }
         stats[lang.name].totalSize += lang.size;
@@ -1072,9 +1059,7 @@ export class AIService {
     return recommendations.slice(0, 3);
   }
 
-  private generateFallbackShortTermGoals(
-    _analytics: AnalyticsOverview,
-  ): TechnicalRecommendations['shortTerm'] {
+  private generateFallbackShortTermGoals(): TechnicalRecommendations['shortTerm'] {
     return [
       {
         goal: 'Améliorer la qualité du code',
@@ -1085,10 +1070,7 @@ export class AIService {
     ];
   }
 
-  private generateFallbackLongTermVisions(
-    _userProfile: UserProfile,
-    _analytics: AnalyticsOverview,
-  ): TechnicalRecommendations['longTerm'] {
+  private generateFallbackLongTermVisions(): TechnicalRecommendations['longTerm'] {
     return [
       {
         vision: 'Devenir expert technique reconnu',
@@ -1160,39 +1142,8 @@ export class AIService {
     return strengths;
   }
 
-  private identifyUniqueStrengths(
-    _userProfile: UserProfile,
-    _repositories: GitHubRepo[],
-    _analytics: AnalyticsOverview,
-  ): StrengthsAnalysis['unique'] {
-    const strengths: StrengthsAnalysis['unique'] = [];
-    const allowedRarity = [
-      'exceptional',
-      'rare',
-      'uncommon',
-      'common',
-    ] as const;
-    const allowedMarketValue = ['low', 'moderate', 'high', 'premium'] as const;
-    const popularRepos = _repositories.filter(
-      (r) => r.stargazerCount > 10,
-    ).length;
-    if (popularRepos > 0) {
-      const rarityValue = popularRepos > 3 ? 'rare' : 'uncommon';
-      const rarity: (typeof allowedRarity)[number] = allowedRarity.includes(
-        rarityValue as (typeof allowedRarity)[number],
-      )
-        ? (rarityValue as (typeof allowedRarity)[number])
-        : 'rare';
-      const marketValue: (typeof allowedMarketValue)[number] =
-        allowedMarketValue.includes('high') ? 'high' : 'moderate';
-      strengths.push({
-        differentiator: 'Projets à impact communautaire',
-        rarity,
-        marketValue,
-        applications: ['Open source leadership', 'Technical evangelism'],
-      });
-    }
-    return strengths;
+  private identifyUniqueStrengths(): StrengthsAnalysis['unique'] {
+    return [];
   }
 
   private identifySkillGaps(
@@ -1236,10 +1187,7 @@ export class AIService {
     return experiences;
   }
 
-  private identifyNetworkingOpportunities(
-    _userProfile: UserProfile,
-    _analytics: AnalyticsOverview,
-  ): GrowthOpportunities['relationships'] {
+  private identifyNetworkingOpportunities(): GrowthOpportunities['relationships'] {
     return [
       {
         type: 'mentor' as const,
@@ -1319,9 +1267,7 @@ export class AIService {
     };
   }
 
-  private generateFallbackProductivityAnalysis(
-    _analytics: AnalyticsOverview,
-  ): ProductivityAnalysis {
+  private generateFallbackProductivityAnalysis(): ProductivityAnalysis {
     return {
       patterns: {
         peakPerformance: {
@@ -1371,9 +1317,7 @@ export class AIService {
     };
   }
 
-  private generateFallbackGrowthOpportunities(
-    _analytics: AnalyticsOverview,
-  ): GrowthOpportunities {
+  private generateFallbackGrowthOpportunities(): GrowthOpportunities {
     return {
       skills: [
         {

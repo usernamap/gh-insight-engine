@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiService = exports.AIService = void 0;
-const openai_1 = __importDefault(require("@/config/openai"));
 const logger_1 = __importDefault(require("@/utils/logger"));
+const openai_1 = __importDefault(require("@/config/openai"));
 class AIService {
     async generateCompleteInsights(_userProfile, _repositories, _analytics) {
         const startTime = Date.now();
@@ -119,7 +119,7 @@ class AIService {
                         .map((skill) => this.validateSoftSkill(skill))
                         .slice(0, 10)
                     : this.generateFallbackSoftSkills(_analytics),
-                leadership: obj['leadership']
+                leadership: obj['leadership'] != null
                     ? this.validateLeadershipSkill(obj['leadership'])
                     : this.generateFallbackLeadershipSkill(_userProfile, _repositories),
             };
@@ -145,7 +145,7 @@ class AIService {
                 experienceIndicators: Array.isArray(obj['experienceIndicators'])
                     ? obj['experienceIndicators'].slice(0, 5)
                     : [],
-                trajectory: obj['trajectory']
+                trajectory: obj['trajectory'] != null
                     ? this.validateTrajectory(obj['trajectory'])
                     : {
                         direction: 'stable',
@@ -157,7 +157,7 @@ class AIService {
                         .map((role) => this.validateSuitableRole(role))
                         .slice(0, 6)
                     : this.generateFallbackSuitableRoles(_analytics),
-                marketPosition: obj['marketPosition']
+                marketPosition: obj['marketPosition'] != null
                     ? this.validateMarketPosition(obj['marketPosition'])
                     : this.generateFallbackMarketPosition(_userProfile, _analytics),
             };
@@ -206,7 +206,7 @@ class AIService {
             logger_1.default.error('Erreur analyse productivité', {
                 _error: _error.message,
             });
-            return this.generateFallbackProductivityAnalysis(_analytics);
+            return this.generateFallbackProductivityAnalysis();
         }
     }
     async generateTechnicalRecommendations(_userProfile, _repositories, _analytics) {
@@ -224,12 +224,12 @@ class AIService {
                     ? obj['shortTerm']
                         .map((goal) => this.validateShortTermGoal(goal))
                         .slice(0, 4)
-                    : this.generateFallbackShortTermGoals(_analytics),
+                    : this.generateFallbackShortTermGoals(),
                 longTerm: Array.isArray(obj['longTerm'])
                     ? obj['longTerm']
                         .map((vision) => this.validateLongTermVision(vision))
                         .slice(0, 3)
-                    : this.generateFallbackLongTermVisions(_userProfile, _analytics),
+                    : this.generateFallbackLongTermVisions(),
             };
         }
         catch (_error) {
@@ -238,8 +238,8 @@ class AIService {
             });
             return {
                 immediate: this.generateFallbackImmediateRecommendations(_analytics),
-                shortTerm: this.generateFallbackShortTermGoals(_analytics),
-                longTerm: this.generateFallbackLongTermVisions(_userProfile, _analytics),
+                shortTerm: this.generateFallbackShortTermGoals(),
+                longTerm: this.generateFallbackLongTermVisions(),
             };
         }
     }
@@ -247,7 +247,7 @@ class AIService {
         try {
             const coreStrengths = this.identifyCoreStrengths(_analytics);
             const emergingStrengths = this.identifyEmergingStrengths(_repositories, _analytics);
-            const uniqueStrengths = this.identifyUniqueStrengths(_userProfile, _repositories, _analytics);
+            const uniqueStrengths = this.identifyUniqueStrengths();
             return {
                 core: coreStrengths,
                 emerging: emergingStrengths,
@@ -265,7 +265,7 @@ class AIService {
         try {
             const skillGaps = this.identifySkillGaps(_analytics);
             const experienceGaps = this.identifyExperienceGaps(_repositories, _analytics);
-            const networkingOpportunities = this.identifyNetworkingOpportunities(_userProfile, _analytics);
+            const networkingOpportunities = this.identifyNetworkingOpportunities();
             return {
                 skills: skillGaps,
                 experiences: experienceGaps,
@@ -276,7 +276,7 @@ class AIService {
             logger_1.default.error('Erreur identification opportunités', {
                 _error: _error.message,
             });
-            return this.generateFallbackGrowthOpportunities(_analytics);
+            return this.generateFallbackGrowthOpportunities();
         }
     }
     async generateExecutiveSummary(insights) {
@@ -427,7 +427,7 @@ class AIService {
     inferArchetypeFromData(_repositories, _analytics) {
         const forkRatio = _repositories.filter((r) => r.isFork).length / _repositories.length;
         const popularRepos = _repositories.filter((r) => r.stargazerCount > 5).length;
-        const docRepos = _repositories.filter((r) => r.community?.hasReadme).length;
+        const docRepos = _repositories.filter((r) => (r.community?.hasReadme ?? false)).length;
         if (forkRatio > 0.5)
             return 'explorer';
         if (popularRepos > 3)
@@ -537,14 +537,14 @@ class AIService {
     aggregateLanguageStats(_repositories) {
         const stats = {};
         _repositories.forEach((repo) => {
+            if (repo.primaryLanguage && typeof stats[repo.primaryLanguage] === 'undefined') {
+                stats[repo.primaryLanguage] = { count: 0, totalSize: 0 };
+            }
             if (repo.primaryLanguage) {
-                if (!stats[repo.primaryLanguage]) {
-                    stats[repo.primaryLanguage] = { count: 0, totalSize: 0 };
-                }
                 stats[repo.primaryLanguage].count++;
             }
             repo.languages.nodes.forEach((lang) => {
-                if (!stats[lang.name]) {
+                if (typeof stats[lang.name] === 'undefined') {
                     stats[lang.name] = { count: 0, totalSize: 0 };
                 }
                 stats[lang.name].totalSize += lang.size;
@@ -727,7 +727,7 @@ class AIService {
         }
         return recommendations.slice(0, 3);
     }
-    generateFallbackShortTermGoals(_analytics) {
+    generateFallbackShortTermGoals() {
         return [
             {
                 goal: 'Améliorer la qualité du code',
@@ -737,7 +737,7 @@ class AIService {
             },
         ];
     }
-    generateFallbackLongTermVisions(_userProfile, _analytics) {
+    generateFallbackLongTermVisions() {
         return [
             {
                 vision: 'Devenir expert technique reconnu',
@@ -794,30 +794,8 @@ class AIService {
         }
         return strengths;
     }
-    identifyUniqueStrengths(_userProfile, _repositories, _analytics) {
-        const strengths = [];
-        const allowedRarity = [
-            'exceptional',
-            'rare',
-            'uncommon',
-            'common',
-        ];
-        const allowedMarketValue = ['low', 'moderate', 'high', 'premium'];
-        const popularRepos = _repositories.filter((r) => r.stargazerCount > 10).length;
-        if (popularRepos > 0) {
-            const rarityValue = popularRepos > 3 ? 'rare' : 'uncommon';
-            const rarity = allowedRarity.includes(rarityValue)
-                ? rarityValue
-                : 'rare';
-            const marketValue = allowedMarketValue.includes('high') ? 'high' : 'moderate';
-            strengths.push({
-                differentiator: 'Projets à impact communautaire',
-                rarity,
-                marketValue,
-                applications: ['Open source leadership', 'Technical evangelism'],
-            });
-        }
-        return strengths;
+    identifyUniqueStrengths() {
+        return [];
     }
     identifySkillGaps(_analytics) {
         const gaps = [];
@@ -849,7 +827,7 @@ class AIService {
         }
         return experiences;
     }
-    identifyNetworkingOpportunities(_userProfile, _analytics) {
+    identifyNetworkingOpportunities() {
         return [
             {
                 type: 'mentor',
@@ -907,7 +885,7 @@ class AIService {
             gaps: ['Expérience en équipe', 'Leadership technique'],
         };
     }
-    generateFallbackProductivityAnalysis(_analytics) {
+    generateFallbackProductivityAnalysis() {
         return {
             patterns: {
                 peakPerformance: {
@@ -952,7 +930,7 @@ class AIService {
             unique: [],
         };
     }
-    generateFallbackGrowthOpportunities(_analytics) {
+    generateFallbackGrowthOpportunities() {
         return {
             skills: [
                 {

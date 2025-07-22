@@ -2,13 +2,13 @@
  * Modèle Dataset - Collection datasets
  * CRUD operations pour les datasets avec métadonnées, analyses quantitatives et IA
  */
-
-import { Dataset as PrismaDataset } from '@/generated/prisma';
-import { DatasetMetadata } from '@/types/github';
 import { AnalyticsExtension } from '@/types/analytics';
+import { DatasetMetadata } from '@/types/github';
 import { InsightsExtension } from '@/types/insights';
+import { Dataset as PrismaDataset } from '@/generated/prisma';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
+
 
 export class DatasetModel {
   /**
@@ -20,7 +20,7 @@ export class DatasetModel {
     repositories: string[],
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -54,7 +54,7 @@ export class DatasetModel {
    */
   static async findById(id: string): Promise<PrismaDataset | null> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -68,7 +68,7 @@ export class DatasetModel {
 
       logger.debug('Recherche dataset par ID', {
         id,
-        found: !!dataset,
+        found: dataset != null,
       });
 
       return dataset;
@@ -94,7 +94,7 @@ export class DatasetModel {
     } = {},
   ): Promise<{ datasets: PrismaDataset[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -138,7 +138,7 @@ export class DatasetModel {
     metadata: DatasetMetadata,
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -175,7 +175,7 @@ export class DatasetModel {
     analytics: AnalyticsExtension,
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -211,7 +211,7 @@ export class DatasetModel {
     insights: InsightsExtension,
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -245,7 +245,7 @@ export class DatasetModel {
    */
   static async delete(id: string): Promise<void> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -273,7 +273,7 @@ export class DatasetModel {
     userProfileId: string,
   ): Promise<PrismaDataset | null> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -288,7 +288,7 @@ export class DatasetModel {
 
       logger.debug('Recherche dataset le plus récent', {
         userProfileId,
-        found: !!dataset,
+        found: dataset != null,
         datasetId: dataset?.id,
       });
 
@@ -315,7 +315,7 @@ export class DatasetModel {
     insightsUpToDate: boolean;
   }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -325,14 +325,14 @@ export class DatasetModel {
         select: { _analytics: true, aiInsights: true, updatedAt: true },
       });
 
-      if (!dataset) {
+      if (dataset == null) {
         throw new Error('Dataset non trouvé');
       }
 
       const cutoffTime = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
 
-      const hasAnalytics = !!dataset.analytics;
-      const hasInsights = !!dataset.aiInsights;
+      const hasAnalytics = dataset.analytics != null;
+      const hasInsights = dataset.aiInsights != null;
 
       let analyticsUpToDate = false;
       let insightsUpToDate = false;
@@ -387,7 +387,7 @@ export class DatasetModel {
     };
   }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -458,7 +458,7 @@ export class DatasetModel {
     offset?: number;
   }): Promise<{ datasets: PrismaDataset[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -560,7 +560,7 @@ export class DatasetModel {
     newUserProfileId?: string,
   ): Promise<PrismaDataset> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -569,7 +569,7 @@ export class DatasetModel {
         where: { id: sourceId },
       });
 
-      if (!sourceDataset) {
+      if (sourceDataset == null) {
         throw new Error('Dataset source non trouvé');
       }
 
@@ -603,7 +603,7 @@ export class DatasetModel {
    */
   static async cleanupOldDatasets(olderThanDays = 90): Promise<number> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 

@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
-import { GitHubTokenValidationResult, RateLimitInfo } from '@/types/github';
+import { GitHubTokenValidationResult } from '@/types/github';
+import { RateLimitInfo } from '@/types/github';
 export declare const REQUIRED_SCOPES: readonly ["repo", "user:email", "read:user", "read:org", "read:packages", "security_events", "actions:read", "admin:repo_hook", "repo:status"];
 export declare class GitHubConfig {
     private octokit;

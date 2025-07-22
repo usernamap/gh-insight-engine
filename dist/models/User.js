@@ -9,7 +9,7 @@ const logger_1 = __importDefault(require("@/utils/logger"));
 class UserModel {
     static async create(userData) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -56,7 +56,7 @@ class UserModel {
     }
     static async findByLogin(login) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -75,7 +75,7 @@ class UserModel {
             });
             logger_1.default.debug('Recherche utilisateur par login', {
                 login,
-                found: !!user,
+                found: user != null,
             });
             return user;
         }
@@ -89,7 +89,7 @@ class UserModel {
     }
     static async findById(id) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -98,7 +98,7 @@ class UserModel {
             });
             logger_1.default.debug('Recherche utilisateur par ID', {
                 id,
-                found: !!user,
+                found: user != null,
             });
             return user;
         }
@@ -112,16 +112,16 @@ class UserModel {
     }
     static async update(id, updateData) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
             const user = await prisma.user.update({
                 where: { id },
                 data: {
-                    ...(updateData.name && { name: updateData.name }),
-                    ...(updateData.email && { email: updateData.email }),
-                    ...(updateData.avatarUrl && { avatarUrl: updateData.avatarUrl }),
+                    ...(updateData.name != null && { name: updateData.name }),
+                    ...(updateData.email != null && { email: updateData.email }),
+                    ...(updateData.avatarUrl != null && { avatarUrl: updateData.avatarUrl }),
                     ...(updateData.bio !== undefined && { bio: updateData.bio }),
                     ...(updateData.company !== undefined && {
                         company: updateData.company,
@@ -173,7 +173,7 @@ class UserModel {
     }
     static async delete(id) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -200,22 +200,22 @@ class UserModel {
     }
     static async search(filters) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
             const where = {};
-            if (filters.search) {
+            if (filters.search != null) {
                 where.OR = [
                     { login: { contains: filters.search, mode: 'insensitive' } },
                     { name: { contains: filters.search, mode: 'insensitive' } },
                     { bio: { contains: filters.search, mode: 'insensitive' } },
                 ];
             }
-            if (filters.location) {
+            if (filters.location != null) {
                 where.location = { contains: filters.location, mode: 'insensitive' };
             }
-            if (filters.company) {
+            if (filters.company != null) {
                 where.company = { contains: filters.company, mode: 'insensitive' };
             }
             if (filters.minFollowers !== undefined ||
@@ -254,7 +254,7 @@ class UserModel {
     }
     static async getStats() {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -270,7 +270,7 @@ class UserModel {
                 select: { primaryLanguage: true },
             });
             const languageCount = repositories.reduce((acc, repo) => {
-                if (repo.primaryLanguage) {
+                if (repo.primaryLanguage != null) {
                     acc[repo.primaryLanguage] = (acc[repo.primaryLanguage] ?? 0) + 1;
                 }
                 return acc;
@@ -295,7 +295,7 @@ class UserModel {
     }
     static async exists(login) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -303,7 +303,7 @@ class UserModel {
                 where: { login },
                 select: { id: true },
             });
-            return !!user;
+            return user != null;
         }
         catch (_error) {
             logger_1.default.error("Erreur lors de la vérification d'existence utilisateur", {
@@ -315,7 +315,7 @@ class UserModel {
     }
     static async upsert(userData) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {

@@ -75,8 +75,8 @@ export declare const userSearchQuerySchema: z.ZodObject<{
     minFollowers?: number | undefined;
     minRepos?: number | undefined;
 }, {
-    limit?: string | undefined;
     query?: string | undefined;
+    limit?: string | undefined;
     location?: string | undefined;
     language?: string | undefined;
     page?: string | undefined;
@@ -113,8 +113,8 @@ export declare const repoSearchQuerySchema: z.ZodObject<{
     minStars?: number | undefined;
     minForks?: number | undefined;
 }, {
-    limit?: string | undefined;
     query?: string | undefined;
+    limit?: string | undefined;
     language?: string | undefined;
     page?: string | undefined;
     isPrivate?: string | undefined;

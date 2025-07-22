@@ -6,11 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createError = exports.asyncHandler = exports.setupGlobalErrorHandlers = exports.notFoundHandler = exports.errorHandler = exports.DatabaseError = exports.ExternalServiceError = exports.RateLimitError = exports.ConflictError = exports.NotFoundError = exports.AuthorizationError = exports.AuthenticationError = exports.ValidationError = void 0;
 const zod_1 = require("zod");
 const library_1 = require("@prisma/client/runtime/library");
+const library_2 = require("@prisma/client/runtime/library");
 const logger_1 = __importDefault(require("@/utils/logger"));
 class ValidationError extends Error {
-    constructor(message, details) {
+    constructor(message, _details) {
         super(message);
-        this.details = details;
+        this._details = _details;
         this.statusCode = 400;
         this.code = 'VALIDATION_ERROR';
         this.isOperational = true;
@@ -64,9 +65,9 @@ class ConflictError extends Error {
 }
 exports.ConflictError = ConflictError;
 class RateLimitError extends Error {
-    constructor(message = 'Trop de requêtes', retryAfter) {
+    constructor(message = 'Trop de requêtes', _retryAfter) {
         super(message);
-        this.retryAfter = retryAfter;
+        this._retryAfter = _retryAfter;
         this.statusCode = 429;
         this.code = 'RATE_LIMIT_ERROR';
         this.isOperational = true;
@@ -136,7 +137,7 @@ const classifyError = (_error) => {
                 return new DatabaseError(`Erreur Prisma ${_error.code}`, _error);
         }
     }
-    if (_error instanceof library_1.PrismaClientValidationError) {
+    if (_error instanceof library_2.PrismaClientValidationError) {
         return new ValidationError('Erreur de validation Prisma', {
             originalMessage: _error.message,
         });
@@ -157,15 +158,15 @@ const classifyError = (_error) => {
             value: _error.value,
         });
     }
-    if (_error.response?.status) {
-        const status = _error.response?.status;
+    const status = _error.response?.status;
+    if (status != null) {
         switch (true) {
-            case status && status >= 400 && status < 500:
+            case status >= 400 && status < 500:
                 return new ValidationError('Erreur dans la requête externe', {
                     status,
                     data: _error.response?.data,
                 });
-            case status && status >= 500:
+            case status >= 500:
                 return new ExternalServiceError('Service externe', _error);
         }
     }
@@ -194,33 +195,33 @@ const formatErrorResponse = (_error, req) => {
         return {
             ...baseResponse,
             stack: _error.stack,
-            details: _error.details,
+            details: ('details' in _error) ? _error.details : undefined,
             statusCode: _error.statusCode,
         };
     }
     const response = { ...baseResponse };
-    if (_error.isOperational && _error.details) {
+    if (_error.isOperational === true && _error.details != null) {
         response.details = _error.details;
     }
     return response;
 };
-const errorHandler = (_error, req, _res, _next) => {
+const errorHandler = (_error, _req, _res) => {
     const classifiedError = classifyError(_error);
     const errorId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const logData = {
         errorId,
-        userId: req.user?.id,
-        username: req.user?.username,
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        body: req.body,
-        query: req.query,
-        params: req.params,
+        userId: _req.user?.id,
+        username: _req.user?.username,
+        ip: _req.ip,
+        userAgent: _req.get('User-Agent'),
+        body: _req.body,
+        query: _req.query,
+        params: _req.params,
         headers: {
-            authorization: req.headers.authorization ? '[REDACTED]' : undefined,
-            'content-type': req.headers['content-type'],
-            origin: req.headers.origin,
-            referer: req.headers.referer,
+            authorization: _req.headers.authorization != null ? '[REDACTED]' : undefined,
+            'content-type': _req.headers['content-type'],
+            origin: _req.headers.origin,
+            referer: _req.headers.referer,
         },
         statusCode: classifiedError.statusCode,
         errorName: classifiedError.name,
@@ -230,7 +231,7 @@ const errorHandler = (_error, req, _res, _next) => {
         details: classifiedError.details,
     };
     if ((classifiedError.statusCode ?? 500) >= 500 ||
-        !classifiedError.isOperational) {
+        classifiedError.isOperational === false) {
         logger_1.default.error('Erreur serveur critique', logData);
     }
     else if ((classifiedError.statusCode ?? 500) >= 400) {
@@ -240,20 +241,22 @@ const errorHandler = (_error, req, _res, _next) => {
         logger_1.default.info('Erreur gérée', logData);
     }
     logger_1.default.info('error_handled', {
-        path: req.path,
+        path: _req.path,
         errorId,
         errorCode: classifiedError.code,
         statusCode: classifiedError.statusCode,
         isOperational: classifiedError.isOperational,
     });
-    const responseData = formatErrorResponse(classifiedError, req);
+    const responseData = formatErrorResponse(classifiedError, _req);
     if ((classifiedError.statusCode ?? 500) >= 500) {
         responseData.errorId = errorId;
         responseData.supportMessage =
             "Si le problème persiste, contactez le support avec cet ID d'erreur";
     }
-    if (_error instanceof RateLimitError && _error.retryAfter) {
-        _res.set('Retry-After', (_error.retryAfter ?? 0).toString());
+    if (_error instanceof RateLimitError &&
+        _error._retryAfter != null &&
+        !Number.isNaN(_error._retryAfter)) {
+        _res.set('Retry-After', (_error._retryAfter ?? 0).toString());
     }
     _res.status(classifiedError.statusCode ?? 500).json(responseData);
 };

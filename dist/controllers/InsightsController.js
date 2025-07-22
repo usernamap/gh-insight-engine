@@ -42,7 +42,7 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
         if (!latestDataset) {
             throw errorHandler_2.createError.notFound("Aucun dataset trouvé. Veuillez d'abord lancer une analyse");
         }
-        const analytics = latestDataset.dataset.analytics &&
+        const analytics = latestDataset.dataset.analytics != null &&
             typeof latestDataset.dataset.analytics === 'object' &&
             'overview' in latestDataset.dataset.analytics
             ? latestDataset.dataset
@@ -51,7 +51,7 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
         if (!analytics) {
             throw errorHandler_2.createError.validation('Les métriques analytiques sont requises avant de générer des insights IA');
         }
-        if (latestDataset.dataset.aiInsights) {
+        if (typeof latestDataset.dataset.aiInsights !== 'undefined' && latestDataset.dataset.aiInsights != null) {
             const insightsAge = Date.now() - new Date(latestDataset.dataset.updatedAt).getTime();
             const maxAge = 24 * 60 * 60 * 1000;
             if (insightsAge < maxAge) {
@@ -84,7 +84,7 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
             totalPrivateRepos: userData.totalPrivateRepos ?? 0,
             collaborators: userData.collaborators ?? 0,
             hireable: userData.hireable ?? false,
-            organizations: userData.organizations &&
+            organizations: userData.organizations != null &&
                 typeof userData.organizations === 'object' &&
                 'totalCount' in userData.organizations &&
                 'nodes' in userData.organizations
@@ -92,12 +92,11 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
                 : { totalCount: 0, nodes: [] },
         };
         function isValid(obj, keys) {
-            return (!!obj &&
-                typeof obj === 'object' &&
+            return (typeof obj === 'object' && obj !== null &&
                 keys.every((k) => k in obj));
         }
         const isValidCommits = (c) => {
-            return !!c && typeof c === 'object' && 'totalCount' in c && 'recent' in c && Array.isArray(c.recent);
+            return typeof c === 'object' && c !== null && 'totalCount' in c && 'recent' in c && Array.isArray(c.recent);
         };
         const repositoriesStrict = repositories.map((repo) => ({
             ...repo,
@@ -131,12 +130,12 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
             codeOfConductEnabled: repo.codeOfConductEnabled ?? false,
             contributingGuidelinesEnabled: repo.contributingGuidelinesEnabled ?? false,
             readmeEnabled: repo.readmeEnabled ?? false,
-            deployments: repo.deployments &&
+            deployments: repo.deployments != null &&
                 typeof repo.deployments === 'object' &&
                 isDeploymentData(repo.deployments)
                 ? { totalCount: repo.deployments.totalCount }
                 : { totalCount: 0 },
-            environments: repo.environments &&
+            environments: repo.environments != null &&
                 typeof repo.environments === 'object' &&
                 isEnvironmentData(repo.environments)
                 ? { totalCount: repo.environments.totalCount }
@@ -155,7 +154,7 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
                     })),
                 }
                 : { totalCount: 0, recent: [] },
-            releases: repo.releases &&
+            releases: repo.releases != null &&
                 typeof repo.releases === 'object' &&
                 isReleaseData(repo.releases)
                 ? {
@@ -163,7 +162,7 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
                     latestRelease: repo.releases.latestRelease,
                 }
                 : { totalCount: 0, latestRelease: null },
-            issues: repo.issues &&
+            issues: repo.issues != null &&
                 typeof repo.issues === 'object' &&
                 isIssueData(repo.issues)
                 ? {
@@ -172,7 +171,7 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
                     closedCount: repo.issues.closedCount,
                 }
                 : { totalCount: 0, openCount: 0, closedCount: 0 },
-            pullRequests: repo.pullRequests &&
+            pullRequests: repo.pullRequests != null &&
                 typeof repo.pullRequests === 'object' &&
                 'totalCount' in repo.pullRequests
                 ? {
@@ -182,14 +181,14 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
                     mergedCount: repo.pullRequests.mergedCount ?? 0,
                 }
                 : { totalCount: 0, openCount: 0, closedCount: 0, mergedCount: 0 },
-            branchProtectionRules: repo.branchProtectionRules &&
+            branchProtectionRules: repo.branchProtectionRules != null &&
                 typeof repo.branchProtectionRules === 'object' &&
                 'totalCount' in repo.branchProtectionRules
                 ? {
                     totalCount: repo.branchProtectionRules.totalCount ?? 0,
                 }
                 : { totalCount: 0 },
-            collaborators: repo.collaborators &&
+            collaborators: repo.collaborators != null &&
                 typeof repo.collaborators === 'object' &&
                 'totalCount' in repo.collaborators
                 ? { totalCount: repo.collaborators.totalCount ?? 0 }
@@ -232,13 +231,13 @@ InsightsController.generateInsights = (0, errorHandler_1.asyncHandler)(async (re
                 ? repo.traffic
                 : undefined,
             diskUsage: repo.diskUsage ?? 0,
-            languages: repo.languages &&
+            languages: repo.languages != null &&
                 typeof repo.languages === 'object' &&
                 'totalSize' in repo.languages &&
                 'nodes' in repo.languages
                 ? repo.languages
                 : { totalSize: 0, nodes: [] },
-            owner: repo.owner &&
+            owner: repo.owner != null &&
                 typeof repo.owner === 'object' &&
                 'login' in repo.owner &&
                 'type' in repo.owner &&
@@ -305,7 +304,7 @@ InsightsController.getInsightsSummary = (0, errorHandler_1.asyncHandler)(async (
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucun insight IA trouvé pour cet utilisateur');
         }
         const aiInsights = latestDataset.dataset
@@ -368,7 +367,7 @@ InsightsController.getDeveloperPersonality = (0, errorHandler_1.asyncHandler)(as
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucune analyse de personnalité trouvée');
         }
         const aiInsights = latestDataset.dataset
@@ -418,7 +417,7 @@ InsightsController.getRecommendations = (0, errorHandler_1.asyncHandler)(async (
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucune recommandation trouvée');
         }
         const aiInsights = latestDataset.dataset
@@ -464,7 +463,7 @@ InsightsController.getStrengths = (0, errorHandler_1.asyncHandler)(async (req, r
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucune analyse des forces trouvée');
         }
         const aiInsights = latestDataset.dataset
@@ -510,7 +509,7 @@ InsightsController.getGrowthOpportunities = (0, errorHandler_1.asyncHandler)(asy
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucune analyse des opportunités de croissance trouvée');
         }
         const aiInsights = latestDataset.dataset
@@ -557,7 +556,7 @@ InsightsController.getSkillAssessment = (0, errorHandler_1.asyncHandler)(async (
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucune évaluation des compétences trouvée');
         }
         const aiInsights = latestDataset.dataset
@@ -604,7 +603,7 @@ InsightsController.getCareerInsights = (0, errorHandler_1.asyncHandler)(async (r
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         const latestDataset = await DatabaseService_1.databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
             throw errorHandler_2.createError.notFound('Aucun insight de carrière trouvé');
         }
         const aiInsights = latestDataset.dataset

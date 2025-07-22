@@ -8,20 +8,21 @@ export * from './validation';
 export * from './errorHandler';
 
 // Configuration des middlewares communes pour Express
-import { Express, Request, Response } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+import { Express } from 'express';
+import { Request } from 'express';
+import { Response } from 'express';
 import compression from 'compression';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import express from 'express';
+import { notFoundHandler } from './errorHandler';
+import { errorHandler } from './errorHandler';
 import { sanitizeInput } from './validation';
-import {
-  errorHandler,
-  notFoundHandler,
-  setupGlobalErrorHandlers,
-} from './errorHandler';
+import { setupGlobalErrorHandlers } from './errorHandler';
 import logger from '@/utils/logger';
+
 
 /**
  * Configuration des middlewares de sécurité
@@ -57,10 +58,11 @@ export const setupSecurityMiddlewares = (app: Express): void => {
     cors({
       origin: (
         origin: string | undefined,
-        callback: (_error: Error | null, allow?: boolean) => void,
+        // eslint-disable-next-line no-unused-vars
+        callback: (error: Error | null, allow?: boolean) => void,
       ) => {
         // Permettre les requêtes sans origin (mobile apps, etc.)
-        if (!origin) return callback(null, true);
+        if (origin == null || origin === '') return callback(null, true);
 
         // En développement, permettre localhost
         if (process.env.NODE_ENV === 'development') {
@@ -87,7 +89,7 @@ export const setupSecurityMiddlewares = (app: Express): void => {
   app.use(
     compression({
       filter: (req, res): boolean => {
-        if (req.headers['x-no-compression']) {
+        if (req.headers['x-no-compression'] !== undefined) {
           return false;
         }
         return compression.filter(req, res);
@@ -115,7 +117,7 @@ export const setupLoggingMiddleware = (app: Express): void => {
   app.use(
     morgan(morganFormat, {
       stream: morganStream,
-      skip: (req: Request, _res: Response): boolean => {
+      skip: (req: Request): boolean => {
         // Ne pas logger les health checks
         return req.path === '/health' || req.path === '/ping';
       },
@@ -205,7 +207,7 @@ export const setupDataProcessingMiddlewares = (app: Express): void => {
         // Vérification de la validité JSON
         try {
           JSON.parse(buf.toString());
-        } catch (_error) {
+        } catch {
           throw new Error('JSON invalide');
         }
       },

@@ -1,9 +1,9 @@
 import { Express, Response, Router } from 'express';
-import authRoutes from './auth';
-import userRoutes from './users';
-import repositoryRoutes from './repositories';
 import analyticsRoutes from './analytics';
+import authRoutes from './auth';
 import insightsRoutes from './insights';
+import repositoryRoutes from './repositories';
+import userRoutes from './users';
 import logger from '@/utils/logger';
 
 /**

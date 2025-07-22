@@ -83,11 +83,11 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     readmeEnabled: node.readmeEnabled ?? false,
     deployments: node.deployments ?? { totalCount: 0 },
     environments: node.environments ?? { totalCount: 0 },
-    commits: node.commits?.target?.history
+    commits: node.commits?.target?.history?.totalCount !== undefined && typeof node.commits.target.history.totalCount === 'number'
       ? {
         totalCount: node.commits.target.history.totalCount,
-        recent:
-          node.commits.target.history.nodes?.map((commit) => ({
+        recent: Array.isArray(node.commits.target.history.nodes)
+          ? node.commits.target.history.nodes.map((commit) => ({
             oid: commit.oid,
             message: commit.message,
             committedDate: new Date(commit.committedDate),
@@ -99,13 +99,15 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
             additions: commit.additions,
             deletions: commit.deletions,
             changedFiles: commit.changedFiles,
-          })) ?? [],
+          }))
+          : [],
       }
       : { totalCount: 0, recent: [] },
-    releases: node.releases
+
+    releases: typeof node.releases?.totalCount === 'number' && Array.isArray(node.releases?.nodes)
       ? {
         totalCount: node.releases.totalCount,
-        latestRelease: node.releases.nodes?.length
+        latestRelease: node.releases.nodes.length > 0
           ? {
             name: node.releases.nodes[0].name,
             tagName: node.releases.nodes[0].tagName,
@@ -115,14 +117,16 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
           : null,
       }
       : { totalCount: 0, latestRelease: null },
-    issues: node.issues
+
+    issues: typeof node.issues?.totalCount === 'number'
       ? {
         totalCount: node.issues.totalCount,
         openCount: node.issues.openCount ?? 0,
         closedCount: node.issues.closedCount ?? 0,
       }
       : { totalCount: 0, openCount: 0, closedCount: 0 },
-    pullRequests: node.pullRequests
+
+    pullRequests: typeof node.pullRequests?.totalCount === 'number'
       ? {
         totalCount: node.pullRequests.totalCount,
         openCount: node.pullRequests.openCount ?? 0,
@@ -166,9 +170,9 @@ export class GitHubService {
       const response: GraphQLResponse =
         await githubConfig.executeGraphQLQuery(query);
 
-      if (response.errors) {
+      if (Array.isArray(response.errors) && response.errors.length > 0) {
         throw new Error(
-          `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+          `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
         );
       }
 
@@ -262,9 +266,9 @@ export class GitHubService {
       // Vérification des erreurs
       const responses = [basicResponse, countersResponse, orgsResponse];
       for (const response of responses) {
-        if (response.errors) {
+        if (Array.isArray(response.errors) && response.errors.length > 0) {
           throw new Error(
-            `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+            `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
           );
         }
       }
@@ -418,15 +422,15 @@ export class GitHubService {
     `;
 
     try {
-      const variables = cursor ? { cursor } : {};
+      const variables = cursor != null && cursor !== '' ? { cursor } : {};
       const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(
         query,
         variables,
       );
 
-      if (response.errors) {
+      if (Array.isArray(response.errors) && response.errors.length > 0) {
         throw new Error(
-          `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+          `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
         );
       }
 
@@ -437,7 +441,7 @@ export class GitHubService {
       const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => toGitHubRepo(node));
 
       // Récupération récursive si il y a plus de pages
-      if (pageInfo?.hasNextPage) {
+      if (pageInfo?.hasNextPage === true) {
         const nextRepos = await this.getUserRepos(pageInfo.endCursor);
         repos.push(...nextRepos);
       }
@@ -554,15 +558,15 @@ export class GitHubService {
     `;
 
     try {
-      const variables = { orgName, ...(cursor ? { cursor } : {}) };
+      const variables = orgName && cursor != null && cursor !== '' ? { orgName, cursor } : { orgName };
       const response: GraphQLResponse = await githubConfig.executeGraphQLQuery(
         query,
         variables,
       );
 
-      if (response.errors) {
+      if (Array.isArray(response.errors) && response.errors.length > 0) {
         throw new Error(
-          `GraphQL errors: ${(response.errors as Array<{ message: string }>).map((e: { message: string }) => e.message).join(', ')}`,
+          `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
         );
       }
 
@@ -574,7 +578,7 @@ export class GitHubService {
       const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => toGitHubRepo(node));
 
       // Récupération récursive
-      if (pageInfo?.hasNextPage) {
+      if (pageInfo?.hasNextPage === true) {
         const nextRepos = await this.getOrgRepos(orgName, pageInfo.endCursor);
         repos.push(...nextRepos);
       }
@@ -854,10 +858,10 @@ export class GitHubService {
         rules: [
           {
             pattern: branch,
-            requiresStatusChecks: !!(response.required_status_checks as { contexts?: string[] }),
-            requiresCodeOwnerReviews: !!(response.required_pull_request_reviews as { require_code_owner_reviews?: boolean }).require_code_owner_reviews,
-            dismissStaleReviews: !!(response.required_pull_request_reviews as { dismiss_stale_reviews?: boolean }).dismiss_stale_reviews,
-            restrictsPushes: !!response.restrictions,
+            requiresStatusChecks: typeof response.required_status_checks === 'object' && response.required_status_checks !== null,
+            requiresCodeOwnerReviews: typeof response.required_pull_request_reviews === 'object' && response.required_pull_request_reviews !== null && (response.required_pull_request_reviews as { require_code_owner_reviews?: boolean }).require_code_owner_reviews === true,
+            dismissStaleReviews: typeof response.required_pull_request_reviews === 'object' && response.required_pull_request_reviews !== null && (response.required_pull_request_reviews as { dismiss_stale_reviews?: boolean }).dismiss_stale_reviews === true,
+            restrictsPushes: typeof response.restrictions === 'object' && response.restrictions !== null,
             requiredStatusChecks: (response.required_status_checks as { contexts?: string[] })?.contexts ?? [],
           },
         ],
@@ -978,7 +982,12 @@ export class GitHubService {
 
       // Correction mapping popularPaths
       let popularPaths: { path: string; title: string; count: number; uniques: number }[] = [];
-      if (paths && typeof paths === 'object' && 'paths' in paths && Array.isArray((paths as unknown as GitHubRestTrafficPaths).paths)) {
+      if (
+        paths != null &&
+        typeof paths === 'object' &&
+        Object.prototype.hasOwnProperty.call(paths, 'paths') &&
+        Array.isArray((paths as unknown as GitHubRestTrafficPaths).paths)
+      ) {
         popularPaths = (paths as unknown as GitHubRestTrafficPaths).paths.map(({ path, title, count, uniques }) => ({ path, title, count, uniques }));
       }
 
@@ -1092,7 +1101,7 @@ export class GitHubService {
           branchProtection: enrichedRepo.branchProtection,
           community: enrichedRepo.community,
           traffic: enrichedRepo.traffic,
-        }).filter((key) => enrichedRepo[key as keyof GitHubRepo]),
+        }).filter((key) => Boolean(enrichedRepo[key as keyof GitHubRepo])),
       });
 
       return enrichedRepo;
@@ -1122,22 +1131,54 @@ export class GitHubService {
 
 // Ajouter les guards de type en bas du fichier :
 function isValidGitHubActions(obj: unknown): obj is import('@/types/github').GitHubActions {
-  return !!obj && typeof obj === 'object' && 'workflowsCount' in obj && 'workflows' in obj && 'runs' in obj;
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, 'workflowsCount') &&
+    Object.prototype.hasOwnProperty.call(obj, 'workflows') &&
+    Object.prototype.hasOwnProperty.call(obj, 'runs')
+  );
 }
 function isValidGitHubSecurity(obj: unknown): obj is import('@/types/github').GitHubSecurity {
-  return !!obj && typeof obj === 'object' && 'dependabotAlerts' in obj && 'secretScanning' in obj && 'codeScanning' in obj;
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, 'dependabotAlerts') &&
+    Object.prototype.hasOwnProperty.call(obj, 'secretScanning') &&
+    Object.prototype.hasOwnProperty.call(obj, 'codeScanning')
+  );
 }
 function isValidGitHubPackages(obj: unknown): obj is import('@/types/github').GitHubPackages {
-  return !!obj && typeof obj === 'object' && 'totalCount' in obj && 'types' in obj;
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, 'totalCount') &&
+    Object.prototype.hasOwnProperty.call(obj, 'types')
+  );
 }
 function isValidGitHubBranchProtection(obj: unknown): obj is import('@/types/github').GitHubBranchProtection {
-  return !!obj && typeof obj === 'object' && 'rules' in obj;
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, 'rules')
+  );
 }
 function isValidGitHubCommunity(obj: unknown): obj is import('@/types/github').GitHubCommunity {
-  return !!obj && typeof obj === 'object' && 'healthPercentage' in obj && 'hasReadme' in obj;
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, 'healthPercentage') &&
+    Object.prototype.hasOwnProperty.call(obj, 'hasReadme')
+  );
 }
 function isValidGitHubTraffic(obj: unknown): obj is import('@/types/github').GitHubTraffic {
-  return !!obj && typeof obj === 'object' && 'views' in obj && 'clones' in obj && 'popularPaths' in obj;
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, 'views') &&
+    Object.prototype.hasOwnProperty.call(obj, 'clones') &&
+    Object.prototype.hasOwnProperty.call(obj, 'popularPaths')
+  );
 }
 
 // Export de l'instance singleton

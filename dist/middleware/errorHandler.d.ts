@@ -6,11 +6,11 @@ export interface APIError extends Error {
     isOperational?: boolean;
 }
 export declare class ValidationError extends Error implements APIError {
-    details?: unknown | undefined;
+    _details?: unknown | undefined;
     statusCode: number;
     code: string;
     isOperational: boolean;
-    constructor(message: string, details?: unknown | undefined);
+    constructor(message: string, _details?: unknown | undefined);
 }
 export declare class AuthenticationError extends Error implements APIError {
     statusCode: number;
@@ -37,11 +37,11 @@ export declare class ConflictError extends Error implements APIError {
     constructor(message: string);
 }
 export declare class RateLimitError extends Error implements APIError {
-    retryAfter?: number | undefined;
+    _retryAfter?: number | undefined;
     statusCode: number;
     code: string;
     isOperational: boolean;
-    constructor(message?: string, retryAfter?: number | undefined);
+    constructor(message?: string, _retryAfter?: number | undefined);
 }
 export declare class ExternalServiceError extends Error implements APIError {
     statusCode: number;
@@ -60,7 +60,7 @@ export declare class DatabaseError extends Error implements APIError {
 export declare const errorHandler: ErrorRequestHandler;
 export declare const notFoundHandler: (req: Request, _res: Response, _next: NextFunction) => void;
 export declare const setupGlobalErrorHandlers: () => void;
-export declare const asyncHandler: (fn: (req: Request, _res: Response, _next: NextFunction) => Promise<Record<string, unknown> | void>) => (req: Request, _res: Response, _next: NextFunction) => void;
+export declare const asyncHandler: (fn: (_req: Request, _res: Response, _next: NextFunction) => Promise<Record<string, unknown> | void>) => (req: Request, _res: Response, _next: NextFunction) => void;
 export declare const createError: {
     validation: (message: string, details?: unknown) => ValidationError;
     authentication: (message?: string) => AuthenticationError;

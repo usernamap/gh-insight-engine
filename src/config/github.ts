@@ -4,7 +4,9 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { GitHubTokenValidationResult, RateLimitInfo } from '@/types/github';
+
+import { GitHubTokenValidationResult } from '@/types/github';
+import { RateLimitInfo } from '@/types/github';
 import logger from '@/utils/logger';
 
 // Permissions requises pour le token GitHub Classic
@@ -59,7 +61,7 @@ export class GitHubConfig {
   ): Promise<GitHubTokenValidationResult> {
     const authToken = token ?? this.token;
 
-    if (!authToken) {
+    if (authToken == null) {
       return {
         valid: false,
         error: 'Aucun token GitHub fourni',
@@ -119,7 +121,7 @@ export class GitHubConfig {
     headers: Record<string, string | number | undefined>,
   ): string[] {
     const scopesHeader = headers['x-oauth-scopes'] ?? headers['X-OAuth-Scopes'];
-    if (!scopesHeader || typeof scopesHeader !== 'string') return [];
+    if (scopesHeader == null || typeof scopesHeader !== 'string') return [];
 
     return scopesHeader
       .split(',')
@@ -295,7 +297,7 @@ export class GitHubConfig {
    */
   private calculateWaitTime(_error: unknown): number {
     // Essaie d'extraire le temps de reset des headers
-    if ((_error as { response?: { headers?: Record<string, string> } }).response?.headers?.['x-ratelimit-reset']) {
+    if ((_error as { response?: { headers?: Record<string, string> } }).response?.headers?.['x-ratelimit-reset'] != null) {
       const resetTime =
         parseInt((_error as { response?: { headers?: Record<string, string> } }).response?.headers?.['x-ratelimit-reset'] ?? '0') * 1000;
       return Math.max(resetTime - Date.now(), 60000); // Minimum 1 minute

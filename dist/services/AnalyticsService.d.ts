@@ -1,5 +1,5 @@
-import { GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsOverview } from '@/types/analytics';
+import { GitHubRepo, UserProfile } from '@/types/github';
 export declare class AnalyticsService {
     generateAnalyticsOverview(_userProfile: UserProfile, repositories: GitHubRepo[], _timeframe?: {
         start: Date;

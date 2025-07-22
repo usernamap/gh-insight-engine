@@ -42,7 +42,7 @@ export class AuthController {
         // Utiliser GitHubService pour récupérer le profil
         const githubService = new GitHubService();
         const userProfile = await githubService.getUserProfile();
-        if (!userProfile) {
+        if (userProfile == null) {
           logWithContext.auth('github_user_not_found', username, false);
           throw createError.notFound('Utilisateur GitHub');
         }
@@ -114,7 +114,7 @@ export class AuthController {
   static refresh = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = req.user as JWTUser;
-      if (!user) {
+      if (user == null) {
         throw createError.authentication(
           'Token JWT requis pour le rafraîchissement',
         );
@@ -164,7 +164,7 @@ export class AuthController {
   static logout = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = req.user as JWTUser;
-      if (user) {
+      if (user != null) {
         logWithContext.auth('logout_success', user.username, true, {
           userId: user.id,
         });
@@ -181,7 +181,7 @@ export class AuthController {
   static validateToken = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = req.user as JWTUser;
-      if (!user) {
+      if (user == null) {
         throw createError.authentication('Token JWT requis');
       }
       logWithContext.auth('token_validation_request', user.username, true, {
@@ -242,12 +242,12 @@ export class AuthController {
   static getCurrentUser = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = req.user as JWTUser;
-      if (!user) {
+      if (user == null) {
         throw createError.authentication('Token JWT requis');
       }
       try {
         const userData = await UserModel.findByLogin(user.username);
-        if (!userData) {
+        if (userData == null) {
           throw createError.notFound('Utilisateur');
         }
         let tokenStatus = 'unknown';
@@ -256,7 +256,7 @@ export class AuthController {
             user.githubToken,
           );
           tokenStatus = tokenValidation.valid ? 'valid' : 'invalid';
-        } catch (_error) {
+        } catch {
           tokenStatus = 'error';
         }
         const responseData = {

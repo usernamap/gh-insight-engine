@@ -91,7 +91,7 @@ export class InsightsController {
 
         // Validation stricte du champ analytics (doit être un objet avec au moins une clé connue)
         const analytics =
-          latestDataset.dataset.analytics &&
+          latestDataset.dataset.analytics != null &&
             typeof latestDataset.dataset.analytics === 'object' &&
             'overview' in latestDataset.dataset.analytics
             ? (latestDataset.dataset
@@ -104,7 +104,7 @@ export class InsightsController {
         }
 
         // 2. Vérification si les insights existent déjà et sont récents
-        if (latestDataset.dataset.aiInsights) {
+        if (typeof latestDataset.dataset.aiInsights !== 'undefined' && latestDataset.dataset.aiInsights != null) {
           const insightsAge =
             Date.now() - new Date(latestDataset.dataset.updatedAt).getTime();
           const maxAge = 24 * 60 * 60 * 1000; // 24 heures
@@ -147,7 +147,7 @@ export class InsightsController {
           collaborators: userData.collaborators ?? 0,
           hireable: userData.hireable ?? false,
           organizations:
-            userData.organizations &&
+            userData.organizations != null &&
               typeof userData.organizations === 'object' &&
               'totalCount' in userData.organizations &&
               'nodes' in userData.organizations
@@ -160,14 +160,13 @@ export class InsightsController {
         // Helper local pour valider les objets complexes
         function isValid(obj: unknown, keys: string[]): boolean {
           return (
-            !!obj &&
-            typeof obj === 'object' &&
+            typeof obj === 'object' && obj !== null &&
             keys.every((k) => k in (obj as object))
           );
         }
         // Déclarer le guard juste avant le mapping repositoriesStrict :
         const isValidCommits = (c: unknown): c is { totalCount: number; recent: import('@/types/github').GitHubCommit[] } => {
-          return !!c && typeof c === 'object' && 'totalCount' in c && 'recent' in c && Array.isArray((c as { recent: unknown }).recent);
+          return typeof c === 'object' && c !== null && 'totalCount' in c && 'recent' in c && Array.isArray((c as { recent: unknown }).recent);
         };
         const repositoriesStrict = repositories.map((repo) => ({
           ...repo,
@@ -204,13 +203,13 @@ export class InsightsController {
             repo.contributingGuidelinesEnabled ?? false,
           readmeEnabled: repo.readmeEnabled ?? false,
           deployments:
-            repo.deployments &&
+            repo.deployments != null &&
               typeof repo.deployments === 'object' &&
               isDeploymentData(repo.deployments)
               ? { totalCount: repo.deployments.totalCount }
               : { totalCount: 0 },
           environments:
-            repo.environments &&
+            repo.environments != null &&
               typeof repo.environments === 'object' &&
               isEnvironmentData(repo.environments)
               ? { totalCount: repo.environments.totalCount }
@@ -230,7 +229,7 @@ export class InsightsController {
             }
             : { totalCount: 0, recent: [] },
           releases:
-            repo.releases &&
+            repo.releases != null &&
               typeof repo.releases === 'object' &&
               isReleaseData(repo.releases)
               ? {
@@ -239,7 +238,7 @@ export class InsightsController {
               }
               : { totalCount: 0, latestRelease: null },
           issues:
-            repo.issues &&
+            repo.issues != null &&
               typeof repo.issues === 'object' &&
               isIssueData(repo.issues)
               ? {
@@ -249,7 +248,7 @@ export class InsightsController {
               }
               : { totalCount: 0, openCount: 0, closedCount: 0 },
           pullRequests:
-            repo.pullRequests &&
+            repo.pullRequests != null &&
               typeof repo.pullRequests === 'object' &&
               'totalCount' in repo.pullRequests
               ? {
@@ -260,7 +259,7 @@ export class InsightsController {
               }
               : { totalCount: 0, openCount: 0, closedCount: 0, mergedCount: 0 },
           branchProtectionRules:
-            repo.branchProtectionRules &&
+            repo.branchProtectionRules != null &&
               typeof repo.branchProtectionRules === 'object' &&
               'totalCount' in repo.branchProtectionRules
               ? {
@@ -269,7 +268,7 @@ export class InsightsController {
               }
               : { totalCount: 0 },
           collaborators:
-            repo.collaborators &&
+            repo.collaborators != null &&
               typeof repo.collaborators === 'object' &&
               'totalCount' in repo.collaborators
               ? { totalCount: (repo.collaborators as { totalCount: number }).totalCount ?? 0 }
@@ -313,7 +312,7 @@ export class InsightsController {
             : undefined,
           diskUsage: repo.diskUsage ?? 0,
           languages:
-            repo.languages &&
+            repo.languages != null &&
               typeof repo.languages === 'object' &&
               'totalSize' in repo.languages &&
               'nodes' in repo.languages
@@ -323,7 +322,7 @@ export class InsightsController {
               })
               : { totalSize: 0, nodes: [] },
           owner:
-            repo.owner &&
+            repo.owner != null &&
               typeof repo.owner === 'object' &&
               'login' in repo.owner &&
               'type' in repo.owner &&
@@ -416,7 +415,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound(
             'Aucun insight IA trouvé pour cet utilisateur',
           );
@@ -499,7 +498,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound('Aucune analyse de personnalité trouvée');
         }
 
@@ -562,7 +561,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound('Aucune recommandation trouvée');
         }
 
@@ -622,7 +621,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound('Aucune analyse des forces trouvée');
         }
 
@@ -681,7 +680,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound(
             'Aucune analyse des opportunités de croissance trouvée',
           );
@@ -743,7 +742,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound(
             'Aucune évaluation des compétences trouvée',
           );
@@ -805,7 +804,7 @@ export class InsightsController {
 
         const latestDataset =
           await databaseService.getLatestUserDataset(username);
-        if (!latestDataset?.dataset.aiInsights) {
+        if (latestDataset?.dataset?.aiInsights == null) {
           throw createError.notFound('Aucun insight de carrière trouvé');
         }
 

@@ -1,12 +1,10 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { AnalyticsController } from '@/controllers';
-import {
-  authenticateJWT,
-  optionalJWT,
-  requireOwnership,
-  validateUserAnalysis,
-  validateUserParams,
-} from '@/middleware';
+import { authenticateJWT } from '@/middleware';
+import { optionalJWT } from '@/middleware';
+import { requireOwnership } from '@/middleware';
+import { validateUserAnalysis } from '@/middleware';
+import { validateUserParams } from '@/middleware';
 
 const router = Router();
 
@@ -21,7 +19,7 @@ router.post(
   // Rate limiting spécialisé pour les analyses (coûteuses)
   (req: Request, res: Response, next: NextFunction) => {
     const analysisLimiter = req.app.get('analysisLimiter');
-    if (analysisLimiter) {
+    if (typeof analysisLimiter === 'function') {
       analysisLimiter(req, res, next);
     } else {
       next();

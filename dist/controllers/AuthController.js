@@ -31,7 +31,7 @@ AuthController.login = (0, errorHandler_1.asyncHandler)(async (req, res) => {
         }
         const githubService = new GitHubService_1.GitHubService();
         const userProfile = await githubService.getUserProfile();
-        if (!userProfile) {
+        if (userProfile == null) {
             logger_1.logWithContext.auth('github_user_not_found', username, false);
             throw errorHandler_2.createError.notFound('Utilisateur GitHub');
         }
@@ -96,7 +96,7 @@ AuthController.login = (0, errorHandler_1.asyncHandler)(async (req, res) => {
 });
 AuthController.refresh = (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const user = req.user;
-    if (!user) {
+    if (user == null) {
         throw errorHandler_2.createError.authentication('Token JWT requis pour le rafraîchissement');
     }
     logger_1.logWithContext.auth('token_refresh_attempt', user.username, true, {
@@ -138,7 +138,7 @@ AuthController.refresh = (0, errorHandler_1.asyncHandler)(async (req, res) => {
 });
 AuthController.logout = (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const user = req.user;
-    if (user) {
+    if (user != null) {
         logger_1.logWithContext.auth('logout_success', user.username, true, {
             userId: user.id,
         });
@@ -152,7 +152,7 @@ AuthController.logout = (0, errorHandler_1.asyncHandler)(async (req, res) => {
 });
 AuthController.validateToken = (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const user = req.user;
-    if (!user) {
+    if (user == null) {
         throw errorHandler_2.createError.authentication('Token JWT requis');
     }
     logger_1.logWithContext.auth('token_validation_request', user.username, true, {
@@ -209,12 +209,12 @@ AuthController.validateToken = (0, errorHandler_1.asyncHandler)(async (req, res)
 });
 AuthController.getCurrentUser = (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const user = req.user;
-    if (!user) {
+    if (user == null) {
         throw errorHandler_2.createError.authentication('Token JWT requis');
     }
     try {
         const userData = await User_1.UserModel.findByLogin(user.username);
-        if (!userData) {
+        if (userData == null) {
             throw errorHandler_2.createError.notFound('Utilisateur');
         }
         let tokenStatus = 'unknown';
@@ -222,7 +222,7 @@ AuthController.getCurrentUser = (0, errorHandler_1.asyncHandler)(async (req, res
             const tokenValidation = await github_1.githubConfig.validateToken(user.githubToken);
             tokenStatus = tokenValidation.valid ? 'valid' : 'invalid';
         }
-        catch (_error) {
+        catch {
             tokenStatus = 'error';
         }
         const responseData = {

@@ -15,6 +15,16 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 let server: http.Server;
 
 /**
+ * Déclaration locale du type ErrnoException si NodeJS n'est pas reconnu
+ */
+interface ErrnoException extends Error {
+  errno?: number;
+  code?: string;
+  syscall?: string;
+  path?: string;
+}
+
+/**
  * Démarrage du serveur
  */
 const startServer = async (): Promise<void> => {
@@ -38,7 +48,7 @@ const startServer = async (): Promise<void> => {
     server.headersTimeout = 66000; // 66 secondes
 
     // Gestion des erreurs du serveur
-    server.on('error', (error: NodeJS.ErrnoException) => {
+    server.on('error', (error: ErrnoException) => {
       if (error.syscall !== 'listen') {
         throw error;
       }
@@ -101,7 +111,7 @@ const startServer = async (): Promise<void> => {
 const stopServer = async (signal: string): Promise<void> => {
   logger.info(`Signal ${signal} reçu, arrêt du serveur en cours...`);
 
-  if (server) {
+  if (typeof server !== 'undefined' && server !== null) {
     // Arrêt d'accepter de nouvelles connexions
     server.close(async (error) => {
       if (error) {

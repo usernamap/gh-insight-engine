@@ -5,10 +5,12 @@
 
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { GitHubTokenValidationResult, JWTPayload } from '@/types/github';
+import { GitHubTokenValidationResult } from '@/types/github';
+import { JWTPayload } from '@/types/github';
 import githubConfig from '@/config/github';
 import { UserModel } from '@/models';
-import logger, { logWithContext } from '@/utils/logger';
+import { logWithContext } from '@/utils/logger';
+import logger from '@/utils/logger';
 
 // Extension des types Express pour inclure les données utilisateur
 declare global {
@@ -36,11 +38,11 @@ export const validateGitHubToken = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    const githubToken = authHeader?.startsWith('Bearer ')
+    const githubToken = (typeof authHeader === 'string' && authHeader.startsWith('Bearer '))
       ? authHeader.substring(7)
       : authHeader;
 
-    if (!githubToken) {
+    if (githubToken == null || githubToken === '') {
       logWithContext.auth('validate_github_token', req.ip ?? '', false, {
         reason: 'missing_token',
       });
@@ -118,11 +120,11 @@ export const authenticateJWT = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ')
+    const token = (typeof authHeader === 'string' && authHeader.startsWith('Bearer '))
       ? authHeader.substring(7)
       : null;
 
-    if (!token) {
+    if (token == null || token === '') {
       logWithContext.auth('authenticate_jwt', req.ip ?? '', false, {
         reason: 'missing_token',
       });
@@ -136,7 +138,7 @@ export const authenticateJWT = async (
 
     // Vérification du JWT
     const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
+    if (jwtSecret == null || jwtSecret === '') {
       throw new Error('JWT_SECRET non configuré');
     }
 
@@ -227,11 +229,11 @@ export const optionalJWT = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ')
+    const token = (typeof authHeader === 'string' && authHeader.startsWith('Bearer '))
       ? authHeader.substring(7)
       : null;
 
-    if (!token) {
+    if (token == null || token === '') {
       // Pas de token, continuer sans authentification
       _next();
       return;
@@ -242,7 +244,7 @@ export const optionalJWT = async (
       // Ignorer les erreurs d'authentification en mode optionnel
       _next();
     });
-  } catch (_error: unknown) {
+  } catch {
     // Ignorer les erreurs en mode optionnel
     _next();
   }
@@ -256,7 +258,7 @@ export const generateJWT = (payload: {
   username: string;
 }): string => {
   const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
+  if (jwtSecret == null || jwtSecret === '') {
     throw new Error('JWT_SECRET non configuré');
   }
 
@@ -273,6 +275,7 @@ export const generateJWT = (payload: {
 /**
  * Middleware de vérification des rôles (pour usage futur)
  */
+// eslint-disable-next-line no-unused-vars
 export const requireRole = (_roles: string[]) => {
   return async (
     req: Request,
@@ -428,7 +431,7 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
     _res: Response,
     _next: NextFunction,
   ): Promise<void> => {
-    if (!req.user?.githubToken || !req.user.username) {
+    if (req.user?.githubToken == null || req.user.username == null || req.user.githubToken === '' || req.user.username === '') {
       _next();
       return;
     }

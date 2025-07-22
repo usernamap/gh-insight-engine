@@ -5,16 +5,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.insightsRoutes = exports.analyticsRoutes = exports.repositoryRoutes = exports.userRoutes = exports.authRoutes = exports.setupRoutes = void 0;
 const express_1 = require("express");
-const auth_1 = __importDefault(require("./auth"));
-exports.authRoutes = auth_1.default;
-const users_1 = __importDefault(require("./users"));
-exports.userRoutes = users_1.default;
-const repositories_1 = __importDefault(require("./repositories"));
-exports.repositoryRoutes = repositories_1.default;
 const analytics_1 = __importDefault(require("./analytics"));
 exports.analyticsRoutes = analytics_1.default;
+const auth_1 = __importDefault(require("./auth"));
+exports.authRoutes = auth_1.default;
 const insights_1 = __importDefault(require("./insights"));
 exports.insightsRoutes = insights_1.default;
+const repositories_1 = __importDefault(require("./repositories"));
+exports.repositoryRoutes = repositories_1.default;
+const users_1 = __importDefault(require("./users"));
+exports.userRoutes = users_1.default;
 const logger_1 = __importDefault(require("@/utils/logger"));
 const setupRoutes = (app) => {
     const apiRouter = (0, express_1.Router)();

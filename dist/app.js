@@ -5,10 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.gracefulShutdown = exports.createApp = void 0;
 const express_1 = __importDefault(require("express"));
-const middleware_1 = require("@/middleware");
-const routes_1 = require("@/routes");
 const database_1 = require("@/config/database");
 const logger_1 = __importDefault(require("@/utils/logger"));
+const middleware_1 = require("@/middleware");
+const middleware_2 = require("@/middleware");
+const routes_1 = require("@/routes");
 const createApp = async () => {
     const app = (0, express_1.default)();
     logger_1.default.info("Initialisation de l'application GitHub Insight Engine", {
@@ -22,7 +23,7 @@ const createApp = async () => {
         logger_1.default.info('Base de données connectée avec succès');
         (0, middleware_1.setupAllMiddlewares)(app);
         (0, routes_1.setupRoutes)(app);
-        (0, middleware_1.setupErrorHandling)(app);
+        (0, middleware_2.setupErrorHandling)(app);
         app.set('env', process.env.NODE_ENV ?? 'development');
         app.set('trust proxy', true);
         logger_1.default.info('Application Express configurée avec succès');

@@ -3,17 +3,17 @@
  * Couche d'abstraction pour toutes les interactions avec MongoDB via les modèles
  */
 
-import { DatasetMetadata, GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsExtension } from '@/types/analytics';
+import { DatasetMetadata } from '@/types/github';
+import { DatasetModel } from '@/models';
+import { GitHubRepo } from '@/types/github';
 import { InsightsExtension } from '@/types/insights';
-import {
-  DatasetModel,
-  PrismaDataset,
-  PrismaRepository,
-  PrismaUser,
-  RepositoryModel,
-  UserModel,
-} from '@/models';
+import { PrismaDataset } from '@/models';
+import { PrismaRepository } from '@/models';
+import { PrismaUser } from '@/models';
+import { RepositoryModel } from '@/models';
+import { UserModel } from '@/models';
+import { UserProfile } from '@/types/github';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 
@@ -235,7 +235,7 @@ export class DatabaseService {
 
       for (const repositoryId of repositoryIds) {
         const devOpsData = devOpsDataMap[repositoryId];
-        if (devOpsData) {
+        if (devOpsData != null) {
           const enrichedRepo = await RepositoryModel.enrichWithDevOpsData(
             repositoryId,
             devOpsData,
@@ -704,7 +704,7 @@ export class DatabaseService {
 
     for (const id of repositoryIds) {
       const repo = await databaseConfig.findUnique('repository', { id });
-      if (repo) {
+      if (repo != null) {
         repositories.push(repo as PrismaRepository);
       }
     }

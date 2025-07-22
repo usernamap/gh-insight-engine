@@ -26,7 +26,7 @@ RepoController.getRepository = (0, errorHandler_1.asyncHandler)(async (req, res)
                 try {
                     throw errorHandler_2.createError.notFound('Repository');
                 }
-                catch (_error) {
+                catch {
                     throw errorHandler_2.createError.notFound('Repository');
                 }
             }
@@ -84,10 +84,10 @@ RepoController.getRepository = (0, errorHandler_1.asyncHandler)(async (req, res)
                 collaborators: repositoryData.collaborators,
                 branchProtectionRules: repositoryData.branchProtectionRules,
             },
-            devops: (repositoryData.githubActions ??
-                repositoryData.security ??
-                repositoryData.packages ??
-                repositoryData.branchProtection)
+            devops: (repositoryData.githubActions != null ||
+                repositoryData.security != null ||
+                repositoryData.packages != null ||
+                repositoryData.branchProtection != null)
                 ? {
                     githubActions: repositoryData.githubActions,
                     security: repositoryData.security,
@@ -132,7 +132,7 @@ RepoController.searchRepositories = (0, errorHandler_1.asyncHandler)(async (req,
     });
     try {
         const searchFilters = {};
-        if (searchParams.query) {
+        if (searchParams.query != null && searchParams.query !== '') {
             searchFilters.$or = [
                 { name: { $regex: searchParams.query, $options: 'i' } },
                 { nameWithOwner: { $regex: searchParams.query, $options: 'i' } },
@@ -140,10 +140,10 @@ RepoController.searchRepositories = (0, errorHandler_1.asyncHandler)(async (req,
                 { topics: { $in: [new RegExp(searchParams.query, 'i')] } },
             ];
         }
-        if (searchParams.language) {
+        if (searchParams.language != null && searchParams.language !== '') {
             const orArray = Array.isArray(searchFilters.$or)
                 ? searchFilters.$or
-                : searchFilters.$or
+                : (typeof searchFilters.$or !== 'undefined' && searchFilters.$or != null)
                     ? [searchFilters.$or]
                     : [];
             searchFilters.$or = [
@@ -159,7 +159,7 @@ RepoController.searchRepositories = (0, errorHandler_1.asyncHandler)(async (req,
                 },
             ];
         }
-        if (searchParams.topic) {
+        if (searchParams.topic != null && searchParams.topic !== '') {
             searchFilters.topics = { $in: [new RegExp(searchParams.topic, 'i')] };
         }
         if (searchParams.minStars !== undefined) {
@@ -177,7 +177,7 @@ RepoController.searchRepositories = (0, errorHandler_1.asyncHandler)(async (req,
         const result = await Repository_1.RepositoryModel.search({
             search: searchParams.query,
             language: searchParams.language,
-            topics: searchParams.topic ? [searchParams.topic] : undefined,
+            topics: searchParams.topic != null && searchParams.topic !== '' ? [searchParams.topic] : undefined,
             minStars: searchParams.minStars,
             isPrivate: searchParams.isPrivate,
             limit: searchParams.limit,
@@ -191,11 +191,12 @@ RepoController.searchRepositories = (0, errorHandler_1.asyncHandler)(async (req,
         const repositories = result.repositories
             .filter((repo) => {
             const r = repo;
-            return (r &&
+            return (typeof r === 'object' && r != null &&
                 typeof r.nameWithOwner === 'string' &&
                 typeof r.name === 'string' &&
                 typeof r.description !== 'undefined' &&
-                r.languages !== undefined &&
+                typeof r.languages !== 'undefined' &&
+                r.languages != null &&
                 typeof r.languages.totalSize === 'number' &&
                 Array.isArray(r.languages.nodes));
         })
@@ -315,7 +316,7 @@ RepoController.enrichRepository = (0, errorHandler_1.asyncHandler)(async (req, r
             community: existingRepo.community,
             traffic: existingRepo.traffic,
         });
-        if (!enrichedData) {
+        if (enrichedData == null) {
             throw errorHandler_2.createError.externalService('GitHub API', new Error("Impossible d'enrichir le repository"));
         }
         await Repository_1.RepositoryModel.enrichWithDevOpsData(nameWithOwner, {
@@ -328,7 +329,7 @@ RepoController.enrichRepository = (0, errorHandler_1.asyncHandler)(async (req, r
         });
         logger_1.logWithContext.api('enrich_repository', req.path, true, {
             nameWithOwner,
-            enrichedFields: Object.keys(enrichedData).filter((key) => !!enrichedData[key]),
+            enrichedFields: Object.keys(enrichedData).filter((key) => enrichedData[key] != null),
         });
         res.status(200).json({
             message: 'Repository enrichi avec succès',
@@ -415,7 +416,7 @@ RepoController.getTrendingRepositories = (0, errorHandler_1.asyncHandler)(async 
             isArchived: false,
             stargazerCount: { $gte: 1 },
         };
-        if (language) {
+        if (language != null && language !== '') {
             trendingFilters.primaryLanguage = language;
         }
         const trendingRepos = await Repository_1.RepositoryModel.search({

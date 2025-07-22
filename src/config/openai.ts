@@ -3,11 +3,15 @@
  * Gestion des prompts structurés et modèles GPT-4
  */
 
+
 import OpenAI from 'openai';
-import { AIAnalysisPrompt, PromptTemplate } from '@/types/insights';
-import logger from '@/utils/logger';
-import type { GitHubRepo, UserProfile } from '@/types/github';
+
+import { AIAnalysisPrompt } from '@/types/insights';
 import type { AnalyticsOverview } from '@/types/analytics';
+import type { GitHubRepo } from '@/types/github';
+import { PromptTemplate } from '@/types/insights';
+import type { UserProfile } from '@/types/github';
+import logger from '@/utils/logger';
 
 export class OpenAIConfig {
   private client: OpenAI | null = null;
@@ -165,7 +169,7 @@ export class OpenAIConfig {
   private sanitizeDataForPrompt(
     data: Record<string, unknown>,
   ): Record<string, unknown> | null {
-    if (!data) return null;
+    if (data == null) return null;
 
     const sensitiveFields = ['email', 'token', 'apiKey', '_id', 'password'];
 
@@ -320,7 +324,7 @@ export class OpenAIConfig {
     };
 
     const template = templates[name];
-    if (!template) {
+    if (template == null) {
       throw new Error(`Template de prompt '${name}' non trouvé`);
     }
 

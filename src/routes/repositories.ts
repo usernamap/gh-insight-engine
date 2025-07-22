@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { RepoController } from '@/controllers';
-import {
-  authenticateJWT,
-  optionalJWT,
-  validateRepoParams,
-  validateRepoSearch,
-} from '@/middleware';
+import { authenticateJWT } from '@/middleware';
+import { optionalJWT } from '@/middleware';
+import { validateRepoParams } from '@/middleware';
+import { validateRepoSearch } from '@/middleware';
+
 
 const router = Router();
 

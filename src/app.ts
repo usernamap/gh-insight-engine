@@ -1,8 +1,9 @@
 import express from 'express';
-import { setupAllMiddlewares, setupErrorHandling } from '@/middleware';
-import { setupRoutes } from '@/routes';
 import { DatabaseConfig } from '@/config/database';
 import logger from '@/utils/logger';
+import { setupAllMiddlewares } from '@/middleware';
+import { setupErrorHandling } from '@/middleware';
+import { setupRoutes } from '@/routes';
 
 /**
  * Création et configuration de l'application Express

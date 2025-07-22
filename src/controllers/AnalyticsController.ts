@@ -65,7 +65,7 @@ export class AnalyticsController {
             },
             dataset: {
               id: latest?.dataset.id,
-              hasAnalytics: !!latest?.dataset.analytics,
+              hasAnalytics: latest?.dataset?.analytics != null,
               repositoriesCount: Array.isArray(latest?.dataset.repositories)
                 ? latest.dataset.repositories.length
                 : 0,
@@ -76,7 +76,7 @@ export class AnalyticsController {
         }
         // Récupération du profil utilisateur (pour l'utilisateur authentifié)
         const userProfile = await githubService.getUserProfile();
-        if (!userProfile) {
+        if (userProfile == null) {
           throw createError.notFound('Profil utilisateur GitHub');
         }
         // Récupération des repositories (pour l'utilisateur authentifié)
@@ -286,7 +286,7 @@ export class AnalyticsController {
           throw createError.notFound('Utilisateur');
         }
         const latest = await databaseService.getLatestUserDataset(username);
-        if (!latest?.dataset.analytics) {
+        if (latest?.dataset?.analytics == null) {
           throw createError.notFound(
             'Aucune analyse trouvée pour cet utilisateur',
           );
@@ -340,7 +340,7 @@ export class AnalyticsController {
           throw createError.notFound('Utilisateur');
         }
         const latest = await databaseService.getLatestUserDataset(username);
-        if (!latest?.dataset.analytics) {
+        if (latest?.dataset?.analytics == null) {
           throw createError.notFound('Aucune analyse de performance trouvée');
         }
         const analytics = latest.dataset
@@ -385,14 +385,14 @@ export class AnalyticsController {
           throw createError.notFound('Utilisateur');
         }
         const latest = await databaseService.getLatestUserDataset(username);
-        if (!latest?.dataset.analytics) {
+        if (latest?.dataset?.analytics == null) {
           throw createError.notFound('Aucune analyse de langages trouvée');
         }
         const languages = (
           latest.dataset
             .analytics as unknown as import('@/types/analytics').AnalyticsOverview
         ).languages;
-        const repositories = latest.repositories || [];
+        const repositories = Array.isArray(latest.repositories) && latest.repositories.length > 0 ? latest.repositories : [];
         res.status(200).json({
           user: {
             username: user.login,
@@ -459,7 +459,7 @@ export class AnalyticsController {
           throw createError.notFound('Utilisateur');
         }
         const latest = await databaseService.getLatestUserDataset(username);
-        if (!latest?.dataset.analytics) {
+        if (latest?.dataset?.analytics == null) {
           throw createError.notFound("Aucune analyse d'activité trouvée");
         }
         const activity = (
@@ -481,7 +481,7 @@ export class AnalyticsController {
           },
           metadata: {
             analyzedAt: latest.dataset.updatedAt,
-            timeRange: activity.seasonality
+            timeRange: activity.seasonality != null
               ? activity.seasonality.mostActiveQuarter
               : undefined,
           },
@@ -512,7 +512,7 @@ export class AnalyticsController {
           throw createError.notFound('Utilisateur');
         }
         const latest = await databaseService.getLatestUserDataset(username);
-        if (!latest?.dataset.analytics) {
+        if (latest?.dataset?.analytics == null) {
           throw createError.notFound('Aucune analyse de productivité trouvée');
         }
         const productivity = (
@@ -558,7 +558,7 @@ export class AnalyticsController {
           throw createError.notFound('Utilisateur');
         }
         const latest = await databaseService.getLatestUserDataset(username);
-        if (!latest?.dataset.analytics) {
+        if (latest?.dataset?.analytics == null) {
           throw createError.notFound('Aucune analyse DevOps trouvée');
         }
         const devops = (

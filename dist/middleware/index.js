@@ -21,14 +21,18 @@ exports.express = exports.setupAllMiddlewares = exports.setupErrorHandling = exp
 __exportStar(require("./auth"), exports);
 __exportStar(require("./validation"), exports);
 __exportStar(require("./errorHandler"), exports);
-const cors_1 = __importDefault(require("cors"));
-const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
+const cors_1 = __importDefault(require("cors"));
+const express_1 = __importDefault(require("express"));
+exports.express = express_1.default;
+const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const logger_1 = __importDefault(require("@/utils/logger"));
-const validation_1 = require("./validation");
 const errorHandler_1 = require("./errorHandler");
+const errorHandler_2 = require("./errorHandler");
+const validation_1 = require("./validation");
+const errorHandler_3 = require("./errorHandler");
+const logger_1 = __importDefault(require("@/utils/logger"));
 const setupSecurityMiddlewares = (app) => {
     app.use((0, helmet_1.default)({
         contentSecurityPolicy: {
@@ -53,7 +57,7 @@ const setupSecurityMiddlewares = (app) => {
     }));
     app.use((0, cors_1.default)({
         origin: (origin, callback) => {
-            if (!origin)
+            if (origin == null || origin === '')
                 return callback(null, true);
             if (process.env.NODE_ENV === 'development') {
                 if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -72,7 +76,7 @@ const setupSecurityMiddlewares = (app) => {
     }));
     app.use((0, compression_1.default)({
         filter: (req, res) => {
-            if (req.headers['x-no-compression']) {
+            if (req.headers['x-no-compression'] !== undefined) {
                 return false;
             }
             return compression_1.default.filter(req, res);
@@ -90,7 +94,7 @@ const setupLoggingMiddleware = (app) => {
     };
     app.use((0, morgan_1.default)(morganFormat, {
         stream: morganStream,
-        skip: (req, _res) => {
+        skip: (req) => {
             return req.path === '/health' || req.path === '/ping';
         },
     }));
@@ -156,7 +160,7 @@ const setupDataProcessingMiddlewares = (app) => {
             try {
                 JSON.parse(buf.toString());
             }
-            catch (_error) {
+            catch {
                 throw new Error('JSON invalide');
             }
         },
@@ -170,8 +174,8 @@ const setupDataProcessingMiddlewares = (app) => {
 exports.setupDataProcessingMiddlewares = setupDataProcessingMiddlewares;
 const setupErrorHandling = (app) => {
     app.use(errorHandler_1.notFoundHandler);
-    app.use(errorHandler_1.errorHandler);
-    (0, errorHandler_1.setupGlobalErrorHandlers)();
+    app.use(errorHandler_2.errorHandler);
+    (0, errorHandler_3.setupGlobalErrorHandlers)();
 };
 exports.setupErrorHandling = setupErrorHandling;
 const setupAllMiddlewares = (app) => {
@@ -183,6 +187,4 @@ const setupAllMiddlewares = (app) => {
     logger_1.default.info('Middlewares configurés avec succès');
 };
 exports.setupAllMiddlewares = setupAllMiddlewares;
-const express_1 = __importDefault(require("express"));
-exports.express = express_1.default;
 //# sourceMappingURL=index.js.map

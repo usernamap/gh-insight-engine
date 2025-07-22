@@ -95,8 +95,8 @@ export class UserController {
               )
                 ? latestDataset.dataset.repositories.length
                 : 0,
-              hasAnalytics: !!latestDataset.dataset.analytics,
-              hasAiInsights: !!latestDataset.dataset.aiInsights,
+              hasAnalytics: latestDataset.dataset.analytics != null,
+              hasAiInsights: latestDataset.dataset.aiInsights != null,
             }
             : null,
           timestamp: new Date().toISOString(),
@@ -144,7 +144,7 @@ export class UserController {
         // Construction des filtres de recherche
         const searchFilters: Record<string, unknown> = {};
 
-        if (searchParams.query) {
+        if (searchParams.query != null && searchParams.query !== '') {
           searchFilters.$or = [
             { login: { $regex: searchParams.query, $options: 'i' } },
             { name: { $regex: searchParams.query, $options: 'i' } },
@@ -152,7 +152,7 @@ export class UserController {
           ];
         }
 
-        if (searchParams.location) {
+        if (searchParams.location != null && searchParams.location !== '') {
           searchFilters.location = {
             $regex: searchParams.location,
             $options: 'i',
@@ -355,8 +355,8 @@ export class UserController {
             hasDataset: !!latestDataset,
             datasetId: latestDataset?.dataset.id,
             lastAnalyzed: latestDataset?.dataset.updatedAt,
-            hasAnalytics: !!latestDataset?.dataset.analytics,
-            hasAiInsights: !!latestDataset?.dataset.aiInsights,
+            hasAnalytics: latestDataset?.dataset.analytics != null,
+            hasAiInsights: latestDataset?.dataset.aiInsights != null,
             isUpToDate: analysisAge.analyticsUpToDate,
             lastUpdate: analysisAge.lastUpdate,
             needsUpdate: !analysisAge.analyticsUpToDate,

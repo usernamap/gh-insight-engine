@@ -15,9 +15,9 @@ class AnalyticsService {
             });
             const [performance, productivity, languages, activity, complexity, devops, collaboration,] = await Promise.all([
                 this.calculatePerformanceMetrics(_userProfile, repositories, _timeframe),
-                this.calculateProductivityScore(_userProfile, repositories, _timeframe),
+                this.calculateProductivityScore(_userProfile, repositories),
                 this.analyzeLanguages(repositories),
-                this.analyzeActivityPatterns(repositories, _timeframe),
+                this.analyzeActivityPatterns(repositories),
                 this.analyzeProjectComplexity(repositories),
                 this.analyzeDevOpsMaturity(repositories),
                 this.analyzeCollaborationMetrics(_userProfile, repositories),
@@ -105,20 +105,20 @@ class AnalyticsService {
             throw new Error(`Erreur calcul métriques performance: ${_error.message}`);
         }
     }
-    async calculateProductivityScore(_userProfile, repositories, _timeframe) {
+    async calculateProductivityScore(_userProfile, repositories) {
         try {
             const totalStars = repositories.reduce((sum, repo) => sum + repo.stargazerCount, 0);
             const totalForks = repositories.reduce((sum, repo) => sum + repo.forkCount, 0);
             const totalCommits = repositories.reduce((sum, repo) => sum + repo.commits.totalCount, 0);
-            const activeRepos = repositories.filter((repo) => !repo.isArchived).length;
+            const activeRepos = repositories.filter((repo) => repo.isArchived === false).length;
             const consistency = this.calculateConsistencyScore(repositories);
             const volume = Math.min(100, Math.round((totalCommits / 100) * 20 + (activeRepos / 10) * 30));
             const impact = Math.min(100, Math.round((totalStars / 50) * 40 + (totalForks / 20) * 60));
             const recentActivity = repositories.filter((repo) => {
-                const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
+                const lastPush = repo.pushedAt != null ? new Date(repo.pushedAt) : new Date(0);
                 const sixMonthsAgo = new Date();
                 sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-                return lastPush > sixMonthsAgo;
+                return lastPush.getTime() > sixMonthsAgo.getTime();
             }).length;
             const maintenance = Math.min(100, Math.round((recentActivity / repositories.length) * 100));
             const overall = Math.round(consistency * 0.25 + volume * 0.25 + impact * 0.25 + maintenance * 0.25);
@@ -147,8 +147,8 @@ class AnalyticsService {
         try {
             const languageStats = {};
             repositories.forEach((repo) => {
-                if (repo.primaryLanguage) {
-                    if (!languageStats[repo.primaryLanguage]) {
+                if (typeof repo.primaryLanguage === 'string' && repo.primaryLanguage.length > 0) {
+                    if (typeof languageStats[repo.primaryLanguage] === 'undefined') {
                         languageStats[repo.primaryLanguage] = {
                             count: 0,
                             totalSize: 0,
@@ -159,16 +159,18 @@ class AnalyticsService {
                     languageStats[repo.primaryLanguage].repositories.push(repo.nameWithOwner);
                 }
                 repo.languages.nodes.forEach((lang) => {
-                    if (!languageStats[lang.name]) {
+                    if (typeof lang.name === 'string' && lang.name.length > 0 && typeof languageStats[lang.name] === 'undefined') {
                         languageStats[lang.name] = {
                             count: 0,
                             totalSize: 0,
                             repositories: [],
                         };
                     }
-                    languageStats[lang.name].totalSize += lang.size;
-                    if (!languageStats[lang.name].repositories.includes(repo.nameWithOwner)) {
-                        languageStats[lang.name].repositories.push(repo.nameWithOwner);
+                    if (typeof lang.name === 'string' && lang.name.length > 0) {
+                        languageStats[lang.name].totalSize += lang.size;
+                        if (!languageStats[lang.name].repositories.includes(repo.nameWithOwner)) {
+                            languageStats[lang.name].repositories.push(repo.nameWithOwner);
+                        }
                     }
                 });
             });
@@ -199,7 +201,7 @@ class AnalyticsService {
             throw new Error(`Erreur analyse langages: ${_error.message}`);
         }
     }
-    async analyzeActivityPatterns(repositories, _timeframe) {
+    async analyzeActivityPatterns(repositories) {
         try {
             const allCommits = repositories.flatMap((repo) => repo.commits.recent);
             const hourlyDistribution = this.calculateHourlyDistribution(allCommits);
@@ -229,8 +231,8 @@ class AnalyticsService {
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
             const maintainedProjects = repositories.filter((repo) => {
-                const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
-                return lastPush > sixMonthsAgo;
+                const lastPush = repo.pushedAt != null ? new Date(repo.pushedAt) : new Date(0);
+                return lastPush.getTime() > sixMonthsAgo.getTime();
             }).length;
             repositories.forEach((repo) => {
                 const commitCount = repo.commits.totalCount;
@@ -293,15 +295,14 @@ class AnalyticsService {
             }
             const reposWithCI = repositories.filter((repo) => (repo.githubActions?.workflowsCount ?? 0) > 0).length;
             const cicdAdoption = Math.round((reposWithCI / totalRepos) * 100);
-            const reposWithTests = repositories.filter((repo) => repo.githubActions?.workflows?.some((workflow) => workflow.name.toLowerCase().includes('test') ||
-                workflow.name.toLowerCase().includes('ci'))).length;
+            const reposWithTests = repositories.filter((repo) => (repo.githubActions?.workflows?.some((workflow) => workflow.name.toLowerCase().includes('test') ||
+                workflow.name.toLowerCase().includes('ci'))) ?? false).length;
             const testingCulture = Math.round((reposWithTests / totalRepos) * 100);
             const reposWithSecurity = repositories.filter((repo) => (repo.security?.dependabotAlerts?.totalCount ?? 0) > 0 ||
                 (repo.security?.hasSecurityPolicy ?? false) ||
                 (repo.branchProtection?.rules?.length ?? 0) > 0).length;
             const securityPractices = Math.round((reposWithSecurity / totalRepos) * 100);
-            const reposWithDocs = repositories.filter((repo) => repo.community?.hasReadme ??
-                repo.community?.hasContributing ??
+            const reposWithDocs = repositories.filter((repo) => (repo.community?.hasReadme ?? repo.community?.hasContributing) === true ||
                 repo.hasWikiEnabled).length;
             const documentationQuality = Math.round((reposWithDocs / totalRepos) * 100);
             const reposWithEngagement = repositories.filter((repo) => repo.stargazerCount > 0 ||
@@ -405,7 +406,7 @@ class AnalyticsService {
             .filter(Boolean);
         const hasMain = mainBranches.some((branch) => branch === 'main');
         const hasMaster = mainBranches.some((branch) => branch === 'master');
-        const hasDevelop = repositories.some((repo) => repo.branchProtection?.rules.some((rule) => rule.pattern.includes('develop')));
+        const hasDevelop = repositories.some((repo) => (repo.branchProtection?.rules?.some((rule) => rule.pattern.includes('develop'))) ?? false);
         if (hasDevelop)
             return 'gitflow';
         if (hasMain || hasMaster)
@@ -421,7 +422,7 @@ class AnalyticsService {
     }
     calculateCodeReviewParticipation(repositories) {
         const reposWithPRs = repositories.filter((repo) => (repo.pullRequests.totalCount ?? 0) > 0).length;
-        const reposWithReviewRules = repositories.filter((repo) => repo.branchProtection?.rules.some((rule) => rule.requiresCodeOwnerReviews)).length;
+        const reposWithReviewRules = repositories.filter((repo) => (repo.branchProtection?.rules?.some((rule) => rule.requiresCodeOwnerReviews)) ?? false).length;
         const total = repositories.length;
         if (total === 0)
             return 0;
@@ -440,9 +441,9 @@ class AnalyticsService {
             return 0;
         const now = new Date();
         const recentlyActive = repositories.filter((repo) => {
-            const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
+            const lastPush = repo.pushedAt != null ? new Date(repo.pushedAt) : new Date(0);
             const monthsAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            return lastPush > monthsAgo;
+            return lastPush.getTime() > monthsAgo.getTime();
         }).length;
         return Math.round((recentlyActive / repositories.length) * 100);
     }
@@ -451,12 +452,12 @@ class AnalyticsService {
         const sixMonthsAgo = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
         const oneYearAgo = new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
         const recentActivity = repositories.filter((repo) => {
-            const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
-            return lastPush > sixMonthsAgo;
+            const lastPush = repo.pushedAt != null ? new Date(repo.pushedAt) : new Date(0);
+            return lastPush.getTime() > sixMonthsAgo.getTime();
         }).length;
         const oldActivity = repositories.filter((repo) => {
-            const lastPush = repo.pushedAt ? new Date(repo.pushedAt) : new Date(0);
-            return lastPush > oneYearAgo && lastPush <= sixMonthsAgo;
+            const lastPush = repo.pushedAt != null ? new Date(repo.pushedAt) : new Date(0);
+            return lastPush.getTime() > oneYearAgo.getTime() && lastPush.getTime() <= sixMonthsAgo.getTime();
         }).length;
         if (recentActivity > oldActivity * 1.2)
             return 'increasing';
@@ -510,12 +511,12 @@ class AnalyticsService {
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         repositories.forEach((repo) => {
-            if (repo.primaryLanguage) {
-                if (!languageActivity[repo.primaryLanguage]) {
+            if (typeof repo.primaryLanguage === 'string') {
+                if (typeof languageActivity[repo.primaryLanguage] === 'undefined') {
                     languageActivity[repo.primaryLanguage] = { recent: 0, total: 0 };
                 }
                 languageActivity[repo.primaryLanguage].total++;
-                if (repo.pushedAt && new Date(repo.pushedAt) > sixMonthsAgo) {
+                if (repo.pushedAt != null && new Date(repo.pushedAt) > sixMonthsAgo) {
                     languageActivity[repo.primaryLanguage].recent++;
                 }
             }
@@ -626,7 +627,7 @@ class AnalyticsService {
             'November',
             'December',
         ];
-        return months.map((month, _index) => ({
+        return months.map((month) => ({
             month,
             commits: Math.floor(Math.random() * 50) + 10,
             repositories: Math.floor(repositories.length / 12),
@@ -655,7 +656,7 @@ class AnalyticsService {
     }
     calculateMentorshipScore(_userProfile, repositories) {
         const publicRepos = repositories.filter((repo) => !repo.isPrivate).length;
-        const docsRepos = repositories.filter((repo) => repo.community?.hasReadme ?? repo.community?.hasContributing).length;
+        const docsRepos = repositories.filter((repo) => (repo.community?.hasReadme ?? repo.community?.hasContributing) === true).length;
         const starredRepos = repositories.filter((repo) => repo.stargazerCount > 0).length;
         return Math.min(100, Math.round((publicRepos * 10 + docsRepos * 20 + starredRepos * 15) / 3));
     }

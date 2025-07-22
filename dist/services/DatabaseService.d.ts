@@ -1,7 +1,11 @@
-import { DatasetMetadata, GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsExtension } from '@/types/analytics';
+import { DatasetMetadata } from '@/types/github';
+import { GitHubRepo } from '@/types/github';
 import { InsightsExtension } from '@/types/insights';
-import { PrismaDataset, PrismaRepository, PrismaUser } from '@/models';
+import { PrismaDataset } from '@/models';
+import { PrismaRepository } from '@/models';
+import { PrismaUser } from '@/models';
+import { UserProfile } from '@/types/github';
 export declare class DatabaseService {
     saveCompleteUserDataset(userProfile: UserProfile, repositories: GitHubRepo[], metadata: DatasetMetadata, analytics?: AnalyticsExtension, insights?: InsightsExtension): Promise<{
         user: PrismaUser;

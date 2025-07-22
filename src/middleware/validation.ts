@@ -158,7 +158,7 @@ export const paginationQuerySchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1))
+    .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : 1))
     .refine(
       (val) => val >= 1 && val <= 1000,
       'La page doit être entre 1 et 1000',
@@ -166,7 +166,7 @@ export const paginationQuerySchema = z.object({
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : 20))
     .refine(
       (val) => val >= 1 && val <= 100,
       'La limite doit être entre 1 et 100',
@@ -206,7 +206,7 @@ export const userSearchQuerySchema = z
     minFollowers: z
       .string()
       .optional()
-      .transform((val) => (val ? parseInt(val, 10) : undefined))
+      .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
       .refine(
         (val) => val !== undefined && val >= 0 && val <= 1000000,
         'Le nombre minimum de followers doit être entre 0 et 1,000,000',
@@ -214,7 +214,7 @@ export const userSearchQuerySchema = z
     minRepos: z
       .string()
       .optional()
-      .transform((val) => (val ? parseInt(val, 10) : undefined))
+      .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
       .refine(
         (val) => val !== undefined && val >= 0 && val <= 10000,
         'Le nombre minimum de repos doit être entre 0 et 10,000',
@@ -243,7 +243,7 @@ export const repoSearchQuerySchema = z
     minStars: z
       .string()
       .optional()
-      .transform((val) => (val ? parseInt(val, 10) : undefined))
+      .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
       .refine(
         (val) => val !== undefined && val >= 0 && val <= 1000000,
         'Le nombre minimum de stars doit être entre 0 et 1,000,000',
@@ -251,7 +251,7 @@ export const repoSearchQuerySchema = z
     minForks: z
       .string()
       .optional()
-      .transform((val) => (val ? parseInt(val, 10) : undefined))
+      .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
       .refine(
         (val) => val !== undefined && val >= 0 && val <= 100000,
         'Le nombre minimum de forks doit être entre 0 et 100,000',
@@ -301,7 +301,7 @@ export const analysisQuerySchema = z.object({
   maxAge: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 24))
+    .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : 24))
     .refine(
       (val) => val >= 1 && val <= 168,
       "L'âge maximum doit être entre 1 et 168 heures (7 jours)",
@@ -476,15 +476,15 @@ export const sanitizeInput = (
 
   try {
     // Sanitiser les différentes parties de la requête
-    if (req.body) {
+    if (typeof req.body !== 'undefined' && req.body !== null) {
       req.body = sanitizeObject(req.body) as typeof req.body;
     }
 
-    if (req.query) {
+    if (typeof req.query !== 'undefined' && req.query !== null) {
       req.query = sanitizeObject(req.query) as typeof req.query;
     }
 
-    if (req.params) {
+    if (typeof req.params !== 'undefined' && req.params !== null) {
       req.params = sanitizeObject(req.params) as typeof req.params;
     }
 
@@ -492,7 +492,7 @@ export const sanitizeInput = (
       path: req.path,
       success: true,
       method: req.method,
-      hasBody: !!req.body,
+      hasBody: typeof req.body !== 'undefined' && req.body !== null,
       hasQuery: Object.keys(req.query ?? {}).length > 0,
       hasParams: Object.keys(req.params ?? {}).length > 0,
     });

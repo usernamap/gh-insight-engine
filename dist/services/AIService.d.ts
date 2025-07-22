@@ -1,6 +1,6 @@
+import { AIInsightsSummary } from '@/types/insights';
 import { GitHubRepo, UserProfile } from '@/types/github';
 import { AnalyticsOverview } from '@/types/analytics';
-import { AIInsightsSummary } from '@/types/insights';
 export declare class AIService {
     generateCompleteInsights(_userProfile: UserProfile, _repositories: GitHubRepo[], _analytics: AnalyticsOverview): Promise<AIInsightsSummary>;
     private analyzeDeveloperPersonality;

@@ -1,13 +1,11 @@
 import { Router } from 'express';
 import { UserController } from '@/controllers';
-import {
-  authenticateJWT,
-  optionalJWT,
-  requireOwnership,
-  validateUserParams,
-  validateUserSearch,
-  validateUserWithPagination,
-} from '@/middleware';
+import { authenticateJWT } from '@/middleware';
+import { optionalJWT } from '@/middleware';
+import { requireOwnership } from '@/middleware';
+import { validateUserParams } from '@/middleware';
+import { validateUserSearch } from '@/middleware';
+import { validateUserWithPagination } from '@/middleware';
 
 const router = Router();
 

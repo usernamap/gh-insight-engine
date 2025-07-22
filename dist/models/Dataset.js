@@ -9,7 +9,7 @@ const logger_1 = __importDefault(require("@/utils/logger"));
 class DatasetModel {
     static async create(userProfileId, metadata, repositories) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -37,7 +37,7 @@ class DatasetModel {
     }
     static async findById(id) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -49,7 +49,7 @@ class DatasetModel {
             });
             logger_1.default.debug('Recherche dataset par ID', {
                 id,
-                found: !!dataset,
+                found: dataset != null,
             });
             return dataset;
         }
@@ -63,7 +63,7 @@ class DatasetModel {
     }
     static async findByUserId(userProfileId, options = {}) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -97,7 +97,7 @@ class DatasetModel {
     }
     static async updateMetadata(id, metadata) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -125,7 +125,7 @@ class DatasetModel {
     }
     static async updateAnalytics(id, analytics) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -152,7 +152,7 @@ class DatasetModel {
     }
     static async updateInsights(id, insights) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -180,7 +180,7 @@ class DatasetModel {
     }
     static async delete(id) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -199,7 +199,7 @@ class DatasetModel {
     }
     static async findLatestByUserId(userProfileId) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -212,7 +212,7 @@ class DatasetModel {
             });
             logger_1.default.debug('Recherche dataset le plus récent', {
                 userProfileId,
-                found: !!dataset,
+                found: dataset != null,
                 datasetId: dataset?.id,
             });
             return dataset;
@@ -227,7 +227,7 @@ class DatasetModel {
     }
     static async isAnalyticsUpToDate(id, maxAgeMinutes = 60) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -235,12 +235,12 @@ class DatasetModel {
                 where: { id },
                 select: { _analytics: true, aiInsights: true, updatedAt: true },
             });
-            if (!dataset) {
+            if (dataset == null) {
                 throw new Error('Dataset non trouvé');
             }
             const cutoffTime = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
-            const hasAnalytics = !!dataset.analytics;
-            const hasInsights = !!dataset.aiInsights;
+            const hasAnalytics = dataset.analytics != null;
+            const hasInsights = dataset.aiInsights != null;
             let analyticsUpToDate = false;
             let insightsUpToDate = false;
             if (hasAnalytics) {
@@ -270,7 +270,7 @@ class DatasetModel {
     }
     static async getStats() {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -310,7 +310,7 @@ class DatasetModel {
     }
     static async search(filters) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -387,14 +387,14 @@ class DatasetModel {
     }
     static async clone(sourceId, newUserProfileId) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
             const sourceDataset = await prisma.dataset.findUnique({
                 where: { id: sourceId },
             });
-            if (!sourceDataset) {
+            if (sourceDataset == null) {
                 throw new Error('Dataset source non trouvé');
             }
             const clonedDataset = await prisma.dataset.create({
@@ -421,7 +421,7 @@ class DatasetModel {
     }
     static async cleanupOldDatasets(olderThanDays = 90) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {

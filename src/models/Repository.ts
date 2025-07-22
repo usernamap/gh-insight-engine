@@ -2,9 +2,8 @@
  * Modèle Repository - Collection repositories
  * CRUD operations et enrichissement DevOps pour les repositories GitHub
  */
-
-import { Repository as PrismaRepository } from '@/generated/prisma';
 import { GitHubRepo } from '@/types/github';
+import { Repository as PrismaRepository } from '@/generated/prisma';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
 
@@ -17,7 +16,7 @@ export class RepositoryModel {
     userId: string,
   ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -106,7 +105,7 @@ export class RepositoryModel {
     nameWithOwner: string,
   ): Promise<PrismaRepository | null> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -120,7 +119,7 @@ export class RepositoryModel {
 
       logger.debug('Recherche repository par nameWithOwner', {
         nameWithOwner,
-        found: !!repository,
+        found: repository != null,
       });
 
       return repository;
@@ -147,7 +146,7 @@ export class RepositoryModel {
     } = {},
   ): Promise<{ repositories: PrismaRepository[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -217,7 +216,7 @@ export class RepositoryModel {
     updateData: Partial<GitHubRepo>,
   ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -298,7 +297,7 @@ export class RepositoryModel {
     },
   ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -354,7 +353,7 @@ export class RepositoryModel {
    */
   static async delete(id: string): Promise<void> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -391,14 +390,14 @@ export class RepositoryModel {
     offset?: number;
   }): Promise<{ repositories: PrismaRepository[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
     try {
       const where: Record<string, unknown> = {};
 
-      if (filters.search) {
+      if (filters.search != null) {
         where.OR = [
           { name: { contains: filters.search, mode: 'insensitive' } },
           { description: { contains: filters.search, mode: 'insensitive' } },
@@ -406,7 +405,7 @@ export class RepositoryModel {
         ];
       }
 
-      if (filters.language) {
+      if (filters.language != null) {
         where.primaryLanguage = filters.language;
       }
 
@@ -428,11 +427,11 @@ export class RepositoryModel {
         where.isPrivate = filters.isPrivate;
       }
 
-      if (filters.hasActions) {
+      if (filters.hasActions === true) {
         where.githubActions = { not: null };
       }
 
-      if (filters.hasSecurityAlerts) {
+      if (filters.hasSecurityAlerts === true) {
         where.security = { not: null };
       }
 
@@ -481,7 +480,7 @@ export class RepositoryModel {
     };
   }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -552,7 +551,7 @@ export class RepositoryModel {
     userId: string,
   ): Promise<PrismaRepository> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 

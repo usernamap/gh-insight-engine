@@ -3,7 +3,7 @@
  * CRUD operations et validation pour les profils utilisateur GitHub
  */
 
-import { User as PrismaUser } from '@/generated/prisma';
+import { PrismaClient, User as PrismaUser } from '@/generated/prisma';
 import { UserProfile } from '@/types/github';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
@@ -14,7 +14,7 @@ export class UserModel {
    */
   static async create(userData: UserProfile): Promise<PrismaUser> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -69,7 +69,7 @@ export class UserModel {
    */
   static async findByLogin(login: string): Promise<PrismaUser | null> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -90,7 +90,7 @@ export class UserModel {
 
       logger.debug('Recherche utilisateur par login', {
         login,
-        found: !!user,
+        found: user != null,
       });
 
       return user;
@@ -108,7 +108,7 @@ export class UserModel {
    */
   static async findById(id: string): Promise<PrismaUser | null> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -119,7 +119,7 @@ export class UserModel {
 
       logger.debug('Recherche utilisateur par ID', {
         id,
-        found: !!user,
+        found: user != null,
       });
 
       return user;
@@ -140,7 +140,7 @@ export class UserModel {
     updateData: Partial<UserProfile>,
   ): Promise<PrismaUser> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -148,9 +148,9 @@ export class UserModel {
       const user = await prisma.user.update({
         where: { id },
         data: {
-          ...(updateData.name && { name: updateData.name }),
-          ...(updateData.email && { email: updateData.email }),
-          ...(updateData.avatarUrl && { avatarUrl: updateData.avatarUrl }),
+          ...(updateData.name != null && { name: updateData.name }),
+          ...(updateData.email != null && { email: updateData.email }),
+          ...(updateData.avatarUrl != null && { avatarUrl: updateData.avatarUrl }),
           ...(updateData.bio !== undefined && { bio: updateData.bio }),
           ...(updateData.company !== undefined && {
             company: updateData.company,
@@ -209,12 +209,12 @@ export class UserModel {
    */
   static async delete(id: string): Promise<void> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
     try {
-      await databaseConfig.transaction(async (tx) => {
+      await databaseConfig.transaction(async (tx: PrismaClient) => {
         // Supprimer les datasets associés
         await tx.dataset.deleteMany({
           where: { userProfileId: id },
@@ -256,14 +256,14 @@ export class UserModel {
     offset?: number;
   }): Promise<{ users: PrismaUser[]; total: number }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
     try {
       const where: Record<string, unknown> = {};
 
-      if (filters.search) {
+      if (filters.search != null) {
         where.OR = [
           { login: { contains: filters.search, mode: 'insensitive' } },
           { name: { contains: filters.search, mode: 'insensitive' } },
@@ -271,11 +271,11 @@ export class UserModel {
         ];
       }
 
-      if (filters.location) {
+      if (filters.location != null) {
         where.location = { contains: filters.location, mode: 'insensitive' };
       }
 
-      if (filters.company) {
+      if (filters.company != null) {
         where.company = { contains: filters.company, mode: 'insensitive' };
       }
 
@@ -328,7 +328,7 @@ export class UserModel {
     topLanguages: Array<{ language: string; count: number }>;
   }> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -352,7 +352,7 @@ export class UserModel {
           acc: Record<string, number>,
           repo: { primaryLanguage: string | null },
         ) => {
-          if (repo.primaryLanguage) {
+          if (repo.primaryLanguage != null) {
             acc[repo.primaryLanguage] = (acc[repo.primaryLanguage] ?? 0) + 1;
           }
           return acc;
@@ -384,7 +384,7 @@ export class UserModel {
    */
   static async exists(login: string): Promise<boolean> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 
@@ -394,7 +394,7 @@ export class UserModel {
         select: { id: true },
       });
 
-      return !!user;
+      return user != null;
     } catch (_error: unknown) {
       logger.error("Erreur lors de la vérification d'existence utilisateur", {
         login,
@@ -409,7 +409,7 @@ export class UserModel {
    */
   static async upsert(userData: UserProfile): Promise<PrismaUser> {
     const prisma = databaseConfig.getPrismaClient();
-    if (!prisma) {
+    if (prisma == null) {
       throw new Error('Base de données non initialisée');
     }
 

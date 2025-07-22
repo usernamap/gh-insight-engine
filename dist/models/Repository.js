@@ -9,7 +9,7 @@ const logger_1 = __importDefault(require("@/utils/logger"));
 class RepositoryModel {
     static async create(repoData, userId) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -85,7 +85,7 @@ class RepositoryModel {
     }
     static async findByNameWithOwner(nameWithOwner) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -97,7 +97,7 @@ class RepositoryModel {
             });
             logger_1.default.debug('Recherche repository par nameWithOwner', {
                 nameWithOwner,
-                found: !!repository,
+                found: repository != null,
             });
             return repository;
         }
@@ -111,7 +111,7 @@ class RepositoryModel {
     }
     static async findByUserId(userId, options = {}) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -161,7 +161,7 @@ class RepositoryModel {
     }
     static async update(id, updateData) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -219,7 +219,7 @@ class RepositoryModel {
     }
     static async enrichWithDevOpsData(id, devOpsData) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -266,7 +266,7 @@ class RepositoryModel {
     }
     static async delete(id) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -285,19 +285,19 @@ class RepositoryModel {
     }
     static async search(filters) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
             const where = {};
-            if (filters.search) {
+            if (filters.search != null) {
                 where.OR = [
                     { name: { contains: filters.search, mode: 'insensitive' } },
                     { description: { contains: filters.search, mode: 'insensitive' } },
                     { nameWithOwner: { contains: filters.search, mode: 'insensitive' } },
                 ];
             }
-            if (filters.language) {
+            if (filters.language != null) {
                 where.primaryLanguage = filters.language;
             }
             if (filters.topics && filters.topics.length > 0) {
@@ -315,10 +315,10 @@ class RepositoryModel {
             if (filters.isPrivate !== undefined) {
                 where.isPrivate = filters.isPrivate;
             }
-            if (filters.hasActions) {
+            if (filters.hasActions === true) {
                 where.githubActions = { not: null };
             }
-            if (filters.hasSecurityAlerts) {
+            if (filters.hasSecurityAlerts === true) {
                 where.security = { not: null };
             }
             const [repositories, total] = await Promise.all([
@@ -350,7 +350,7 @@ class RepositoryModel {
     }
     static async getStats() {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {
@@ -406,7 +406,7 @@ class RepositoryModel {
     }
     static async upsert(repoData, userId) {
         const prisma = database_1.default.getPrismaClient();
-        if (!prisma) {
+        if (prisma == null) {
             throw new Error('Base de données non initialisée');
         }
         try {

@@ -1,7 +1,7 @@
-import { Dataset as PrismaDataset } from '@/generated/prisma';
-import { DatasetMetadata } from '@/types/github';
 import { AnalyticsExtension } from '@/types/analytics';
+import { DatasetMetadata } from '@/types/github';
 import { InsightsExtension } from '@/types/insights';
+import { Dataset as PrismaDataset } from '@/generated/prisma';
 export declare class DatasetModel {
     static create(userProfileId: string, metadata: DatasetMetadata, repositories: string[]): Promise<PrismaDataset>;
     static findById(id: string): Promise<PrismaDataset | null>;

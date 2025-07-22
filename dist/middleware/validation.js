@@ -92,12 +92,12 @@ exports.paginationQuerySchema = zod_1.z.object({
     page: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : 1))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : 1))
         .refine((val) => val >= 1 && val <= 1000, 'La page doit être entre 1 et 1000'),
     limit: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : 20))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : 20))
         .refine((val) => val >= 1 && val <= 100, 'La limite doit être entre 1 et 100'),
     sortBy: zod_1.z
         .enum([
@@ -130,12 +130,12 @@ exports.userSearchQuerySchema = zod_1.z
     minFollowers: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : undefined))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
         .refine((val) => val !== undefined && val >= 0 && val <= 1000000, 'Le nombre minimum de followers doit être entre 0 et 1,000,000'),
     minRepos: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : undefined))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
         .refine((val) => val !== undefined && val >= 0 && val <= 10000, 'Le nombre minimum de repos doit être entre 0 et 10,000'),
 })
     .merge(exports.paginationQuerySchema);
@@ -157,12 +157,12 @@ exports.repoSearchQuerySchema = zod_1.z
     minStars: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : undefined))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
         .refine((val) => val !== undefined && val >= 0 && val <= 1000000, 'Le nombre minimum de stars doit être entre 0 et 1,000,000'),
     minForks: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : undefined))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
         .refine((val) => val !== undefined && val >= 0 && val <= 100000, 'Le nombre minimum de forks doit être entre 0 et 100,000'),
     isPrivate: zod_1.z
         .string()
@@ -210,7 +210,7 @@ exports.analysisQuerySchema = zod_1.z.object({
     maxAge: zod_1.z
         .string()
         .optional()
-        .transform((val) => (val ? parseInt(val, 10) : 24))
+        .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : 24))
         .refine((val) => val >= 1 && val <= 168, "L'âge maximum doit être entre 1 et 168 heures (7 jours)"),
 });
 exports.datasetParamsSchema = zod_1.z.object({
@@ -308,20 +308,20 @@ const sanitizeInput = (req, _res, _next) => {
         return obj;
     };
     try {
-        if (req.body) {
+        if (typeof req.body !== 'undefined' && req.body !== null) {
             req.body = sanitizeObject(req.body);
         }
-        if (req.query) {
+        if (typeof req.query !== 'undefined' && req.query !== null) {
             req.query = sanitizeObject(req.query);
         }
-        if (req.params) {
+        if (typeof req.params !== 'undefined' && req.params !== null) {
             req.params = sanitizeObject(req.params);
         }
         logger_1.logWithContext.security('input_sanitized', 'low', {
             path: req.path,
             success: true,
             method: req.method,
-            hasBody: !!req.body,
+            hasBody: typeof req.body !== 'undefined' && req.body !== null,
             hasQuery: Object.keys(req.query ?? {}).length > 0,
             hasParams: Object.keys(req.params ?? {}).length > 0,
         });

@@ -15,7 +15,7 @@ class DatabaseConfig {
     }
     async initialize() {
         const databaseUrl = process.env.DATABASE_URL;
-        if (!databaseUrl) {
+        if (databaseUrl == null || databaseUrl === '') {
             throw new Error("DATABASE_URL non définie dans les variables d'environnement");
         }
         try {
@@ -91,7 +91,7 @@ class DatabaseConfig {
             overall: false,
         };
         try {
-            if (this.prismaClient) {
+            if (this.prismaClient != null) {
                 await this.prismaClient.$queryRaw `SELECT 1`;
                 health.prisma = true;
             }
@@ -102,7 +102,7 @@ class DatabaseConfig {
             });
         }
         try {
-            if (this.mongooseConnection && this.mongooseConnection.readyState === 1) {
+            if (this.mongooseConnection != null && this.mongooseConnection.readyState === 1) {
                 health.mongoose = true;
             }
         }
@@ -115,14 +115,12 @@ class DatabaseConfig {
         return health;
     }
     async transaction(operations) {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         const startTime = Date.now();
         try {
-            const result = await this.prismaClient.$transaction(async (tx) => {
-                return await operations(tx);
-            });
+            const result = await this.prismaClient.$transaction(operations);
             const duration = Date.now() - startTime;
             logger_1.default.debug('Transaction Prisma terminée', {
                 duration: `${duration}ms`,
@@ -139,7 +137,7 @@ class DatabaseConfig {
         }
     }
     async createIndexes() {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         try {
@@ -154,12 +152,12 @@ class DatabaseConfig {
     }
     async cleanup() {
         try {
-            if (this.prismaClient) {
+            if (this.prismaClient != null) {
                 await this.prismaClient.$disconnect();
                 this.prismaClient = null;
                 logger_1.default.info('Connexion Prisma fermée');
             }
-            if (this.mongooseConnection) {
+            if (this.mongooseConnection != null) {
                 await mongoose_1.default.disconnect();
                 this.mongooseConnection = null;
                 logger_1.default.info('Connexion Mongoose fermée');
@@ -176,7 +174,7 @@ class DatabaseConfig {
         if (process.env.NODE_ENV !== 'test') {
             throw new Error('Nettoyage des données autorisé uniquement en mode test');
         }
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         try {
@@ -214,7 +212,7 @@ class DatabaseConfig {
         return this.isConnected;
     }
     async findMany(model, options = {}) {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         const startTime = Date.now();
@@ -237,7 +235,7 @@ class DatabaseConfig {
         }
     }
     async findUnique(model, where) {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         const startTime = Date.now();
@@ -246,7 +244,7 @@ class DatabaseConfig {
             const duration = Date.now() - startTime;
             logger_1.default.debug('Find unique operation', {
                 model,
-                found: !!result,
+                found: result != null,
                 duration: `${duration}ms`,
             });
             return result;
@@ -260,7 +258,7 @@ class DatabaseConfig {
         }
     }
     async create(model, data) {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         const startTime = Date.now();
@@ -282,7 +280,7 @@ class DatabaseConfig {
         }
     }
     async update(model, where, data) {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         const startTime = Date.now();
@@ -304,7 +302,7 @@ class DatabaseConfig {
         }
     }
     async delete(model, where) {
-        if (!this.prismaClient) {
+        if (this.prismaClient == null) {
             throw new Error('Client Prisma non initialisé');
         }
         const startTime = Date.now();

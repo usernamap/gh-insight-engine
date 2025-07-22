@@ -60,8 +60,8 @@ UserController.getUserProfile = (0, errorHandler_1.asyncHandler)(async (req, res
                     repositoriesCount: Array.isArray(latestDataset.dataset.repositories)
                         ? latestDataset.dataset.repositories.length
                         : 0,
-                    hasAnalytics: !!latestDataset.dataset.analytics,
-                    hasAiInsights: !!latestDataset.dataset.aiInsights,
+                    hasAnalytics: latestDataset.dataset.analytics != null,
+                    hasAiInsights: latestDataset.dataset.aiInsights != null,
                 }
                 : null,
             timestamp: new Date().toISOString(),
@@ -96,14 +96,14 @@ UserController.searchUsers = (0, errorHandler_1.asyncHandler)(async (req, res) =
     });
     try {
         const searchFilters = {};
-        if (searchParams.query) {
+        if (searchParams.query != null && searchParams.query !== '') {
             searchFilters.$or = [
                 { login: { $regex: searchParams.query, $options: 'i' } },
                 { name: { $regex: searchParams.query, $options: 'i' } },
                 { bio: { $regex: searchParams.query, $options: 'i' } },
             ];
         }
-        if (searchParams.location) {
+        if (searchParams.location != null && searchParams.location !== '') {
             searchFilters.location = {
                 $regex: searchParams.location,
                 $options: 'i',
@@ -267,8 +267,8 @@ UserController.getUserAnalysisStatus = (0, errorHandler_1.asyncHandler)(async (r
                 hasDataset: !!latestDataset,
                 datasetId: latestDataset?.dataset.id,
                 lastAnalyzed: latestDataset?.dataset.updatedAt,
-                hasAnalytics: !!latestDataset?.dataset.analytics,
-                hasAiInsights: !!latestDataset?.dataset.aiInsights,
+                hasAnalytics: latestDataset?.dataset.analytics != null,
+                hasAiInsights: latestDataset?.dataset.aiInsights != null,
                 isUpToDate: analysisAge.analyticsUpToDate,
                 lastUpdate: analysisAge.lastUpdate,
                 needsUpdate: !analysisAge.analyticsUpToDate,

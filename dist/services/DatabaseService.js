@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseService = exports.DatabaseService = void 0;
 const models_1 = require("@/models");
+const models_2 = require("@/models");
+const models_3 = require("@/models");
 const database_1 = __importDefault(require("@/config/database"));
 const logger_1 = __importDefault(require("@/utils/logger"));
 class DatabaseService {
@@ -16,10 +18,10 @@ class DatabaseService {
                 repositoriesCount: repositories.length,
             });
             return await database_1.default.transaction(async () => {
-                const user = await models_1.UserModel.upsert(userProfile);
+                const user = await models_3.UserModel.upsert(userProfile);
                 const savedRepositories = [];
                 for (const repo of repositories) {
-                    const savedRepo = await models_1.RepositoryModel.upsert(repo, user.id);
+                    const savedRepo = await models_2.RepositoryModel.upsert(repo, user.id);
                     savedRepositories.push(savedRepo);
                 }
                 const repositoryIds = savedRepositories.map((repo) => repo.id);
@@ -60,7 +62,7 @@ class DatabaseService {
                 return null;
             }
             const [user, repositories] = await Promise.all([
-                models_1.UserModel.findById(dataset.userProfileId),
+                models_3.UserModel.findById(dataset.userProfileId),
                 this.getRepositoriesByIds(dataset.repositories),
             ]);
             if (!user) {
@@ -82,7 +84,7 @@ class DatabaseService {
     }
     async getLatestUserDataset(username) {
         try {
-            const user = await models_1.UserModel.findByLogin(username);
+            const user = await models_3.UserModel.findByLogin(username);
             if (!user) {
                 return null;
             }
@@ -137,8 +139,8 @@ class DatabaseService {
             const enrichedRepositories = [];
             for (const repositoryId of repositoryIds) {
                 const devOpsData = devOpsDataMap[repositoryId];
-                if (devOpsData) {
-                    const enrichedRepo = await models_1.RepositoryModel.enrichWithDevOpsData(repositoryId, devOpsData);
+                if (devOpsData != null) {
+                    const enrichedRepo = await models_2.RepositoryModel.enrichWithDevOpsData(repositoryId, devOpsData);
                     enrichedRepositories.push(enrichedRepo);
                 }
             }
@@ -157,10 +159,10 @@ class DatabaseService {
     }
     async searchUsersWithStats(filters) {
         try {
-            const { users, total } = await models_1.UserModel.search(filters);
+            const { users, total } = await models_3.UserModel.search(filters);
             const enrichedUsers = await Promise.all(users.map(async (user) => {
                 const [repositoriesResult, datasetsResult] = await Promise.all([
-                    models_1.RepositoryModel.findByUserId(user.id, { limit: 1 }),
+                    models_2.RepositoryModel.findByUserId(user.id, { limit: 1 }),
                     models_1.DatasetModel.findByUserId(user.id, { limit: 1 }),
                 ]);
                 const stats = {
@@ -188,9 +190,9 @@ class DatabaseService {
     }
     async searchRepositoriesWithUserInfo(filters) {
         try {
-            const { repositories, total } = await models_1.RepositoryModel.search(filters);
+            const { repositories, total } = await models_2.RepositoryModel.search(filters);
             const enrichedRepositories = await Promise.all(repositories.map(async (repo) => {
-                const user = await models_1.UserModel.findById(repo.userId);
+                const user = await models_3.UserModel.findById(repo.userId);
                 return {
                     ...repo,
                     user: {
@@ -216,8 +218,8 @@ class DatabaseService {
     async getPlatformStats() {
         try {
             const [userStats, repositoryStats, datasetStats] = await Promise.all([
-                models_1.UserModel.getStats(),
-                models_1.RepositoryModel.getStats(),
+                models_3.UserModel.getStats(),
+                models_2.RepositoryModel.getStats(),
                 models_1.DatasetModel.getStats(),
             ]);
             const usersWithDatasets = await this.countUsersWithDatasets();
@@ -284,13 +286,13 @@ class DatabaseService {
     async deleteAllUserData(username) {
         try {
             logger_1.default.info('Début suppression données utilisateur', { username });
-            const user = await models_1.UserModel.findByLogin(username);
+            const user = await models_3.UserModel.findByLogin(username);
             if (!user) {
                 throw new Error('Utilisateur non trouvé');
             }
             return await database_1.default.transaction(async () => {
                 const [repositoriesResult, datasetsResult] = await Promise.all([
-                    models_1.RepositoryModel.findByUserId(user.id),
+                    models_2.RepositoryModel.findByUserId(user.id),
                     models_1.DatasetModel.findByUserId(user.id),
                 ]);
                 const stats = {
@@ -298,7 +300,7 @@ class DatabaseService {
                     deletedRepositories: repositoriesResult.total,
                     deletedDatasets: datasetsResult.total,
                 };
-                await models_1.UserModel.delete(user.id);
+                await models_3.UserModel.delete(user.id);
                 logger_1.default.info('Données utilisateur supprimées avec succès', {
                     username,
                     stats,
@@ -404,7 +406,7 @@ class DatabaseService {
         const repositories = [];
         for (const id of repositoryIds) {
             const repo = await database_1.default.findUnique('repository', { id });
-            if (repo) {
+            if (repo != null) {
                 repositories.push(repo);
             }
         }
@@ -492,7 +494,7 @@ class DatabaseService {
         let deletedCount = 0;
         for (const userId of inactiveIds) {
             try {
-                await models_1.UserModel.delete(userId);
+                await models_3.UserModel.delete(userId);
                 deletedCount++;
             }
             catch (_error) {
