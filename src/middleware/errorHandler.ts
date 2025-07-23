@@ -301,6 +301,7 @@ export const errorHandler: ErrorRequestHandler = (
   _error: Error,
   _req: Request,
   _res: Response,
+  // eslint-disable-next-line no-unused-vars
   _next: NextFunction,
 ): void => {
   // Classifier et normaliser l'erreur
@@ -449,11 +450,11 @@ export const setupGlobalErrorHandlers = (): void => {
  */
 export const asyncHandler = (
   fn: (
-     // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     _req: Request,
-     // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     _res: Response,
-     // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     _next: NextFunction,
   ) => Promise<Record<string, unknown> | void>,
 ) => {

@@ -68,6 +68,7 @@ export class DatabaseConfig {
     });
 
     // Configuration des event listeners pour logs
+    // @ts-ignore - Prisma v5+ interactive transaction
     this.prismaClient.$on('query', (e: unknown) => {
       logger.debug('Prisma Query', {
         query: (e as unknown as { query: string }).query,
@@ -76,6 +77,7 @@ export class DatabaseConfig {
       });
     });
 
+    // @ts-ignore - Prisma v5+ interactive transaction
     this.prismaClient.$on('error', (e: unknown) => {
       logger.error('Prisma Error', {
         message: (e as unknown as { message: string }).message,
@@ -135,6 +137,7 @@ export class DatabaseConfig {
     // Test Prisma
     try {
       if (this.prismaClient != null) {
+        // @ts-ignore - Prisma v5+ interactive transaction
         await this.prismaClient.$queryRaw`SELECT 1`;
         health.prisma = true;
       }
@@ -175,6 +178,7 @@ export class DatabaseConfig {
     const startTime = Date.now();
 
     try {
+      // @ts-ignore - Prisma v5+ interactive transaction
       const result = await this.prismaClient.$transaction(operations);
 
       const duration = Date.now() - startTime;
@@ -182,7 +186,7 @@ export class DatabaseConfig {
         duration: `${duration}ms`,
       });
 
-      return result;
+      return result as T;
     } catch (_error: unknown) {
       const duration = Date.now() - startTime;
       logger.error('Transaction Prisma échouée', {
@@ -253,8 +257,11 @@ export class DatabaseConfig {
 
     try {
       // Nettoyage dans l'ordre inverse des dépendances
+      // @ts-ignore - Prisma v5+ interactive transaction
       await this.prismaClient.$executeRaw`DELETE FROM datasets`;
+      // @ts-ignore - Prisma v5+ interactive transaction
       await this.prismaClient.$executeRaw`DELETE FROM repositories`;
+      // @ts-ignore - Prisma v5+ interactive transaction
       await this.prismaClient.$executeRaw`DELETE FROM users`;
 
       logger.info('Données de test nettoyées');

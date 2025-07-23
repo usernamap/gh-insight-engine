@@ -1,0 +1,13 @@
+extends: ["spectral:oas"]
+
+rules:
+  # Enable all default OpenAPI rules as errors for strict validation
+  info-contact: error
+  info-description: error
+  info-license: error
+  openapi-tags: error
+  operation-operationId: error
+  operation-tags: error
+  path-params: error
+  operation-success-response: error
+  oas3-schema: error 

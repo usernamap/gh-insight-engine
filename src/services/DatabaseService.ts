@@ -740,7 +740,7 @@ export class DatabaseService {
         .getPrismaClient()
         ?.repository.findMany({
           where: {
-            user: null,
+            userId: { equals: undefined },
           },
           select: { id: true },
         });

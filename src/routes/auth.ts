@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { AuthController } from '@/controllers';
 import { authenticateJWT } from '@/middleware';
 import { validateAuth } from '@/middleware';
-import { validateGitHubToken } from '@/middleware';
 
 const router = Router();
 

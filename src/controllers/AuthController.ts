@@ -53,14 +53,6 @@ export class AuthController {
         logWithContext.auth('github_user_not_found', username, false);
         throw createError.notFound('Utilisateur GitHub');
       }
-      // Logs de débogage détaillé
-      console.log('🔍 [DEBUG] Comparaison des usernames:');
-      console.log('🔍 [DEBUG] userProfile.login:', JSON.stringify(userProfile.login));
-      console.log('🔍 [DEBUG] username from request:', JSON.stringify(username));
-      console.log('🔍 [DEBUG] typeof userProfile.login:', typeof userProfile.login);
-      console.log('🔍 [DEBUG] typeof username:', typeof username);
-      console.log('🔍 [DEBUG] Equality check:', userProfile.login === username);
-      console.log('🔍 [DEBUG] Strict comparison:', userProfile.login !== username);
 
       if (userProfile.login !== cleanUsername) {
         logWithContext.auth('token_username_mismatch', username, false, {

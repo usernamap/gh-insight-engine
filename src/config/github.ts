@@ -180,7 +180,7 @@ export class GitHubConfig {
         logger.error('[DEBUG] GraphQL error:', {
           error: (_error as Error).message,
           stack: (_error as Error).stack,
-          raw: JSON.stringify(_error)
+          raw: JSON.stringify(_error),
         });
         lastError = _error as Error;
 

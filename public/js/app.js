@@ -418,10 +418,8 @@ const LoginForm = {
           `Connexion réussie ! Bienvenue ${user.name} (@${user.username})`,
         );
 
-        // Redirection vers le dashboard (à implémenter)
-        setTimeout(() => {
+        // Affiche la page de debug immédiatement
           this.redirectToDashboard(user);
-        }, 2000);
       } else {
         Utils.showMessage('error', result.error || 'Erreur de connexion');
       }
@@ -448,7 +446,8 @@ const LoginForm = {
       <p>Token JWT stocké, vous pouvez tester les routes API ci-dessous :</p>
       <button id="btnMe">GET /api/auth/me</button>
       <button id="btnValidate">GET /api/auth/validate</button>
-      <button id="btnLogout">DELETE /api/auth/logout</button>
+      <button id="btnLogout">DELETE
+       /api/auth/logout</button>
       <button id="btnUser">GET /api/users/${user.username}</button>
       <button id="btnRepos">GET /api/users/${user.username}/repositories</button>
       <button id="btnAnalytics">GET /api/analytics/${user.username}/overview</button>

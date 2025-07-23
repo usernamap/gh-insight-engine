@@ -27,7 +27,7 @@ import {
   UserProfile,
 } from '@/types/github';
 
-import githubConfig, { GitHubConfig } from '@/config/github';
+import { GitHubConfig } from '@/config/github';
 import logger from '@/utils/logger';
 
 // Fonction utilitaire stricte pour transformer un node GraphQL en GitHubRepo
@@ -149,11 +149,13 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
 }
 
 export class GitHubService {
-  private githubConfig: GitHubConfig;
+  public githubConfig: GitHubConfig;
 
-  private constructor(token: string) {
+  public constructor(_token?: string) {
     this.githubConfig = new GitHubConfig();
-    // L'initialisation asynchrone se fait dans la méthode create
+    if (_token != null && _token !== '') {
+      void this.githubConfig.initialize(_token);
+    }
   }
 
   static async create(token: string): Promise<GitHubService> {
@@ -284,9 +286,9 @@ export class GitHubService {
         }
       }
 
-      const basic = (basicResponse as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
-      const counters = (countersResponse as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
-      const orgs = (orgsResponse as GitHubGraphQLUserOrganizationsResponse)?.viewer ?? {} as GitHubGraphQLUserOrganizations;
+      const basic = (basicResponse as unknown as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
+      const counters = (countersResponse as unknown as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
+      const orgs = (orgsResponse as unknown as GitHubGraphQLUserOrganizationsResponse)?.viewer ?? {} as GitHubGraphQLUserOrganizations;
 
       const userProfile: UserProfile = {
         login: basic.login,

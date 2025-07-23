@@ -83,8 +83,8 @@ export const validateGitHubToken = async (
     req.user = {
       id: '', // sera complété lors de la recherche en base
       username: validation.username ?? '',
-      fullName: '', // sera complété depuis le formulaire 
-      githubToken: githubToken
+      fullName: '', // sera complété depuis le formulaire
+      githubToken,
     };
 
     logWithContext.auth(
@@ -183,7 +183,7 @@ export const authenticateJWT = async (
       id: user.id,
       username: user.login,
       fullName: user.name ?? '',
-      githubToken: '' // Le token GitHub n'est pas stocké en base par sécurité
+      githubToken: '', // Le token GitHub n'est pas stocké en base par sécurité
     };
 
     logWithContext.auth('authenticate_jwt', decoded.username, true, {

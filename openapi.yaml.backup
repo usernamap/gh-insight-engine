@@ -1,0 +1,2760 @@
+openapi: 3.0.3
+info:
+  title: GitHub Insight Engine API
+  description: |
+    API REST pour l'analyse en profondeur des données GitHub avec insights IA.
+    
+    Cette API permet d'analyser les profils GitHub, repositories et de générer des insights 
+    quantitatifs et qualitatifs grâce à l'intelligence artificielle.
+    
+    ## Authentification
+    L'API utilise l'authentification JWT Bearer Token. Pour vous connecter, utilisez votre token GitHub Classic.
+    
+    ## Rate Limiting
+    - Global: 100 requêtes par 15 minutes par IP
+    - Authentification: 5 tentatives par 15 minutes par IP  
+    - Analyses: 10 analyses par heure par IP
+    
+    ## Workflow d'analyse
+    1. Connexion avec token GitHub Classic
+    2. Lancement d'analyse utilisateur (GitHub + Analytics)
+    3. Génération d'insights IA
+    4. Consultation des résultats
+  version: 0.1.1
+  contact:
+    name: GitHub Insight Engine Support
+    url: https://github.com/org/gh-insight-engine
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de développement
+  - url: https://api.gh-insight-engine.com/api
+    description: Serveur de production
+
+security:
+  - BearerAuth: []
+  - {}
+
+paths:
+  /health:
+    get:
+      summary: Health check du service
+      description: Vérifie l'état de santé de l'API et retourne des informations système
+      operationId: healthCheck
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Service en fonctionnement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ping:
+    get:
+      summary: Test de connectivité simple
+      description: Test de connectivité basique pour vérifier que l'API répond
+      operationId: ping
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Pong
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+
+  /auth/login:
+    post:
+      summary: Authentification avec token GitHub
+      description: |
+        Authentification avec token GitHub Classic et génération d'un JWT.
+        Le token GitHub doit avoir les permissions appropriées pour accéder aux données privées.
+      operationId: login
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+
+
+  /auth/refresh:
+    post:
+      summary: Rafraîchissement du token JWT
+      description: Génère un nouveau token JWT à partir d'un token valide
+      operationId: refreshToken
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  description: Token de rafraîchissement
+      responses:
+        '200':
+          description: Token rafraîchi avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - token
+                  - expiresIn
+                properties:
+                  token:
+                    type: string
+                    description: Nouveau token JWT
+                  expiresIn:
+                    type: string
+                    description: Durée de validité
+                    example: "24h"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/validate:
+    get:
+      summary: Validation du token JWT
+      description: Vérifie la validité du token JWT courant
+      operationId: validateToken
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Token valide
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - valid
+                  - expiresAt
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  user:
+                    $ref: '#/components/schemas/AuthenticatedUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    delete:
+      summary: Déconnexion
+      description: Invalide le token JWT courant
+      operationId: logout
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Déconnexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+
+  /auth/me:
+    get:
+      summary: Information sur l'utilisateur connecté
+      description: Retourne les informations du profil de l'utilisateur authentifié
+      operationId: getCurrentUser
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Informations utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/search:
+    get:
+      summary: Recherche d'utilisateurs avec filtres
+      description: |
+        Recherche d'utilisateurs GitHub avec filtres avancés.
+        Permet de filtrer par localisation, langage, nombre de followers, etc.
+      operationId: searchUsers
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: query
+          in: query
+          description: Terme de recherche dans le nom d'utilisateur ou nom complet
+          schema:
+            type: string
+            example: "john"
+        - name: location
+          in: query
+          description: Localisation de l'utilisateur
+          schema:
+            type: string
+            example: "Paris"
+        - name: language
+          in: query
+          description: Langage de programmation principal
+          schema:
+            type: string
+            example: "JavaScript"
+        - name: minFollowers
+          in: query
+          description: Nombre minimum de followers
+          schema:
+            type: integer
+            minimum: 0
+            example: 100
+        - name: minRepos
+          in: query
+          description: Nombre minimum de repositories publics
+          schema:
+            type: integer
+            minimum: 0
+            example: 10
+        - name: page
+          in: query
+          description: Numéro de page (commence à 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sortBy
+          in: query
+          description: Champ de tri
+          schema:
+            type: string
+            enum: [followers, repositories, created, updated]
+            default: followers
+        - name: sortOrder
+          in: query
+          description: Ordre de tri
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Liste des utilisateurs trouvés
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /users/{username}:
+    get:
+      summary: Récupération du profil d'un utilisateur
+      description: |
+        Récupère le profil complet d'un utilisateur GitHub.
+        Inclut les informations publiques et privées si l'utilisateur authentifié en a les droits.
+      operationId: getUserProfile
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Nom d'utilisateur GitHub
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
+            example: "octocat"
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Suppression des données utilisateur (GDPR)
+      description: |
+        Supprime toutes les données associées à un utilisateur pour conformité GDPR.
+        Seul le propriétaire du compte peut supprimer ses propres données.
+      operationId: deleteUserData
+      tags:
+        - Users
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Nom d'utilisateur GitHub
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
+      responses:
+        '200':
+          description: Données supprimées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - deleted
+                  - compliance
+                  - timestamp
+                properties:
+                  message:
+                    type: string
+                    example: "Données utilisateur supprimées avec succès"
+                  deleted:
+                    type: object
+                    properties:
+                      user:
+                        type: integer
+                      repositories:
+                        type: integer
+                      datasets:
+                        type: integer
+                  compliance:
+                    type: string
+                    example: "GDPR"
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{username}/status:
+    get:
+      summary: Statut de l'analyse d'un utilisateur
+      description: Récupère le statut de progression d'une analyse utilisateur
+      operationId: getUserAnalysisStatus
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Nom d'utilisateur GitHub
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
+      responses:
+        '200':
+          description: Statut de l'analyse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/stats:
+    get:
+      summary: Statistiques globales des utilisateurs
+      description: Récupère les statistiques globales de la plateforme
+      operationId: getUsersStats
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Statistiques globales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformStats'
+
+  /users/{username}/repositories:
+    get:
+      summary: Liste des repositories d'un utilisateur
+      description: |
+        Récupère la liste des repositories d'un utilisateur avec données DevOps enrichies.
+        Inclut les repositories privés si l'utilisateur authentifié en a les droits.
+      operationId: getUserRepositories
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Nom d'utilisateur GitHub
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
+        - name: includePrivate
+          in: query
+          description: Inclure les repositories privés (nécessite authentification)
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Liste des repositories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /repositories/search:
+    get:
+      summary: Recherche de repositories avec filtres avancés
+      description: |
+        Recherche de repositories GitHub avec filtres avancés.
+        Permet de filtrer par langage, sujet, nombre d'étoiles, etc.
+      operationId: searchRepositories
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: query
+          in: query
+          description: Terme de recherche dans le nom ou description
+          schema:
+            type: string
+        - name: language
+          in: query
+          description: Langage de programmation principal
+          schema:
+            type: string
+        - name: topic
+          in: query
+          description: Sujet/tag du repository
+          schema:
+            type: string
+        - name: minStars
+          in: query
+          description: Nombre minimum d'étoiles
+          schema:
+            type: integer
+            minimum: 0
+        - name: minForks
+          in: query
+          description: Nombre minimum de forks
+          schema:
+            type: integer
+            minimum: 0
+        - name: isPrivate
+          in: query
+          description: Repository privé (nécessite authentification)
+          schema:
+            type: boolean
+        - name: isFork
+          in: query
+          description: Est un fork
+          schema:
+            type: boolean
+        - name: isArchived
+          in: query
+          description: Est archivé
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [stars, forks, updated, created]
+            default: stars
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Liste des repositories trouvés
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositorySearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /repositories/languages/stats:
+    get:
+      summary: Statistiques des langages de programmation
+      description: |
+        Récupère les statistiques globales des langages de programmation
+        utilisés dans tous les repositories de la plateforme.
+      operationId: getLanguagesStats
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Statistiques des langages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguagesStats'
+
+  /repositories/trending:
+    get:
+      summary: Repositories tendance
+      description: |
+        Récupère les repositories tendance par période et langage.
+        Permet de découvrir les projets populaires récemment.
+      operationId: getTrendingRepositories
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: period
+          in: query
+          description: Période de tendance
+          schema:
+            type: string
+            enum: ['1d', '7d', '30d']
+            default: '7d'
+        - name: language
+          in: query
+          description: Langage de programmation
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Nombre de repositories à retourner
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Liste des repositories tendance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendingRepositoriesResponse'
+
+  /repositories/{owner}/{repo}:
+    get:
+      summary: Récupération des détails d'un repository
+      description: |
+        Récupère les détails complets d'un repository avec données DevOps.
+        Inclut les informations privées si l'utilisateur authentifié en a les droits.
+      operationId: getRepository
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          description: Propriétaire du repository
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          description: Nom du repository
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Détails du repository
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /repositories/{owner}/{repo}/enrich:
+    post:
+      summary: Enrichissement DevOps d'un repository
+      description: |
+        Lance l'enrichissement DevOps d'un repository avec données avancées.
+        Nécessite une authentification pour accéder aux données privées.
+      operationId: enrichRepository
+      tags:
+        - Repositories
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Repository enrichi avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repository'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/{username}/analyze:
+    post:
+      summary: Lance une analyse complète d'un utilisateur
+      description: |
+        Lance une analyse complète d'un utilisateur (GitHub + Analytics).
+        Cette opération peut prendre plusieurs minutes et est limitée en fréquence.
+      operationId: analyzeUser
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeUserRequest'
+      responses:
+        '202':
+          description: Analyse lancée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /analytics/{username}/overview:
+    get:
+      summary: Vue d'ensemble des métriques
+      description: Récupère une vue d'ensemble des métriques analytiques d'un utilisateur
+      operationId: getAnalyticsOverview
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vue d'ensemble des métriques
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverview'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/{username}/performance:
+    get:
+      summary: Scores de performance
+      description: Récupère les scores de performance calculés pour un utilisateur
+      operationId: getPerformanceScores
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scores de performance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceScores'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/{username}/languages:
+    get:
+      summary: Analyse des langages
+      description: Récupère l'analyse détaillée des langages de programmation utilisés
+      operationId: getLanguageAnalysis
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Analyse des langages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageAnalysis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/{username}/activity:
+    get:
+      summary: Analyse d'activité
+      description: Récupère l'analyse d'activité et des patterns de développement
+      operationId: getActivityAnalysis
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Analyse d'activité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityAnalysis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/{username}/productivity:
+    get:
+      summary: Score de productivité
+      description: Récupère le score de productivité et métriques associées
+      operationId: getProductivityScore
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Score de productivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityScore'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /analytics/{username}/devops:
+    get:
+      summary: Maturité DevOps
+      description: Récupère l'évaluation de maturité DevOps et pratiques de développement
+      operationId: getDevOpsMaturity
+      tags:
+        - Analytics
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Maturité DevOps
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevOpsMaturity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/generate:
+    post:
+      summary: Génération d'insights IA pour un utilisateur
+      description: |
+        Lance la génération d'insights IA pour un utilisateur.
+        Cette opération utilise OpenAI et est très coûteuse, donc limitée en fréquence.
+      operationId: generateInsights
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Génération d'insights lancée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightGenerationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /insights/{username}/summary:
+    get:
+      summary: Résumé IA du profil
+      description: Récupère le résumé IA du profil développeur
+      operationId: getInsightsSummary
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Résumé IA du profil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightsSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/recommendations:
+    get:
+      summary: Recommandations IA
+      description: Récupère les recommandations IA basées sur l'analyse du profil
+      operationId: getInsightsRecommendations
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommandations IA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightsRecommendations'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/strengths:
+    get:
+      summary: Forces identifiées
+      description: Récupère les forces identifiées par l'IA
+      operationId: getInsightsStrengths
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Forces identifiées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightsStrengths'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/growth:
+    get:
+      summary: Axes d'amélioration
+      description: Récupère les axes d'amélioration suggérés par l'IA
+      operationId: getInsightsGrowth
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Axes d'amélioration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightsGrowth'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/personality:
+    get:
+      summary: Personnalité de développeur
+      description: Récupère l'analyse de personnalité de développeur par l'IA
+      operationId: getDeveloperPersonality
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Personnalité de développeur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeveloperPersonality'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/career:
+    get:
+      summary: Insights de carrière
+      description: Récupère les insights de carrière par l'IA
+      operationId: getCareerInsights
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Insights de carrière
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CareerInsights'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /insights/{username}/skills:
+    get:
+      summary: Évaluation des compétences
+      description: Récupère l'évaluation des compétences par l'IA
+      operationId: getSkillAssessment
+      tags:
+        - Insights
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Évaluation des compétences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillAssessment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT obtenu via l'endpoint /auth/login.
+        Format: `Authorization: Bearer <token>`
+
+  schemas:
+    # System Schemas
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+        - version
+        - timestamp
+        - uptime
+        - environment
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          example: "healthy"
+        service:
+          type: string
+          example: "GitHub Insight Engine API"
+        version:
+          type: string
+          example: "0.1.0"
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: Temps de fonctionnement en secondes
+          example: 3600.5
+        environment:
+          type: string
+          enum: [development, staging, production]
+          example: "development"
+
+    PingResponse:
+      type: object
+      required:
+        - message
+        - timestamp
+      properties:
+        message:
+          type: string
+          example: "pong"
+        timestamp:
+          type: string
+          format: date-time
+
+    # Authentication Schemas
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - fullName
+        - githubToken
+      properties:
+        username:
+          type: string
+          description: Nom d'utilisateur GitHub
+          pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
+          example: "octocat"
+        fullName:
+          type: string
+          description: Nom complet de l'utilisateur
+          minLength: 1
+          maxLength: 100
+          example: "John Doe"
+        githubToken:
+          type: string
+          description: Token GitHub Classic avec permissions appropriées
+          format: password
+          pattern: '^gh[ps]_[A-Za-z0-9]{36}$|^[a-f0-9]{40}$'
+          example: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+    LoginResponse:
+      type: object
+      required:
+        - success
+        - message
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Authentification réussie"
+        data:
+          type: object
+          required:
+            - token
+            - expiresIn
+            - user
+          properties:
+            token:
+              type: string
+              description: Token JWT pour l'authentification
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            expiresIn:
+              type: string
+              description: Durée de validité du token
+              example: "24h"
+            user:
+              $ref: '#/components/schemas/AuthenticatedUser'
+        timestamp:
+          type: string
+          format: date-time
+
+    AuthenticatedUser:
+      type: object
+      required:
+        - id
+        - username
+        - name
+        - email
+        - avatarUrl
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        username:
+          type: string
+          example: "octocat"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        avatarUrl:
+          type: string
+          format: uri
+          example: "https://github.com/images/error/octocat_happy.gif"
+        bio:
+          type: string
+          nullable: true
+          example: "There once was..."
+        company:
+          type: string
+          nullable: true
+          example: "GitHub"
+        location:
+          type: string
+          nullable: true
+          example: "San Francisco"
+
+
+
+    LogoutResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Déconnexion réussie"
+
+
+
+    CurrentUserResponse:
+      type: object
+      required:
+        - user
+        - status
+        - timestamp
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthenticatedUser'
+        status:
+          type: object
+          required:
+            - tokenStatus
+            - lastLogin
+          properties:
+            tokenStatus:
+              type: string
+              enum: [valid, invalid, expired, error]
+              example: "valid"
+            lastLogin:
+              type: string
+              format: date-time
+        timestamp:
+          type: string
+          format: date-time
+
+    # User Schemas
+    UserProfile:
+      type: object
+      required:
+        - id
+        - login
+        - name
+        - email
+        - avatarUrl
+        - followers
+        - following
+        - publicRepos
+        - publicGists
+        - createdAt
+        - updatedAt
+        - type
+        - siteAdmin
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        login:
+          type: string
+          example: "octocat"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+        bio:
+          type: string
+          nullable: true
+        company:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        blog:
+          type: string
+          format: uri
+          nullable: true
+        twitterUsername:
+          type: string
+          nullable: true
+        followers:
+          type: integer
+          minimum: 0
+        following:
+          type: integer
+          minimum: 0
+        publicRepos:
+          type: integer
+          minimum: 0
+        publicGists:
+          type: integer
+          minimum: 0
+        privateRepos:
+          type: integer
+          minimum: 0
+          nullable: true
+        ownedPrivateRepos:
+          type: integer
+          minimum: 0
+          nullable: true
+        totalPrivateRepos:
+          type: integer
+          minimum: 0
+          nullable: true
+        collaborators:
+          type: integer
+          minimum: 0
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [User, Organization]
+        siteAdmin:
+          type: boolean
+        hireable:
+          type: boolean
+          nullable: true
+        organizations:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/Organization'
+
+    Organization:
+      type: object
+      required:
+        - login
+        - name
+        - avatarUrl
+      properties:
+        login:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          format: uri
+
+    UserSearchResponse:
+      type: object
+      required:
+        - users
+        - pagination
+        - totalCount
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        totalCount:
+          type: integer
+          minimum: 0
+
+    # Repository Schemas
+    Repository:
+      type: object
+      required:
+        - id
+        - nameWithOwner
+        - name
+        - isPrivate
+        - isArchived
+        - isFork
+        - isTemplate
+        - stargazerCount
+        - forkCount
+        - watchersCount
+        - openIssuesCount
+        - pushedAt
+        - updatedAt
+        - createdAt
+        - hasIssuesEnabled
+        - hasProjectsEnabled
+        - hasWikiEnabled
+      properties:
+        id:
+          type: string
+        nameWithOwner:
+          type: string
+          example: "octocat/Hello-World"
+        name:
+          type: string
+          example: "Hello-World"
+        description:
+          type: string
+          nullable: true
+        isPrivate:
+          type: boolean
+        isArchived:
+          type: boolean
+        isFork:
+          type: boolean
+        isTemplate:
+          type: boolean
+        stargazerCount:
+          type: integer
+          minimum: 0
+        forkCount:
+          type: integer
+          minimum: 0
+        watchersCount:
+          type: integer
+          minimum: 0
+        subscriberCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        networkCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        openIssuesCount:
+          type: integer
+          minimum: 0
+        primaryLanguage:
+          type: string
+          nullable: true
+          example: "JavaScript"
+        languages:
+          type: object
+          properties:
+            totalSize:
+              type: integer
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/Language'
+        topics:
+          type: array
+          items:
+            type: string
+        pushedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        homepageUrl:
+          type: string
+          format: uri
+          nullable: true
+        size:
+          type: integer
+          minimum: 0
+        defaultBranchRef:
+          type: string
+          nullable: true
+          example: "main"
+        license:
+          $ref: '#/components/schemas/License'
+        hasIssuesEnabled:
+          type: boolean
+        hasProjectsEnabled:
+          type: boolean
+        hasWikiEnabled:
+          type: boolean
+        hasPages:
+          type: boolean
+          nullable: true
+        hasDownloads:
+          type: boolean
+          nullable: true
+        hasDiscussions:
+          type: boolean
+          nullable: true
+        vulnerabilityAlertsEnabled:
+          type: boolean
+          nullable: true
+        securityPolicyEnabled:
+          type: boolean
+          nullable: true
+        codeOfConductEnabled:
+          type: boolean
+          nullable: true
+        contributingGuidelinesEnabled:
+          type: boolean
+          nullable: true
+        readmeEnabled:
+          type: boolean
+          nullable: true
+        deployments:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        environments:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        commits:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Commit'
+        releases:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+            latestRelease:
+              $ref: '#/components/schemas/Release'
+        issues:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+            openCount:
+              type: integer
+            closedCount:
+              type: integer
+        pullRequests:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+            openCount:
+              type: integer
+            closedCount:
+              type: integer
+            mergedCount:
+              type: integer
+        branchProtectionRules:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        collaborators:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        # DevOps enrichment fields
+        githubActions:
+          $ref: '#/components/schemas/GitHubActions'
+        security:
+          $ref: '#/components/schemas/GitHubSecurity'
+        packages:
+          $ref: '#/components/schemas/GitHubPackages'
+        branchProtection:
+          $ref: '#/components/schemas/GitHubBranchProtection'
+
+    Language:
+      type: object
+      required:
+        - name
+        - size
+        - percentage
+      properties:
+        name:
+          type: string
+          example: "JavaScript"
+        size:
+          type: integer
+          minimum: 0
+        percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    License:
+      type: object
+      nullable: true
+      properties:
+        name:
+          type: string
+          example: "MIT License"
+        spdxId:
+          type: string
+          example: "MIT"
+        url:
+          type: string
+          format: uri
+
+    Commit:
+      type: object
+      required:
+        - oid
+        - message
+        - committedDate
+        - author
+        - additions
+        - deletions
+        - changedFiles
+      properties:
+        oid:
+          type: string
+          example: "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+        message:
+          type: string
+        committedDate:
+          type: string
+          format: date-time
+        author:
+          type: object
+          properties:
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        additions:
+          type: integer
+          minimum: 0
+        deletions:
+          type: integer
+          minimum: 0
+        changedFiles:
+          type: integer
+          minimum: 0
+
+    Release:
+      type: object
+      nullable: true
+      properties:
+        name:
+          type: string
+        tagName:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        isLatest:
+          type: boolean
+
+    GitHubActions:
+      type: object
+      nullable: true
+      properties:
+        enabled:
+          type: boolean
+        workflows:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workflow'
+
+    Workflow:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        state:
+          type: string
+          enum: [active, disabled]
+
+    GitHubSecurity:
+      type: object
+      nullable: true
+      properties:
+        vulnerabilityAlertsEnabled:
+          type: boolean
+        securityAndAnalysisEnabled:
+          type: boolean
+        dependabotEnabled:
+          type: boolean
+        codeQLEnabled:
+          type: boolean
+
+    GitHubPackages:
+      type: object
+      nullable: true
+      properties:
+        totalCount:
+          type: integer
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+
+    Package:
+      type: object
+      properties:
+        name:
+          type: string
+        packageType:
+          type: string
+        visibility:
+          type: string
+          enum: [public, private]
+
+    GitHubBranchProtection:
+      type: object
+      nullable: true
+      properties:
+        enabled:
+          type: boolean
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchProtectionRule'
+
+    BranchProtectionRule:
+      type: object
+      properties:
+        pattern:
+          type: string
+        requiresApprovingReviews:
+          type: boolean
+        requiredApprovingReviewCount:
+          type: integer
+        requiresStatusChecks:
+          type: boolean
+        requiresStrictStatusChecks:
+          type: boolean
+
+    RepositoryListResponse:
+      type: object
+      required:
+        - repositories
+        - pagination
+        - totalCount
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repository'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        totalCount:
+          type: integer
+          minimum: 0
+
+    RepositorySearchResponse:
+      type: object
+      required:
+        - repositories
+        - pagination
+        - totalCount
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repository'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        totalCount:
+          type: integer
+          minimum: 0
+
+    # Analytics Schemas
+    AnalyzeUserRequest:
+      type: object
+      properties:
+        includePrivate:
+          type: boolean
+          default: false
+          description: Inclure les repositories privés dans l'analyse
+        forceRefresh:
+          type: boolean
+          default: false
+          description: Forcer le rafraîchissement des données
+        maxAge:
+          type: integer
+          minimum: 0
+          default: 3600
+          description: Âge maximum des données en cache (secondes)
+
+    AnalysisStatusResponse:
+      type: object
+      required:
+        - status
+        - progress
+        - startedAt
+      properties:
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Pourcentage de progression
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        phases:
+          type: object
+          properties:
+            githubData:
+              $ref: '#/components/schemas/AnalysisPhase'
+            analytics:
+              $ref: '#/components/schemas/AnalysisPhase'
+            insights:
+              $ref: '#/components/schemas/AnalysisPhase'
+
+    AnalysisPhase:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    AnalyticsOverview:
+      type: object
+      required:
+        - username
+        - lastUpdated
+        - summary
+      properties:
+        username:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+        summary:
+          type: object
+          required:
+            - totalRepositories
+            - totalStars
+            - totalForks
+            - totalCommits
+            - primaryLanguages
+            - activityScore
+          properties:
+            totalRepositories:
+              type: integer
+              minimum: 0
+            totalStars:
+              type: integer
+              minimum: 0
+            totalForks:
+              type: integer
+              minimum: 0
+            totalCommits:
+              type: integer
+              minimum: 0
+            primaryLanguages:
+              type: array
+              items:
+                type: string
+            activityScore:
+              type: number
+              minimum: 0
+              maximum: 100
+
+    PerformanceScores:
+      type: object
+      required:
+        - username
+        - lastUpdated
+        - scores
+      properties:
+        username:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+        scores:
+          type: object
+          required:
+            - overall
+            - productivity
+            - quality
+            - collaboration
+            - innovation
+          properties:
+            overall:
+              $ref: '#/components/schemas/Score'
+            productivity:
+              $ref: '#/components/schemas/Score'
+            quality:
+              $ref: '#/components/schemas/Score'
+            collaboration:
+              $ref: '#/components/schemas/Score'
+            innovation:
+              $ref: '#/components/schemas/Score'
+
+    Score:
+      type: object
+      required:
+        - value
+        - category
+      properties:
+        value:
+          type: number
+          minimum: 0
+          maximum: 100
+        category:
+          type: string
+          enum: [excellent, good, average, below_average, poor]
+        details:
+          type: string
+        factors:
+          type: array
+          items:
+            type: string
+
+    LanguageAnalysis:
+      type: object
+      required:
+        - username
+        - lastUpdated
+        - languages
+      properties:
+        username:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageStats'
+        diversity:
+          $ref: '#/components/schemas/Score'
+        expertise:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Score'
+
+    LanguageStats:
+      type: object
+      required:
+        - name
+        - totalBytes
+        - percentage
+        - repositoryCount
+      properties:
+        name:
+          type: string
+        totalBytes:
+          type: integer
+          minimum: 0
+        percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        repositoryCount:
+          type: integer
+          minimum: 0
+        averageCommitsPerRepo:
+          type: number
+          minimum: 0
+        lastUsed:
+          type: string
+          format: date-time
+
+    ActivityAnalysis:
+      type: object
+      required:
+        - username
+        - lastUpdated
+        - patterns
+      properties:
+        username:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+        patterns:
+          type: object
+          required:
+            - commitFrequency
+            - workingHours
+            - weeklyActivity
+          properties:
+            commitFrequency:
+              $ref: '#/components/schemas/CommitFrequency'
+            workingHours:
+              $ref: '#/components/schemas/WorkingHours'
+            weeklyActivity:
+              $ref: '#/components/schemas/WeeklyActivity'
+        trends:
+          type: object
+          properties:
+            productivity:
+              $ref: '#/components/schemas/ProductivityTrend'
+            consistency:
+              $ref: '#/components/schemas/Score'
+
+    CommitFrequency:
+      type: object
+      required:
+        - daily
+        - weekly
+        - monthly
+      properties:
+        daily:
+          type: number
+          minimum: 0
+        weekly:
+          type: number
+          minimum: 0
+        monthly:
+          type: number
+          minimum: 0
+        peakDays:
+          type: array
+          items:
+            type: string
+
+    WorkingHours:
+      type: object
+      properties:
+        peakHours:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 23
+        timezone:
+          type: string
+        pattern:
+          type: string
+          enum: [morning, afternoon, evening, night, distributed]
+
+    WeeklyActivity:
+      type: object
+      properties:
+        mostActiveDay:
+          type: string
+          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        leastActiveDay:
+          type: string
+          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        weekendActivity:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    ProductivityTrend:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum: [increasing, decreasing, stable]
+        changePercentage:
+          type: number
+        period:
+          type: string
+          enum: [week, month, quarter, year]
+
+    # Insights Schemas
+    InsightGenerationResponse:
+      type: object
+      required:
+        - status
+        - message
+        - estimatedCompletion
+      properties:
+        status:
+          type: string
+          enum: [accepted, processing]
+        message:
+          type: string
+        estimatedCompletion:
+          type: string
+          format: date-time
+
+    InsightsSummary:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - summary
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        summary:
+          type: object
+          required:
+            - profileOverview
+            - keyStrengths
+            - developmentStyle
+            - expertise
+          properties:
+            profileOverview:
+              type: string
+              description: Vue d'ensemble du profil développeur
+            keyStrengths:
+              type: array
+              items:
+                type: string
+            developmentStyle:
+              type: string
+              description: Style de développement identifié
+            expertise:
+              type: object
+              properties:
+                level:
+                  type: string
+                  enum: [junior, intermediate, senior, expert]
+                domains:
+                  type: array
+                  items:
+                    type: string
+
+    InsightsRecommendations:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - recommendations
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+
+    Recommendation:
+      type: object
+      required:
+        - category
+        - title
+        - description
+        - priority
+      properties:
+        category:
+          type: string
+          enum: [skills, productivity, collaboration, projects, career]
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+        actionItems:
+          type: array
+          items:
+            type: string
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resource'
+
+    Resource:
+      type: object
+      required:
+        - title
+        - url
+        - type
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        type:
+          type: string
+          enum: [documentation, tutorial, course, book, tool]
+        description:
+          type: string
+
+    InsightsStrengths:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - strengths
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        strengths:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strength'
+
+    Strength:
+      type: object
+      required:
+        - area
+        - description
+        - evidence
+        - score
+      properties:
+        area:
+          type: string
+          enum: [technical, leadership, collaboration, innovation, productivity]
+        description:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    InsightsGrowth:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - growthAreas
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        growthAreas:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrowthArea'
+
+    GrowthArea:
+      type: object
+      required:
+        - area
+        - description
+        - impact
+        - difficulty
+      properties:
+        area:
+          type: string
+        description:
+          type: string
+        impact:
+          type: string
+          enum: [high, medium, low]
+        difficulty:
+          type: string
+          enum: [easy, moderate, challenging]
+        timeline:
+          type: string
+          enum: [short_term, medium_term, long_term]
+        steps:
+          type: array
+          items:
+            type: string
+
+    # New Schemas for missing endpoints
+    PlatformStats:
+      type: object
+      required:
+        - users
+        - activity
+        - timestamp
+      properties:
+        users:
+          type: object
+          required:
+            - total
+            - withDatasets
+            - averageFollowers
+            - topLanguages
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            withDatasets:
+              type: integer
+              minimum: 0
+            averageFollowers:
+              type: number
+              minimum: 0
+            topLanguages:
+              type: array
+              items:
+                type: string
+        activity:
+          type: object
+          required:
+            - recentAnalyses
+            - totalAnalyses
+          properties:
+            recentAnalyses:
+              type: integer
+              minimum: 0
+            totalAnalyses:
+              type: integer
+              minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+
+    TrendingRepositoriesResponse:
+      type: object
+      required:
+        - repositories
+        - period
+        - totalCount
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repository'
+        period:
+          type: string
+          enum: ['1d', '7d', '30d']
+        totalCount:
+          type: integer
+          minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+
+    ProductivityScore:
+      type: object
+      required:
+        - username
+        - lastUpdated
+        - score
+      properties:
+        username:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+        score:
+          $ref: '#/components/schemas/Score'
+        metrics:
+          type: object
+          properties:
+            commitsPerDay:
+              type: number
+              minimum: 0
+            linesOfCodePerCommit:
+              type: number
+              minimum: 0
+            issuesClosedPerWeek:
+              type: number
+              minimum: 0
+
+    DevOpsMaturity:
+      type: object
+      required:
+        - username
+        - lastUpdated
+        - maturityLevel
+      properties:
+        username:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+        maturityLevel:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+        practices:
+          type: object
+          properties:
+            cicd:
+              $ref: '#/components/schemas/Score'
+            testing:
+              $ref: '#/components/schemas/Score'
+            monitoring:
+              $ref: '#/components/schemas/Score'
+            security:
+              $ref: '#/components/schemas/Score'
+
+    SkillAssessment:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - skills
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        skills:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - level
+              - confidence
+            properties:
+              name:
+                type: string
+              level:
+                type: string
+                enum: [beginner, intermediate, advanced, expert]
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 100
+              evidence:
+                type: array
+                items:
+                  type: string
+
+    DeveloperPersonality:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - personality
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        personality:
+          type: object
+          required:
+            - type
+            - traits
+            - workStyle
+          properties:
+            type:
+              type: string
+              description: Type de personnalité développeur
+              example: "Innovator"
+            traits:
+              type: array
+              items:
+                type: string
+              example: ["Creative", "Analytical", "Problem-solver"]
+            workStyle:
+              type: string
+              example: "Collaborative and detail-oriented"
+            strengths:
+              type: array
+              items:
+                type: string
+            challenges:
+              type: array
+              items:
+                type: string
+
+    CareerInsights:
+      type: object
+      required:
+        - username
+        - generatedAt
+        - insights
+      properties:
+        username:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        insights:
+          type: object
+          required:
+            - currentLevel
+            - nextSteps
+            - recommendations
+          properties:
+            currentLevel:
+              type: string
+              enum: [junior, mid, senior, lead, principal]
+            nextSteps:
+              type: array
+              items:
+                type: string
+            recommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                  suggestion:
+                    type: string
+                  priority:
+                    type: string
+                    enum: [high, medium, low]
+
+    LanguagesStats:
+      type: object
+      required:
+        - totalRepositories
+        - languages
+        - timestamp
+      properties:
+        totalRepositories:
+          type: integer
+          minimum: 0
+        languages:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - repositoryCount
+              - percentage
+            properties:
+              name:
+                type: string
+              repositoryCount:
+                type: integer
+                minimum: 0
+              percentage:
+                type: number
+                minimum: 0
+                maximum: 100
+              totalBytes:
+                type: integer
+                minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+
+    # Common Schemas
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - totalPages
+        - hasNext
+        - hasPrevious
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalPages:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+        nextPage:
+          type: integer
+          nullable: true
+        previousPage:
+          type: integer
+          nullable: true
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Code d'erreur
+        message:
+          type: string
+          description: Message d'erreur lisible
+        details:
+          type: object
+          description: Détails supplémentaires sur l'erreur
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+          description: Chemin de la requête qui a causé l'erreur
+        requestId:
+          type: string
+          description: Identifiant unique de la requête
+
+    ValidationError:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - details
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Erreur de validation des données"
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+          description: Chemin de l'endpoint
+        method:
+          type: string
+          description: Méthode HTTP
+        details:
+          type: array
+          items:
+            type: object
+            required:
+              - field
+              - message
+              - code
+            properties:
+              field:
+                type: string
+                description: Champ en erreur
+              message:
+                type: string
+                description: Message d'erreur pour ce champ
+              code:
+                type: string
+                description: Code d'erreur spécifique
+              received:
+                description: Valeur reçue (si applicable)
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+    Unauthorized:
+      description: Non autorisé - Token manquant ou invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Token d'authentification requis"
+            timestamp: "2024-01-15T10:30:00.000Z"
+
+    Forbidden:
+      description: Accès interdit - Permissions insuffisantes
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "Vous n'avez pas les permissions pour accéder à cette ressource"
+            timestamp: "2024-01-15T10:30:00.000Z"
+
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "La ressource demandée n'existe pas"
+            timestamp: "2024-01-15T10:30:00.000Z"
+
+    TooManyRequests:
+      description: Trop de requêtes - Rate limit dépassé
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Too Many Requests"
+            message: "Rate limit dépassé. Réessayez dans 15 minutes."
+            timestamp: "2024-01-15T10:30:00.000Z"
+      headers:
+        Retry-After:
+          description: Nombre de secondes à attendre avant de réessayer
+          schema:
+            type: integer
+        X-RateLimit-Limit:
+          description: Limite de requêtes par période
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Nombre de requêtes restantes
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Timestamp de réinitialisation du rate limit
+          schema:
+            type: integer
+
+
+
+tags:
+  - name: System
+    description: Endpoints système (health check, ping)
+  - name: Authentication
+    description: Authentification et gestion des tokens JWT
+  - name: Users
+    description: Gestion des utilisateurs GitHub
+  - name: Repositories
+    description: Recherche et gestion des repositories
+  - name: Analytics
+    description: Analyses quantitatives et métriques
+  - name: Insights
+    description: Insights IA qualitatifs et recommandations
+
+externalDocs:
+  description: Documentation complète de l'API
+  url: https://docs.gh-insight-engine.com 

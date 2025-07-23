@@ -196,7 +196,7 @@ process.on('warning', (warning) => {
  */
 function printHeader(): void {
   // eslint-disable-next-line no-console
-  console.log(`\n${  chalk.bgBlueBright.bold.white('  GitHub Insight Engine  ')  }  ${  chalk.bold.gray(`v${process.env.npm_package_version ?? 'dev'}`)}`);
+  console.log(`\n${chalk.bgBlueBright.bold.white('  GitHub Insight Engine  ')}  ${chalk.bold.gray(`v${process.env.npm_package_version ?? 'dev'}`)}`);
   // eslint-disable-next-line no-console
   console.log(chalk.gray('='.repeat(60)));
   // eslint-disable-next-line no-console
@@ -206,7 +206,7 @@ function printHeader(): void {
   // eslint-disable-next-line no-console
   console.log(chalk.white('Docs:'), chalk.underline(`http://localhost:${process.env.PORT ?? '3000'}/`));
   // eslint-disable-next-line no-console
-  console.log(`${chalk.gray('='.repeat(60))  }\n`);
+  console.log(`${chalk.gray('='.repeat(60))}\n`);
 }
 
 /**
