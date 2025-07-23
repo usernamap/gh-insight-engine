@@ -20,7 +20,7 @@ info:
     2. Lancement d'analyse utilisateur (GitHub + Analytics)
     3. Génération d'insights IA
     4. Consultation des résultats
-  version: 0.1.7
+  version: 0.1.6
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -2597,59 +2597,399 @@ components:
     InsightGenerationResponse:
       type: object
       required:
-        - status
         - message
-        - estimatedCompletion
+        - insights
+        - summary
+        - metadata
+        - timestamp
       properties:
-        status:
-          type: string
-          enum: [accepted, processing]
         message:
           type: string
-        estimatedCompletion:
+          example: "Insights IA générés avec succès"
+        insights:
+          type: object
+          required:
+            - generated
+            - fresh
+          properties:
+            generated:
+              type: boolean
+              example: true
+            fresh:
+              type: boolean
+              example: true
+            cached:
+              type: boolean
+              description: Présent si les insights étaient en cache
+        summary:
+          type: object
+          required:
+            - developerPersonality
+            - mainStrengths
+            - keyRecommendations
+            - overallAssessment
+          properties:
+            developerPersonality:
+              type: object
+              properties:
+                archetype:
+                  type: string
+                  enum: [innovator, builder, optimizer, maintainer, explorer, teacher]
+                description:
+                  type: string
+                strengths:
+                  type: array
+                  items:
+                    type: string
+                workingStyle:
+                  type: object
+                  properties:
+                    preferredProjectSize:
+                      type: string
+                      enum: [small, medium, large, mixed]
+                    collaborationStyle:
+                      type: string
+                      enum: [solo, pair, team_lead, contributor]
+                    learningApproach:
+                      type: string
+                      enum: [experimenter, methodical, research_driven, hands_on]
+                    problemSolving:
+                      type: string
+                      enum: [analytical, creative, systematic, intuitive]
+                motivations:
+                  type: array
+                  items:
+                    type: string
+                potentialChallenges:
+                  type: array
+                  items:
+                    type: string
+            mainStrengths:
+              type: array
+              items:
+                type: object
+                properties:
+                  strength:
+                    type: string
+                  manifestation:
+                    type: array
+                    items:
+                      type: string
+                  evidence:
+                    type: array
+                    items:
+                      type: string
+                  leverageOpportunities:
+                    type: array
+                    items:
+                      type: string
+            keyRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                    enum: [skill, tool, practice, project]
+                  recommendation:
+                    type: string
+                  reasoning:
+                    type: string
+                  expectedImpact:
+                    type: string
+                    enum: [minor, moderate, significant, transformative]
+                  effort:
+                    type: string
+                    enum: [low, medium, high]
+                  resources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        type:
+                          type: string
+                          enum: [course, book, project, certification, community]
+                        url:
+                          type: string
+                          nullable: true
+                        priority:
+                          type: integer
+            overallAssessment:
+              type: object
+              properties:
+                keyHighlights:
+                  type: array
+                  items:
+                    type: string
+                majorStrengths:
+                  type: array
+                  items:
+                    type: string
+                primaryRecommendations:
+                  type: array
+                  items:
+                    type: string
+                careerOutlook:
+                  type: string
+        metadata:
+          type: object
+          required:
+            - datasetId
+            - generatedAt
+            - repositoriesAnalyzed
+          properties:
+            datasetId:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            generatedAt:
+              type: string
+              format: date-time
+            repositoriesAnalyzed:
+              type: integer
+              minimum: 0
+              example: 25
+        timestamp:
           type: string
           format: date-time
 
     InsightsSummary:
       type: object
       required:
-        - username
-        - generatedAt
+        - user
         - summary
+        - highlights
+        - metadata
+        - timestamp
       properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
+        user:
+          type: object
+          required:
+            - username
+            - name
+            - avatarUrl
+          properties:
+            username:
+              type: string
+              example: "octocat"
+            name:
+              type: string
+              example: "John Doe"
+            avatarUrl:
+              type: string
+              format: uri
         summary:
           type: object
           required:
-            - profileOverview
+            - overall
+            - personality
             - keyStrengths
-            - developmentStyle
-            - expertise
+            - topSkills
+            - careerLevel
+            - experience
           properties:
-            profileOverview:
-              type: string
-              description: Vue d'ensemble du profil développeur
-            keyStrengths:
-              type: array
-              items:
-                type: string
-            developmentStyle:
-              type: string
-              description: Style de développement identifié
-            expertise:
+            overall:
               type: object
               properties:
-                level:
-                  type: string
-                  enum: [junior, intermediate, senior, expert]
-                domains:
+                keyHighlights:
                   type: array
                   items:
                     type: string
+                majorStrengths:
+                  type: array
+                  items:
+                    type: string
+                primaryRecommendations:
+                  type: array
+                  items:
+                    type: string
+                careerOutlook:
+                  type: string
+            personality:
+              type: object
+              properties:
+                archetype:
+                  type: string
+                  enum: [innovator, builder, optimizer, maintainer, explorer, teacher]
+                description:
+                  type: string
+                strengths:
+                  type: array
+                  items:
+                    type: string
+                workingStyle:
+                  type: object
+                  properties:
+                    preferredProjectSize:
+                      type: string
+                      enum: [small, medium, large, mixed]
+                    collaborationStyle:
+                      type: string
+                      enum: [solo, pair, team_lead, contributor]
+                    learningApproach:
+                      type: string
+                      enum: [experimenter, methodical, research_driven, hands_on]
+                    problemSolving:
+                      type: string
+                      enum: [analytical, creative, systematic, intuitive]
+                motivations:
+                  type: array
+                  items:
+                    type: string
+                potentialChallenges:
+                  type: array
+                  items:
+                    type: string
+            keyStrengths:
+              type: array
+              items:
+                type: object
+                properties:
+                  strength:
+                    type: string
+                  manifestation:
+                    type: array
+                    items:
+                      type: string
+                  evidence:
+                    type: array
+                    items:
+                      type: string
+                  leverageOpportunities:
+                    type: array
+                    items:
+                      type: string
+            topSkills:
+              type: array
+              items:
+                type: object
+                properties:
+                  skill:
+                    type: string
+                  proficiency:
+                    type: string
+                    enum: [novice, advanced_beginner, competent, proficient, expert]
+                  confidence:
+                    type: number
+                    minimum: 0
+                    maximum: 100
+                  evidenceStrength:
+                    type: string
+                    enum: [weak, moderate, strong, very_strong]
+                  evidence:
+                    type: array
+                    items:
+                      type: string
+                  growthPotential:
+                    type: string
+                    enum: [limited, moderate, high, exceptional]
+                  marketDemand:
+                    type: string
+                    enum: [low, moderate, high, very_high]
+            careerLevel:
+              type: string
+              enum: [junior, mid_level, senior, staff, principal, distinguished]
+            experience:
+              type: object
+              properties:
+                direction:
+                  type: string
+                  enum: [ascending, stable, transitioning, exploring]
+                velocity:
+                  type: string
+                  enum: [slow, steady, rapid, exponential]
+                confidence:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+        highlights:
+          type: object
+          required:
+            - bestQualities
+            - topRecommendations
+            - growthAreas
+          properties:
+            bestQualities:
+              type: array
+              items:
+                type: string
+            topRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                    enum: [skill, tool, practice, project]
+                  recommendation:
+                    type: string
+                  reasoning:
+                    type: string
+                  expectedImpact:
+                    type: string
+                    enum: [minor, moderate, significant, transformative]
+                  effort:
+                    type: string
+                    enum: [low, medium, high]
+                  resources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        type:
+                          type: string
+                          enum: [course, book, project, certification, community]
+                        url:
+                          type: string
+                          nullable: true
+                        priority:
+                          type: integer
+            growthAreas:
+              type: array
+              items:
+                type: object
+                properties:
+                  skill:
+                    type: string
+                  currentGap:
+                    type: string
+                    enum: [minor, moderate, significant, critical]
+                  importance:
+                    type: string
+                    enum: [nice_to_have, beneficial, important, essential]
+                  learningPath:
+                    type: array
+                    items:
+                      type: string
+                  timeToCompetency:
+                    type: string
+                  careerImpact:
+                    type: string
+        metadata:
+          type: object
+          required:
+            - generatedAt
+            - confidence
+            - repositoriesAnalyzed
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+              example: 0.8
+            repositoriesAnalyzed:
+              type: integer
+              minimum: 0
+              example: 25
+        timestamp:
+          type: string
+          format: date-time
 
     InsightsRecommendations:
       type: object
