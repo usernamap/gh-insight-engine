@@ -95,6 +95,13 @@ export class DatabaseConfig {
    * Initialise la connexion Mongoose
    */
   private async initializeMongoose(databaseUrl: string): Promise<void> {
+    // Vérifier si une connexion existe déjà (utile pour les tests)
+    if (mongoose.connection.readyState === 1) {
+      logger.info('Connexion Mongoose déjà établie, réutilisation de la connexion existante');
+      this.mongooseConnection = mongoose.connection;
+      return;
+    }
+
     const options: mongoose.ConnectOptions = {
       maxPoolSize: 10, // Maintain up to 10 socket connections
       serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds

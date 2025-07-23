@@ -48,9 +48,10 @@ export const validateGitHubToken = async (
       });
 
       _res.status(401).json({
-        _error: 'Token GitHub requis',
+        error: 'Unauthorized',
         message:
           'Veuillez fournir votre token GitHub Classic dans le header Authorization',
+        timestamp: new Date().toISOString(),
         documentation:
           'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token',
       });
@@ -72,8 +73,9 @@ export const validateGitHubToken = async (
       );
 
       _res.status(401).json({
-        _error: 'Token GitHub invalide',
+        error: 'Unauthorized',
         message: validation.error,
+        timestamp: new Date().toISOString(),
         help: 'Vérifiez que votre token est correct et possède les permissions requises',
       });
       return;
@@ -106,7 +108,7 @@ export const validateGitHubToken = async (
     });
 
     _res.status(500).json({
-      _error: 'Erreur validation token',
+      error: 'INTERNAL_SERVER_ERROR',
       message: 'Impossible de valider le token GitHub',
       details:
         process.env.NODE_ENV === 'development' ? errorMessage : undefined,
@@ -135,8 +137,9 @@ export const authenticateJWT = async (
       });
 
       _res.status(401).json({
-        _error: "Token d'authentification requis",
+        error: 'Unauthorized',
         message: 'Veuillez vous connecter pour accéder à cette ressource',
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -157,8 +160,9 @@ export const authenticateJWT = async (
       });
 
       _res.status(401).json({
-        _error: 'Token expiré',
+        error: 'Unauthorized',
         message: 'Veuillez vous reconnecter',
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -171,8 +175,9 @@ export const authenticateJWT = async (
       });
 
       _res.status(401).json({
-        _error: 'Utilisateur non trouvé',
+        error: 'Unauthorized',
         message: "Le compte utilisateur associé à ce token n'existe plus",
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -198,8 +203,9 @@ export const authenticateJWT = async (
       });
 
       _res.status(401).json({
-        _error: 'Token JWT invalide',
+        error: 'Unauthorized',
         message: 'Token malformé ou corrompu',
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -210,8 +216,9 @@ export const authenticateJWT = async (
       });
 
       _res.status(401).json({
-        _error: 'Token expiré',
+        error: 'Unauthorized',
         message: 'Veuillez vous reconnecter',
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -222,7 +229,7 @@ export const authenticateJWT = async (
     });
 
     _res.status(500).json({
-      _error: "Erreur d'authentification",
+      error: 'INTERNAL_SERVER_ERROR',
       message: 'Erreur interne du serveur',
     });
   }
@@ -294,7 +301,7 @@ export const requireRole = (_roles: string[]) => {
   ): Promise<void> => {
     if (!req.user) {
       _res.status(401).json({
-        _error: 'Authentification requise',
+        error: 'Unauthorized',
         message: 'Veuillez vous authentifier pour accéder à cette ressource',
       });
       return;
@@ -316,7 +323,7 @@ export const requireOwnership = (paramName = 'username') => {
   ): Promise<void> => {
     if (!req.user) {
       _res.status(401).json({
-        _error: 'Authentification requise',
+        error: 'Unauthorized',
         message: 'Veuillez vous authentifier pour accéder à cette ressource',
       });
       return;
@@ -335,7 +342,7 @@ export const requireOwnership = (paramName = 'username') => {
       });
 
       _res.status(403).json({
-        _error: 'Accès interdit',
+        error: 'Forbidden',
         message: "Vous ne pouvez accéder qu'à vos propres données",
       });
       return;
@@ -408,7 +415,7 @@ export const userRateLimit = (options: {
       });
 
       _res.status(429).json({
-        _error: 'Trop de requêtes',
+        error: 'Too Many Requests',
         message: `Limite de ${maxRequests} requêtes par ${Math.ceil(windowMs / 60000)} minutes atteinte`,
         retryAfter: resetIn,
       });
@@ -467,7 +474,7 @@ export const refreshGitHubValidation = (intervalMinutes = 60) => {
         });
 
         _res.status(401).json({
-          _error: 'Token GitHub expiré ou révoqué',
+          error: 'Unauthorized',
           message: 'Veuillez renouveler votre token GitHub',
           action: 'refresh_token_required',
         });

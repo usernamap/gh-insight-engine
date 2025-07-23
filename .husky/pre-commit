@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Validation pre-commit..."
+
+# Mise à jour automatique de version
+echo "📦 Mise à jour version..."
+npm run version:bump
+
+# Validation OpenAPI (zero warning/error)
+echo "📋 Validation OpenAPI..."
+npm run openapi:validate
+
+# Vérification couverture API
+echo "📊 Vérification couverture API..."
+npm run openapi:coverage
+
+# Lint (zero warning)
+echo "🔧 Vérification ESLint..."
+npm run lint
+
+# Type checking
+echo "🔍 Vérification TypeScript..."
+npm run typecheck
+
+echo "✅ Pre-commit validation réussie!" 

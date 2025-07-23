@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "📚 Génération post-commit de la documentation..."
+
+# Backup OpenAPI pour prochaine comparaison
+echo "💾 Sauvegarde OpenAPI..."
+npm run openapi:backup
+
+# Génération documentation
+echo "🔧 Génération documentation..."
+npm run openapi:build
+
+echo "✅ Documentation générée avec succès!" 

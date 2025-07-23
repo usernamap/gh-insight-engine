@@ -36,9 +36,14 @@ export const validate = (schemas: ValidationSchemas) => {
 
       // Validation des query parameters
       if (schemas.query) {
-        req.query = (await schemas.query.parseAsync(
-          req.query,
-        )) as typeof req.query;
+        const validatedQuery = await schemas.query.parseAsync(req.query);
+        // Utiliser Object.defineProperty pour remplacer le getter
+        Object.defineProperty(req, 'query', {
+          value: validatedQuery,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
       }
 
       // Validation des headers
@@ -64,7 +69,7 @@ export const validate = (schemas: ValidationSchemas) => {
         });
 
         _res.status(400).json({
-          _error: 'Erreur de validation des données',
+          error: 'VALIDATION_ERROR',
           message: 'Les données fournies ne respectent pas le format attendu',
           details: _error.errors.map((err) => ({
             field: err.path.join('.'),
@@ -245,7 +250,7 @@ export const repoSearchQuerySchema = z
       .optional()
       .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
       .refine(
-        (val) => val !== undefined && val >= 0 && val <= 1000000,
+        (val) => val === undefined || (val >= 0 && val <= 1000000),
         'Le nombre minimum de stars doit être entre 0 et 1,000,000',
       ),
     minForks: z
@@ -253,7 +258,7 @@ export const repoSearchQuerySchema = z
       .optional()
       .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
       .refine(
-        (val) => val !== undefined && val >= 0 && val <= 100000,
+        (val) => val === undefined || (val >= 0 && val <= 100000),
         'Le nombre minimum de forks doit être entre 0 et 100,000',
       ),
     isPrivate: z
