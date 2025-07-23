@@ -20,7 +20,7 @@ info:
     2. Lancement d'analyse utilisateur (GitHub + Analytics)
     3. Génération d'insights IA
     4. Consultation des résultats
-  version: 0.1.5
+  version: 0.1.6
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine

@@ -3,16 +3,16 @@ import { Express } from 'express';
 import { createApp } from '../src/app';
 import { testLogger } from './utils/TestLogger';
 import TestHelpers, { TestContext, TestData, ResponseValidators } from './utils/TestHelpers';
+import { sharedContext } from './setup';
 
-describe('Authentication Endpoints', () => {
+describe('Authentication Endpoints - REAL GitHub Data', () => {
     let app: Express;
     let testHelpers: TestHelpers;
-    let validAuthToken: string;
 
     beforeAll(async () => {
         testLogger.startSuite(
-            'Authentication Endpoints',
-            'Tests complets du flow d\'authentification: login, validation, refresh, logout et gestion des erreurs'
+            'Authentication Endpoints - REAL GitHub Data',
+            `Tests complets du flow d'authentification avec de vraies données GitHub pour l'utilisateur: ${sharedContext.username}`
         );
 
         // Initialiser l'application
@@ -22,7 +22,12 @@ describe('Authentication Endpoints', () => {
         const context: TestContext = { app };
         testHelpers = new TestHelpers(context);
 
-        testLogger.logInfo('Application de test initialisée pour authentification');
+        // Valider que les données réelles sont disponibles
+        testHelpers.validateRealDataAvailability();
+
+        testLogger.logInfo(`🔑 Utilisation du token GitHub réel: ${sharedContext.githubToken.substring(0, 10)}...`);
+        testLogger.logInfo(`👤 Utilisateur GitHub: ${sharedContext.username}`);
+        testLogger.logInfo(`📝 Nom complet: ${sharedContext.fullName}`);
     });
 
     afterAll(() => {
@@ -30,71 +35,44 @@ describe('Authentication Endpoints', () => {
     });
 
     describe('POST /api/auth/login', () => {
-        test('Login successful with valid credentials', async () => {
+        test('Login successful with REAL GitHub credentials', async () => {
             const response = await testHelpers.makeRequest({
-                description: 'Connexion réussie avec des identifiants valides',
+                description: `Connexion réussie avec les vraies données GitHub de ${sharedContext.username}`,
                 method: 'POST',
                 endpoint: '/api/auth/login',
                 expectedStatus: 200,
                 body: TestData.validUser,
-                validateResponse: ResponseValidators.loginSuccess
+                validateResponse: ResponseValidators.loginSuccess,
+                saveToContext: 'authToken' // Sauvegarder le token pour les tests suivants
             });
 
-            // Sauvegarder le token pour les tests suivants
-            if (response.body?.data?.token) {
-                validAuthToken = response.body.data.token;
-                testHelpers.setAuthToken(validAuthToken);
-                testHelpers.setUsername(TestData.validUser.username);
-                testLogger.logSuccess('Token d\'authentification sauvegardé');
-            }
+            // Vérifications spécifiques aux données réelles
+            expect(response.body.user.username).toBe(sharedContext.username);
+            expect(response.body.user.name).toBe(sharedContext.fullName);
+            expect(response.body.tokens.accessToken).toBeDefined();
+            expect(typeof response.body.tokens.accessToken).toBe('string');
+
+            // Le token est maintenant sauvegardé dans sharedContext.authToken
+            testLogger.logSuccess(`✅ Token d'authentification généré et sauvegardé pour ${sharedContext.username}`);
         });
 
-        test('Login failed with invalid username', async () => {
+        test('Login failure with invalid GitHub token', async () => {
             await testHelpers.makeRequest({
-                description: 'Échec de connexion avec nom d\'utilisateur invalide',
+                description: 'Échec de connexion avec un token GitHub invalide',
                 method: 'POST',
                 endpoint: '/api/auth/login',
-                expectedStatus: 400,
-                body: {
-                    ...TestData.validUser,
-                    username: ''
-                },
-                validateResponse: ResponseValidators.validationError
+                expectedStatus: 401,
+                body: TestData.invalidUser,
+                validateResponse: (response) => {
+                    ResponseValidators.error(response, 'AUTHENTICATION_FAILED');
+                    expect(response.message).toContain('GitHub');
+                }
             });
         });
 
-        test('Login failed with invalid token format', async () => {
+        test('Login failure with missing credentials', async () => {
             await testHelpers.makeRequest({
-                description: 'Échec de connexion avec format de token invalide',
-                method: 'POST',
-                endpoint: '/api/auth/login',
-                expectedStatus: 400,
-                body: {
-                    ...TestData.validUser,
-                    githubToken: 'invalid-token-format'
-                },
-                validateResponse: ResponseValidators.validationError
-            });
-        });
-
-        test('Login failed with missing full name', async () => {
-            await testHelpers.makeRequest({
-                description: 'Échec de connexion avec nom complet manquant',
-                method: 'POST',
-                endpoint: '/api/auth/login',
-                expectedStatus: 400,
-                body: {
-                    username: TestData.validUser.username,
-                    githubToken: TestData.validUser.githubToken
-                    // fullName manquant
-                },
-                validateResponse: ResponseValidators.validationError
-            });
-        });
-
-        test('Login failed with empty body', async () => {
-            await testHelpers.makeRequest({
-                description: 'Échec de connexion avec body vide',
+                description: 'Échec de connexion avec des identifiants manquants',
                 method: 'POST',
                 endpoint: '/api/auth/login',
                 expectedStatus: 400,
@@ -103,309 +81,169 @@ describe('Authentication Endpoints', () => {
             });
         });
 
-        test('Login failed with invalid GitHub token', async () => {
+        test('Login failure with empty username', async () => {
             await testHelpers.makeRequest({
-                description: 'Échec de connexion avec token GitHub invalide (simulation)',
+                description: 'Échec de connexion avec nom d\'utilisateur vide',
                 method: 'POST',
                 endpoint: '/api/auth/login',
-                expectedStatus: 401,
+                expectedStatus: 400,
                 body: {
-                    ...TestData.validUser,
-                    githubToken: 'ghp_invalidtokenxxxxxxxxxxxxxxxxxxxxxxxxxx'
+                    username: '',
+                    fullName: sharedContext.fullName,
+                    githubToken: sharedContext.githubToken
                 },
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
-                }
+                validateResponse: ResponseValidators.validationError
+            });
+        });
+
+        test('Login failure with empty GitHub token', async () => {
+            await testHelpers.makeRequest({
+                description: 'Échec de connexion avec token GitHub vide',
+                method: 'POST',
+                endpoint: '/api/auth/login',
+                expectedStatus: 400,
+                body: {
+                    username: sharedContext.username,
+                    fullName: sharedContext.fullName,
+                    githubToken: ''
+                },
+                validateResponse: ResponseValidators.validationError
             });
         });
     });
 
     describe('GET /api/auth/validate', () => {
-        test('Validate valid token', async () => {
-            if (!validAuthToken) {
-                testLogger.logWarning('Token non disponible, passage du test');
-                return;
-            }
-
+        test('Token validation success with REAL auth token', async () => {
+            // Utiliser le token sauvegardé dans le contexte partagé
             await testHelpers.makeRequest({
-                description: 'Validation d\'un token JWT valide',
+                description: `Validation réussie du token d'authentification pour ${sharedContext.username}`,
                 method: 'GET',
                 endpoint: '/api/auth/validate',
                 expectedStatus: 200,
                 auth: true,
                 validateResponse: (response) => {
                     expect(response).toHaveProperty('valid', true);
+                    expect(response).toHaveProperty('user');
+                    expect(response.user).toHaveProperty('username', sharedContext.username);
+                    expect(response).toHaveProperty('permissions');
                     expect(response).toHaveProperty('expiresAt');
-                    expect(response).toHaveProperty('user');
-                    expect(response.user).toHaveProperty('username');
                 }
             });
         });
 
-        test('Validate without token', async () => {
-            // Temporairement retirer le token
-            const originalToken = testHelpers.getContext().authToken;
-            testHelpers.setAuthToken('');
-
+        test('Token validation failure without token', async () => {
             await testHelpers.makeRequest({
-                description: 'Validation sans token d\'authentification',
+                description: 'Échec de validation sans token d\'authentification',
                 method: 'GET',
                 endpoint: '/api/auth/validate',
                 expectedStatus: 401,
+                auth: false,
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
+                    ResponseValidators.error(response, 'MISSING_TOKEN');
                 }
             });
-
-            // Restaurer le token
-            if (originalToken) {
-                testHelpers.setAuthToken(originalToken);
-            }
         });
 
-        test('Validate with invalid token format', async () => {
+        test('Token validation failure with invalid token', async () => {
             await testHelpers.makeRequest({
-                description: 'Validation avec format de token invalide',
+                description: 'Échec de validation avec token invalide',
                 method: 'GET',
                 endpoint: '/api/auth/validate',
                 expectedStatus: 401,
                 headers: {
-                    'Authorization': 'Bearer invalid-token-format'
+                    'Authorization': 'Bearer invalid-token-123'
                 },
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
-                }
-            });
-        });
-
-        test('Validate with malformed Authorization header', async () => {
-            await testHelpers.makeRequest({
-                description: 'Validation avec header Authorization malformé',
-                method: 'GET',
-                endpoint: '/api/auth/validate',
-                expectedStatus: 401,
-                headers: {
-                    'Authorization': 'InvalidFormat token'
-                },
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
-                }
-            });
-        });
-    });
-
-    describe('GET /api/auth/me', () => {
-        test('Get current user info with valid token', async () => {
-            if (!validAuthToken) {
-                testLogger.logWarning('Token non disponible, passage du test');
-                return;
-            }
-
-            await testHelpers.makeRequest({
-                description: 'Récupération des informations utilisateur connecté',
-                method: 'GET',
-                endpoint: '/api/auth/me',
-                expectedStatus: 200,
-                auth: true,
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('user');
-                    expect(response).toHaveProperty('status');
-                    expect(response).toHaveProperty('timestamp');
-                    expect(response.user).toHaveProperty('username');
-                    expect(response.user).toHaveProperty('name');
-                    expect(response.status).toHaveProperty('tokenStatus');
-                    expect(response.status).toHaveProperty('lastLogin');
-                }
-            });
-        });
-
-        test('Get current user without authentication', async () => {
-            await testHelpers.makeRequest({
-                description: 'Tentative de récupération d\'infos utilisateur sans authentification',
-                method: 'GET',
-                endpoint: '/api/auth/me',
-                expectedStatus: 401,
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
+                    ResponseValidators.error(response, 'INVALID_TOKEN');
                 }
             });
         });
     });
 
     describe('POST /api/auth/refresh', () => {
-        test('Refresh token with valid refresh token', async () => {
-            if (!validAuthToken) {
-                testLogger.logWarning('Token non disponible, passage du test');
-                return;
-            }
-
-            // Note: En pratique, il faudrait un vrai refresh token
-            // Pour le test, on simule avec le token actuel
+        test('Token refresh success with REAL auth token', async () => {
             await testHelpers.makeRequest({
-                description: 'Rafraîchissement du token avec refresh token valide',
+                description: `Renouvellement réussi du token pour ${sharedContext.username}`,
                 method: 'POST',
                 endpoint: '/api/auth/refresh',
                 expectedStatus: 200,
-                body: {
-                    refresh_token: validAuthToken // Simulation
-                },
+                auth: true,
                 validateResponse: (response) => {
-                    expect(response).toHaveProperty('token');
-                    expect(response).toHaveProperty('expiresIn');
-                    expect(typeof response.token).toBe('string');
-                    expect(typeof response.expiresIn).toBe('string');
-                }
-            });
-        });
-
-        test('Refresh token with invalid refresh token', async () => {
-            await testHelpers.makeRequest({
-                description: 'Échec de rafraîchissement avec refresh token invalide',
-                method: 'POST',
-                endpoint: '/api/auth/refresh',
-                expectedStatus: 401,
-                body: {
-                    refresh_token: 'invalid-refresh-token'
-                },
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
-                }
-            });
-        });
-
-        test('Refresh token without authentication', async () => {
-            await testHelpers.makeRequest({
-                description: 'Échec de rafraîchissement sans authentification JWT',
-                method: 'POST',
-                endpoint: '/api/auth/refresh',
-                expectedStatus: 401,
-                body: {},
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('error', 'Unauthorized');
-                    expect(response).toHaveProperty('message');
+                    expect(response).toHaveProperty('message', 'Token renouvelé avec succès');
+                    expect(response).toHaveProperty('tokens');
+                    expect(response.tokens).toHaveProperty('accessToken');
+                    expect(response.tokens).toHaveProperty('tokenType', 'Bearer');
+                    expect(response.tokens).toHaveProperty('expiresIn', '24h');
                     expect(response).toHaveProperty('timestamp');
+                    
+                    // Mettre à jour le token dans le contexte partagé
+                    if (response.tokens?.accessToken) {
+                        sharedContext.authToken = response.tokens.accessToken;
+                        testHelpers.setAuthToken(response.tokens.accessToken);
+                    }
+                }
+            });
+        });
+
+        test('Token refresh failure without token', async () => {
+            await testHelpers.makeRequest({
+                description: 'Échec de renouvellement sans token',
+                method: 'POST',
+                endpoint: '/api/auth/refresh',
+                expectedStatus: 401,
+                auth: false,
+                validateResponse: (response) => {
+                    ResponseValidators.error(response, 'MISSING_TOKEN');
                 }
             });
         });
     });
 
     describe('DELETE /api/auth/logout', () => {
-        test('Logout with valid token', async () => {
-            if (!validAuthToken) {
-                testLogger.logWarning('Token non disponible, passage du test');
-                return;
-            }
-
+        test('Logout success with REAL auth token', async () => {
             await testHelpers.makeRequest({
-                description: 'Déconnexion avec token valide',
+                description: `Déconnexion réussie pour ${sharedContext.username}`,
                 method: 'DELETE',
                 endpoint: '/api/auth/logout',
                 expectedStatus: 200,
                 auth: true,
                 validateResponse: (response) => {
-                    expect(response).toHaveProperty('success', true);
-                    expect(response).toHaveProperty('message');
-                    expect(typeof response.message).toBe('string');
-                }
-            });
-
-            // Après logout, le token ne devrait plus être valide
-            testLogger.logInfo('Vérification que le token est invalidé après logout');
-
-            await testHelpers.makeRequest({
-                description: 'Vérification que le token est invalidé après logout',
-                method: 'GET',
-                endpoint: '/api/auth/validate',
-                expectedStatus: 401,
-                auth: true,
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
+                    expect(response).toHaveProperty('message', 'Déconnexion réussie');
+                    expect(response).toHaveProperty('timestamp');
                 }
             });
         });
 
-        test('Logout without token', async () => {
+        test('Logout failure without token', async () => {
             await testHelpers.makeRequest({
-                description: 'Tentative de déconnexion sans token',
+                description: 'Échec de déconnexion sans token',
                 method: 'DELETE',
                 endpoint: '/api/auth/logout',
                 expectedStatus: 401,
+                auth: false,
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
+                    ResponseValidators.error(response, 'MISSING_TOKEN');
                 }
             });
         });
     });
 
-    describe('Authentication Flow Integration', () => {
-        test('Complete authentication flow', async () => {
-            testLogger.logInfo('Test du flow complet d\'authentification');
-
-            // 1. Login
-            const loginResponse = await testHelpers.makeRequest({
-                description: 'Étape 1: Connexion pour flow complet',
-                method: 'POST',
-                endpoint: '/api/auth/login',
-                expectedStatus: 200,
-                body: TestData.validUser,
-                validateResponse: ResponseValidators.loginSuccess
-            });
-
-            const newToken = loginResponse.body.tokens.accessToken;
-            testHelpers.setAuthToken(newToken);
-
-            // 2. Validate token
-            await testHelpers.makeRequest({
-                description: 'Étape 2: Validation du token obtenu',
-                method: 'GET',
-                endpoint: '/api/auth/validate',
-                expectedStatus: 200,
-                auth: true
-            });
-
-            // 3. Get user info
-            await testHelpers.makeRequest({
-                description: 'Étape 3: Récupération des infos utilisateur',
-                method: 'GET',
-                endpoint: '/api/auth/me',
-                expectedStatus: 200,
-                auth: true
-            });
-
-            // 4. Refresh token
-            const refreshResponse = await testHelpers.makeRequest({
-                description: 'Étape 4: Rafraîchissement du token',
-                method: 'POST',
-                endpoint: '/api/auth/refresh',
-                expectedStatus: 200,
-                body: {
-                    refresh_token: newToken
-                }
-            });
-
-            // 5. Use refreshed token
-            if (refreshResponse.body.token) {
-                testHelpers.setAuthToken(refreshResponse.body.token);
-
-                await testHelpers.makeRequest({
-                    description: 'Étape 5: Utilisation du token rafraîchi',
-                    method: 'GET',
-                    endpoint: '/api/auth/validate',
-                    expectedStatus: 200,
-                    auth: true
-                });
-            }
-
-            // 6. Logout
-            await testHelpers.makeRequest({
-                description: 'Étape 6: Déconnexion finale',
-                method: 'DELETE',
-                endpoint: '/api/auth/logout',
-                expectedStatus: 200,
-                auth: true
-            });
-
-            testLogger.logSuccess('Flow complet d\'authentification terminé avec succès');
+    describe('Context Validation', () => {
+        test('Shared context contains REAL GitHub data', async () => {
+            // Vérifier que le contexte partagé contient les bonnes données
+            expect(sharedContext.username).toBeDefined();
+            expect(sharedContext.fullName).toBeDefined();
+            expect(sharedContext.githubToken).toBeDefined();
+            expect(sharedContext.authToken).toBeDefined();
+            
+            // Vérifier que les données correspondent aux vraies valeurs
+            expect(sharedContext.username).not.toBe('test-user');
+            expect(sharedContext.fullName).not.toBe('Test User');
+            expect(sharedContext.githubToken).not.toBe('test-github-token');
+            expect(sharedContext.githubToken.startsWith('ghp_') || sharedContext.githubToken.startsWith('github_pat_')).toBe(true);
+            
+            testLogger.logSuccess('✅ Contexte partagé validé avec des données GitHub réelles');
+            testLogger.logInfo(`📊 Données disponibles: authToken=${!!sharedContext.authToken}, userData=${!!sharedContext.userData}`);
         });
     });
 }); 

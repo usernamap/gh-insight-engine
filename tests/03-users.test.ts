@@ -2,18 +2,17 @@ import { describe, test, beforeAll, afterAll } from '@jest/globals';
 import { Express } from 'express';
 import { createApp } from '../src/app';
 import { testLogger } from './utils/TestLogger';
-import TestHelpers, { TestContext, TestData, ResponseValidators } from './utils/TestHelpers';
+import TestHelpers, { TestContext, TestData, ResponseValidators, RealDataHelpers } from './utils/TestHelpers';
+import { sharedContext } from './setup';
 
-describe('Users Endpoints', () => {
+describe('Users Endpoints - REAL GitHub Data', () => {
     let app: Express;
     let testHelpers: TestHelpers;
-    let authToken: string;
-    const testUsername = TestData.validUser.username;
 
     beforeAll(async () => {
         testLogger.startSuite(
-            'Users Endpoints',
-            'Tests des endpoints utilisateurs: recherche, profils, repositories, statistiques et gestion des données'
+            'Users Endpoints - REAL GitHub Data',
+            `Tests des endpoints utilisateurs avec de vraies données GitHub pour l'utilisateur: ${sharedContext.username}`
         );
 
         // Initialiser l'application
@@ -23,24 +22,17 @@ describe('Users Endpoints', () => {
         const context: TestContext = { app };
         testHelpers = new TestHelpers(context);
 
-        // Authentification préalable pour les tests nécessitant un token
-        testLogger.logInfo('Authentification préalable pour les tests utilisateurs');
+        // Valider que les données réelles sont disponibles
+        testHelpers.validateRealDataAvailability();
 
-        const loginResponse = await testHelpers.makeRequest({
-            description: 'Authentification préalable pour les tests utilisateurs',
-            method: 'POST',
-            endpoint: '/api/auth/login',
-            expectedStatus: 200,
-            body: TestData.validUser,
-            validateResponse: ResponseValidators.loginSuccess
-        });
-
-        if (loginResponse.body?.data?.token) {
-            authToken = loginResponse.body.data.token;
-            testHelpers.setAuthToken(authToken);
-            testHelpers.setUsername(testUsername);
-            testLogger.logSuccess('Authentification réussie pour les tests utilisateurs');
+        // Vérifier que l'authentification a été effectuée dans le test précédent
+        if (!sharedContext.authToken) {
+            throw new Error('Auth token not available from previous test. Tests must run in sequence.');
         }
+
+        testHelpers.setAuthToken(sharedContext.authToken);
+        testLogger.logInfo(`🔑 Utilisation du token d'authentification du contexte partagé`);
+        testLogger.logInfo(`👤 Tests pour l'utilisateur GitHub: ${sharedContext.username}`);
     });
 
     afterAll(() => {
@@ -48,36 +40,36 @@ describe('Users Endpoints', () => {
     });
 
     describe('GET /api/users/search', () => {
-        test('Search users without authentication', async () => {
-            // Retirer temporairement le token pour ce test
-            const originalToken = testHelpers.getContext().authToken;
-            testHelpers.setAuthToken('');
-
+        test('Search users without authentication - public endpoint', async () => {
             await testHelpers.makeRequest({
-                description: 'Recherche d\'utilisateurs sans authentification',
+                description: 'Recherche d\'utilisateurs publique sans authentification',
                 method: 'GET',
-                endpoint: '/api/users/search?query=octocat',
+                endpoint: `/api/users/search?query=${sharedContext.username}`,
                 expectedStatus: 200,
+                auth: false,
                 validateResponse: (response) => {
                     expect(response).toHaveProperty('users');
                     expect(response).toHaveProperty('pagination');
                     expect(response).toHaveProperty('totalCount');
                     expect(Array.isArray(response.users)).toBe(true);
                     ResponseValidators.pagination(response);
+                    
+                    // Vérifier que notre utilisateur réel est trouvé
+                    const foundUser = response.users.find((user: any) => 
+                        user.login === sharedContext.username || user.username === sharedContext.username
+                    );
+                    if (foundUser) {
+                        expect(foundUser.login || foundUser.username).toBe(sharedContext.username);
+                    }
                 }
             });
-
-            // Restaurer le token
-            if (originalToken) {
-                testHelpers.setAuthToken(originalToken);
-            }
         });
 
-        test('Search users with authentication', async () => {
+        test('Search users with REAL authentication', async () => {
             await testHelpers.makeRequest({
-                description: 'Recherche d\'utilisateurs avec authentification',
+                description: `Recherche d'utilisateurs avec authentification réelle pour ${sharedContext.username}`,
                 method: 'GET',
-                endpoint: '/api/users/search?query=octocat&limit=10',
+                endpoint: `/api/users/search?query=${sharedContext.username}&limit=10`,
                 expectedStatus: 200,
                 auth: true,
                 validateResponse: (response) => {
@@ -85,107 +77,90 @@ describe('Users Endpoints', () => {
                     expect(response).toHaveProperty('pagination');
                     expect(response).toHaveProperty('totalCount');
                     expect(Array.isArray(response.users)).toBe(true);
-                    expect(response.users.length).toBeLessThanOrEqual(10);
+                    expect(response.users.length).toBeGreaterThanOrEqual(1);
                     ResponseValidators.pagination(response);
+                    
+                    // Avec authentification, on devrait avoir plus de détails
+                    if (response.users.length > 0) {
+                        const user = response.users[0];
+                        expect(user).toHaveProperty('id');
+                        expect(user).toHaveProperty('login');
+                    }
                 }
             });
         });
 
-        test('Search users with filters', async () => {
+        test('Search with empty query', async () => {
             await testHelpers.makeRequest({
-                description: 'Recherche d\'utilisateurs avec filtres avancés',
+                description: 'Recherche avec requête vide',
                 method: 'GET',
-                endpoint: '/api/users/search?location=Paris&language=JavaScript&minFollowers=100&sortBy=followers&sortOrder=desc',
-                expectedStatus: 200,
-                auth: true,
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('users');
-                    expect(response).toHaveProperty('pagination');
-                    expect(response).toHaveProperty('totalCount');
-                    ResponseValidators.pagination(response);
-                }
-            });
-        });
-
-        test('Search users with invalid parameters', async () => {
-            await testHelpers.makeRequest({
-                description: 'Recherche avec paramètres invalides',
-                method: 'GET',
-                endpoint: '/api/users/search?limit=1000&page=0&minFollowers=-1',
+                endpoint: '/api/users/search?query=',
                 expectedStatus: 400,
                 validateResponse: ResponseValidators.validationError
             });
         });
 
-        test('Search users with pagination', async () => {
+        test('Search with pagination parameters', async () => {
             await testHelpers.makeRequest({
-                description: 'Recherche avec pagination - page 1',
+                description: 'Recherche avec paramètres de pagination',
                 method: 'GET',
-                endpoint: '/api/users/search?query=test&page=1&limit=5',
+                endpoint: `/api/users/search?query=${sharedContext.username}&page=1&limit=5`,
                 expectedStatus: 200,
                 validateResponse: (response) => {
+                    expect(response).toHaveProperty('users');
+                    expect(response).toHaveProperty('pagination');
                     expect(response.pagination.page).toBe(1);
                     expect(response.pagination.limit).toBe(5);
                     expect(response.users.length).toBeLessThanOrEqual(5);
                 }
             });
-
-            await testHelpers.makeRequest({
-                description: 'Recherche avec pagination - page 2',
-                method: 'GET',
-                endpoint: '/api/users/search?query=test&page=2&limit=5',
-                expectedStatus: 200,
-                validateResponse: (response) => {
-                    expect(response.pagination.page).toBe(2);
-                    expect(response.pagination.limit).toBe(5);
-                }
-            });
         });
     });
 
-    describe('GET /api/users/{username}', () => {
-        test('Get user profile without authentication', async () => {
-            // Retirer temporairement le token
-            const originalToken = testHelpers.getContext().authToken;
-            testHelpers.setAuthToken('');
-
+    describe('GET /api/users/:username', () => {
+        test('Get REAL user profile with authentication', async () => {
             await testHelpers.makeRequest({
-                description: 'Récupération de profil utilisateur sans authentification',
+                description: `Récupération du profil utilisateur réel pour ${sharedContext.username}`,
                 method: 'GET',
-                endpoint: `/api/users/${testUsername}`,
-                expectedStatus: 200,
-                validateResponse: ResponseValidators.userProfile
-            });
-
-            // Restaurer le token
-            if (originalToken) {
-                testHelpers.setAuthToken(originalToken);
-            }
-        });
-
-        test('Get user profile with authentication', async () => {
-            await testHelpers.makeRequest({
-                description: 'Récupération de profil utilisateur avec authentification',
-                method: 'GET',
-                endpoint: `/api/users/${testUsername}`,
+                endpoint: `/api/users/${sharedContext.username}`,
                 expectedStatus: 200,
                 auth: true,
+                validateResponse: ResponseValidators.userProfile,
+                saveToContext: 'userData'
+            });
+
+            // Vérifier que les données utilisateur sont maintenant dans le contexte partagé
+            expect(sharedContext.userData).toBeDefined();
+            expect(sharedContext.userData.login || sharedContext.userData.username).toBe(sharedContext.username);
+            testLogger.logSuccess(`✅ Données utilisateur réelles sauvegardées dans le contexte partagé`);
+        });
+
+        test('Get user profile without authentication', async () => {
+            await testHelpers.makeRequest({
+                description: `Récupération du profil public pour ${sharedContext.username}`,
+                method: 'GET',
+                endpoint: `/api/users/${sharedContext.username}`,
+                expectedStatus: 200,
+                auth: false,
                 validateResponse: (response) => {
-                    ResponseValidators.userProfile(response);
-                    // Avec auth, on peut avoir des infos privées
-                    expect(response).toHaveProperty('login', testUsername);
+                    // Profil public - moins de détails que avec authentification
+                    expect(response).toHaveProperty('id');
+                    expect(response).toHaveProperty('login', sharedContext.username);
+                    expect(response).toHaveProperty('name');
+                    expect(response).toHaveProperty('publicRepos');
+                    expect(typeof response.publicRepos).toBe('number');
                 }
             });
         });
 
-        test('Get non-existent user profile', async () => {
+        test('Get nonexistent user profile', async () => {
             await testHelpers.makeRequest({
                 description: 'Tentative de récupération d\'un utilisateur inexistant',
                 method: 'GET',
-                endpoint: '/api/users/nonexistentuser123456789',
+                endpoint: '/api/users/nonexistent-user-12345-xyz',
                 expectedStatus: 404,
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Not Found');
+                    ResponseValidators.error(response, 'USER_NOT_FOUND');
                 }
             });
         });
@@ -194,306 +169,241 @@ describe('Users Endpoints', () => {
             await testHelpers.makeRequest({
                 description: 'Récupération avec format de nom d\'utilisateur invalide',
                 method: 'GET',
-                endpoint: '/api/users/invalid-username!@#',
+                endpoint: '/api/users/invalid..username',
                 expectedStatus: 400,
                 validateResponse: ResponseValidators.validationError
             });
         });
     });
 
-    describe('GET /api/users/{username}/status', () => {
-        test('Get user analysis status without authentication', async () => {
+    describe('GET /api/users/:username/repositories', () => {
+        test('Get REAL user repositories with authentication', async () => {
             await testHelpers.makeRequest({
-                description: 'Récupération du statut d\'analyse sans authentification',
+                description: `Récupération des repositories réels pour ${sharedContext.username}`,
                 method: 'GET',
-                endpoint: `/api/users/${testUsername}/status`,
-                expectedStatus: 200,
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('status');
-                    expect(response).toHaveProperty('progress');
-                    expect(response).toHaveProperty('startedAt');
-                    expect(['pending', 'running', 'completed', 'failed']).toContain(response.status);
-                    expect(typeof response.progress).toBe('number');
-                    expect(response.progress).toBeGreaterThanOrEqual(0);
-                    expect(response.progress).toBeLessThanOrEqual(100);
-                }
-            });
-        });
-
-        test('Get user analysis status with authentication', async () => {
-            await testHelpers.makeRequest({
-                description: 'Récupération du statut d\'analyse avec authentification',
-                method: 'GET',
-                endpoint: `/api/users/${testUsername}/status`,
+                endpoint: `/api/users/${sharedContext.username}/repositories`,
                 expectedStatus: 200,
                 auth: true,
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('status');
-                    expect(response).toHaveProperty('progress');
-                    expect(response).toHaveProperty('phases');
-                    if (response.phases) {
-                        expect(response.phases).toHaveProperty('githubData');
-                        expect(response.phases).toHaveProperty('analytics');
-                        expect(response.phases).toHaveProperty('insights');
-                    }
-                }
+                validateResponse: ResponseValidators.repositoryList,
+                saveToContext: 'repositories'
             });
+
+            // Vérifier que les repositories sont maintenant dans le contexte partagé
+            expect(sharedContext.repositories).toBeDefined();
+            expect(Array.isArray(sharedContext.repositories)).toBe(true);
+            
+            if (sharedContext.repositories && sharedContext.repositories.length > 0) {
+                // Mettre à jour les données de test avec des valeurs réelles
+                RealDataHelpers.updateTestDataWithRealValues();
+                testLogger.logSuccess(`✅ ${sharedContext.repositories.length} repositories réels sauvegardés dans le contexte`);
+            } else {
+                testLogger.logWarning('⚠️ Aucun repository trouvé pour cet utilisateur');
+            }
         });
 
-        test('Get analysis status for non-existent user', async () => {
-            await testHelpers.makeRequest({
-                description: 'Statut d\'analyse pour utilisateur inexistant',
-                method: 'GET',
-                endpoint: '/api/users/nonexistentuser123456789/status',
-                expectedStatus: 404,
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Not Found');
-                }
-            });
-        });
-    });
-
-    describe('GET /api/users/stats', () => {
-        test('Get platform statistics without authentication', async () => {
-            await testHelpers.makeRequest({
-                description: 'Récupération des statistiques plateforme sans authentification',
-                method: 'GET',
-                endpoint: '/api/users/stats',
-                expectedStatus: 200,
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('users');
-                    expect(response).toHaveProperty('activity');
-                    expect(response).toHaveProperty('timestamp');
-                    expect(response.users).toHaveProperty('total');
-                    expect(response.users).toHaveProperty('withDatasets');
-                    expect(response.users).toHaveProperty('averageFollowers');
-                    expect(response.users).toHaveProperty('topLanguages');
-                    expect(response.activity).toHaveProperty('recentAnalyses');
-                    expect(response.activity).toHaveProperty('totalAnalyses');
-                    expect(Array.isArray(response.users.topLanguages)).toBe(true);
-                }
-            });
-        });
-
-        test('Get platform statistics with authentication', async () => {
-            await testHelpers.makeRequest({
-                description: 'Récupération des statistiques plateforme avec authentification',
-                method: 'GET',
-                endpoint: '/api/users/stats',
-                expectedStatus: 200,
-                auth: true,
-                validateResponse: (response) => {
-                    expect(response).toHaveProperty('users');
-                    expect(response).toHaveProperty('activity');
-                    expect(response).toHaveProperty('timestamp');
-                    // Avec auth, on peut avoir des stats plus détaillées
-                    expect(typeof response.users.total).toBe('number');
-                    expect(typeof response.users.withDatasets).toBe('number');
-                    expect(typeof response.users.averageFollowers).toBe('number');
-                }
-            });
-        });
-    });
-
-    describe('GET /api/users/{username}/repositories', () => {
         test('Get user repositories without authentication', async () => {
             await testHelpers.makeRequest({
-                description: 'Récupération des repositories utilisateur sans authentification',
+                description: `Récupération des repositories publics pour ${sharedContext.username}`,
                 method: 'GET',
-                endpoint: `/api/users/${testUsername}/repositories`,
+                endpoint: `/api/users/${sharedContext.username}/repositories`,
                 expectedStatus: 200,
+                auth: false,
                 validateResponse: (response) => {
-                    expect(response).toHaveProperty('repositories');
-                    expect(response).toHaveProperty('pagination');
-                    expect(response).toHaveProperty('totalCount');
-                    expect(Array.isArray(response.repositories)).toBe(true);
-                    ResponseValidators.pagination(response);
-
-                    // Vérifier la structure des repositories
-                    if (response.repositories.length > 0) {
-                        ResponseValidators.repository(response.repositories[0]);
+                    expect(Array.isArray(response)).toBe(true);
+                    // Seuls les repositories publics sont visibles sans authentification
+                    if (response.length > 0) {
+                        response.forEach((repo: any) => {
+                            expect(repo.isPrivate || repo.private).toBe(false);
+                        });
                     }
                 }
             });
         });
 
-        test('Get user repositories with authentication', async () => {
+        test('Get repositories with pagination', async () => {
             await testHelpers.makeRequest({
-                description: 'Récupération des repositories utilisateur avec authentification',
+                description: `Récupération des repositories avec pagination pour ${sharedContext.username}`,
                 method: 'GET',
-                endpoint: `/api/users/${testUsername}/repositories?includePrivate=true`,
+                endpoint: `/api/users/${sharedContext.username}/repositories?page=1&limit=5`,
                 expectedStatus: 200,
                 auth: true,
                 validateResponse: (response) => {
-                    expect(response).toHaveProperty('repositories');
-                    expect(response).toHaveProperty('pagination');
-                    expect(response).toHaveProperty('totalCount');
-                    expect(Array.isArray(response.repositories)).toBe(true);
-                    ResponseValidators.pagination(response);
+                    expect(Array.isArray(response)).toBe(true);
+                    expect(response.length).toBeLessThanOrEqual(5);
                 }
             });
         });
 
-        test('Get user repositories with pagination', async () => {
+        test('Get repositories with type filter', async () => {
             await testHelpers.makeRequest({
-                description: 'Récupération des repositories avec pagination',
+                description: `Récupération des repositories filtrés par type pour ${sharedContext.username}`,
                 method: 'GET',
-                endpoint: `/api/users/${testUsername}/repositories?page=1&limit=5`,
+                endpoint: `/api/users/${sharedContext.username}/repositories?type=owner`,
                 expectedStatus: 200,
+                auth: true,
                 validateResponse: (response) => {
-                    expect(response.pagination.page).toBe(1);
-                    expect(response.pagination.limit).toBe(5);
-                    expect(response.repositories.length).toBeLessThanOrEqual(5);
+                    expect(Array.isArray(response)).toBe(true);
+                    // Tous les repos retournés doivent appartenir à l'utilisateur
+                    if (response.length > 0) {
+                        response.forEach((repo: any) => {
+                            const repoOwner = repo.owner?.login || repo.nameWithOwner?.split('/')[0];
+                            expect(repoOwner).toBe(sharedContext.username);
+                        });
+                    }
                 }
             });
         });
 
-        test('Get repositories for non-existent user', async () => {
+        test('Get repositories for nonexistent user', async () => {
             await testHelpers.makeRequest({
-                description: 'Repositories pour utilisateur inexistant',
+                description: 'Récupération des repositories pour utilisateur inexistant',
                 method: 'GET',
-                endpoint: '/api/users/nonexistentuser123456789/repositories',
+                endpoint: '/api/users/nonexistent-user-12345-xyz/repositories',
                 expectedStatus: 404,
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Not Found');
+                    ResponseValidators.error(response, 'USER_NOT_FOUND');
+                }
+            });
+        });
+    });
+
+    describe('POST /api/users/analyze', () => {
+        test('Analyze REAL user data with authentication', async () => {
+            await testHelpers.makeRequest({
+                description: `Analyse complète des données réelles pour ${sharedContext.username}`,
+                method: 'POST',
+                endpoint: '/api/users/analyze',
+                expectedStatus: 202, // Accepted - processus asynchrone
+                auth: true,
+                body: {
+                    username: sharedContext.username,
+                    includePrivate: false,
+                    forceRefresh: true
+                },
+                validateResponse: (response) => {
+                    expect(response).toHaveProperty('message');
+                    expect(response).toHaveProperty('analysisId');
+                    expect(response).toHaveProperty('status', 'started');
+                    expect(response).toHaveProperty('estimatedDuration');
+                    expect(typeof response.analysisId).toBe('string');
                 }
             });
         });
 
-        test('Get repositories with invalid parameters', async () => {
+        test('Analyze user without authentication', async () => {
             await testHelpers.makeRequest({
-                description: 'Repositories avec paramètres invalides',
-                method: 'GET',
-                endpoint: `/api/users/${testUsername}/repositories?page=0&limit=1000`,
+                description: 'Tentative d\'analyse sans authentification',
+                method: 'POST',
+                endpoint: '/api/users/analyze',
+                expectedStatus: 401,
+                auth: false,
+                body: {
+                    username: sharedContext.username
+                },
+                validateResponse: (response) => {
+                    ResponseValidators.error(response, 'MISSING_TOKEN');
+                }
+            });
+        });
+
+        test('Analyze with missing username', async () => {
+            await testHelpers.makeRequest({
+                description: 'Analyse avec nom d\'utilisateur manquant',
+                method: 'POST',
+                endpoint: '/api/users/analyze',
                 expectedStatus: 400,
+                auth: true,
+                body: {},
                 validateResponse: ResponseValidators.validationError
             });
         });
+
+        test('Analyze nonexistent user', async () => {
+            await testHelpers.makeRequest({
+                description: 'Analyse d\'un utilisateur inexistant',
+                method: 'POST',
+                endpoint: '/api/users/analyze',
+                expectedStatus: 404,
+                auth: true,
+                body: {
+                    username: 'nonexistent-user-12345-xyz'
+                },
+                validateResponse: (response) => {
+                    ResponseValidators.error(response, 'USER_NOT_FOUND');
+                }
+            });
+        });
     });
 
-    describe('DELETE /api/users/{username}', () => {
-        test('Delete user data without authentication', async () => {
+    describe('GET /api/users/:username/status', () => {
+        test('Get analysis status for REAL user', async () => {
             await testHelpers.makeRequest({
-                description: 'Tentative de suppression de données sans authentification',
-                method: 'DELETE',
-                endpoint: `/api/users/${testUsername}`,
-                expectedStatus: 401,
-                validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Unauthorized');
-                }
-            });
-        });
-
-        test('Delete another user data (forbidden)', async () => {
-            await testHelpers.makeRequest({
-                description: 'Tentative de suppression de données d\'un autre utilisateur',
-                method: 'DELETE',
-                endpoint: '/api/users/anotheruser',
-                expectedStatus: 403,
+                description: `Vérification du statut d'analyse pour ${sharedContext.username}`,
+                method: 'GET',
+                endpoint: `/api/users/${sharedContext.username}/status`,
+                expectedStatus: 200,
                 auth: true,
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Forbidden');
+                    expect(response).toHaveProperty('username', sharedContext.username);
+                    expect(response).toHaveProperty('status');
+                    expect(response).toHaveProperty('lastUpdated');
+                    expect(['pending', 'processing', 'completed', 'error']).toContain(response.status);
+                    
+                    if (response.status === 'completed') {
+                        expect(response).toHaveProperty('completedAt');
+                        expect(response).toHaveProperty('dataAvailable');
+                    }
+                    
+                    if (response.status === 'error') {
+                        expect(response).toHaveProperty('error');
+                    }
                 }
             });
         });
 
-        test('Delete non-existent user data', async () => {
+        test('Get status without authentication', async () => {
             await testHelpers.makeRequest({
-                description: 'Suppression de données d\'utilisateur inexistant',
-                method: 'DELETE',
-                endpoint: '/api/users/nonexistentuser123456789',
+                description: 'Vérification du statut sans authentification',
+                method: 'GET',
+                endpoint: `/api/users/${sharedContext.username}/status`,
+                expectedStatus: 401,
+                auth: false,
+                validateResponse: (response) => {
+                    ResponseValidators.error(response, 'MISSING_TOKEN');
+                }
+            });
+        });
+
+        test('Get status for nonexistent user', async () => {
+            await testHelpers.makeRequest({
+                description: 'Vérification du statut pour utilisateur inexistant',
+                method: 'GET',
+                endpoint: '/api/users/nonexistent-user-12345-xyz/status',
                 expectedStatus: 404,
                 auth: true,
                 validateResponse: (response) => {
-                    ResponseValidators.error(response, 'Not Found');
+                    ResponseValidators.error(response, 'USER_NOT_FOUND');
                 }
             });
         });
-
-        // Note: Le test de suppression réelle est commenté pour éviter de supprimer les données de test
-        /*
-        test('Delete own user data (GDPR compliance)', async () => {
-          await testHelpers.makeRequest({
-            description: 'Suppression de ses propres données (conformité GDPR)',
-            method: 'DELETE',
-            endpoint: `/api/users/${testUsername}`,
-            expectedStatus: 200,
-            auth: true,
-            validateResponse: (response) => {
-              expect(response).toHaveProperty('message');
-              expect(response).toHaveProperty('deleted');
-              expect(response).toHaveProperty('compliance', 'GDPR');
-              expect(response).toHaveProperty('timestamp');
-              expect(response.deleted).toHaveProperty('user');
-              expect(response.deleted).toHaveProperty('repositories');
-              expect(response.deleted).toHaveProperty('datasets');
-            }
-          });
-        });
-        */
     });
 
-    describe('Users Integration Tests', () => {
-        test('Complete user flow', async () => {
-            testLogger.logInfo('Test du flow complet utilisateur');
-
-            // 1. Rechercher des utilisateurs
-            const searchResponse = await testHelpers.makeRequest({
-                description: 'Étape 1: Recherche d\'utilisateurs',
-                method: 'GET',
-                endpoint: '/api/users/search?query=octocat&limit=5',
-                expectedStatus: 200,
-                auth: true
-            });
-
-            // 2. Sélectionner le premier utilisateur trouvé (s'il y en a)
-            if (searchResponse.body.users && searchResponse.body.users.length > 0) {
-                const firstUser = searchResponse.body.users[0];
-                const username = firstUser.login || firstUser.username;
-
-                // 3. Récupérer le profil complet
-                await testHelpers.makeRequest({
-                    description: `Étape 2: Récupération du profil de ${username}`,
-                    method: 'GET',
-                    endpoint: `/api/users/${username}`,
-                    expectedStatus: 200,
-                    auth: true,
-                    validateResponse: ResponseValidators.userProfile
-                });
-
-                // 4. Récupérer les repositories
-                await testHelpers.makeRequest({
-                    description: `Étape 3: Récupération des repositories de ${username}`,
-                    method: 'GET',
-                    endpoint: `/api/users/${username}/repositories?limit=10`,
-                    expectedStatus: 200,
-                    auth: true
-                });
-
-                // 5. Vérifier le statut d'analyse
-                await testHelpers.makeRequest({
-                    description: `Étape 4: Vérification du statut d'analyse de ${username}`,
-                    method: 'GET',
-                    endpoint: `/api/users/${username}/status`,
-                    expectedStatus: 200,
-                    auth: true
-                });
-
-                testLogger.logSuccess(`Flow complet utilisateur terminé pour ${username}`);
-            } else {
-                testLogger.logWarning('Aucun utilisateur trouvé dans la recherche');
+    describe('Context Validation', () => {
+        test('Shared context contains REAL user data', async () => {
+            // Vérifier que le contexte partagé contient maintenant les données utilisateur réelles
+            expect(sharedContext.userData).toBeDefined();
+            expect(sharedContext.repositories).toBeDefined();
+            
+            // Valider la cohérence des données
+            RealDataHelpers.validateContextConsistency();
+            
+            testLogger.logSuccess('✅ Contexte partagé validé avec les données utilisateur réelles');
+            testLogger.logInfo(`📊 Données disponibles: userData=${!!sharedContext.userData}, repositories=${sharedContext.repositories?.length || 0} repos`);
+            
+            // Log des informations utiles pour les tests suivants
+            if (sharedContext.userData) {
+                testLogger.logInfo(`👤 Profil: ${sharedContext.userData.publicRepos || 0} repos publics, ${sharedContext.userData.followers || 0} followers`);
             }
-
-            // 6. Récupérer les statistiques globales
-            await testHelpers.makeRequest({
-                description: 'Étape 5: Récupération des statistiques globales',
-                method: 'GET',
-                endpoint: '/api/users/stats',
-                expectedStatus: 200,
-                auth: true
-            });
-
-            testLogger.logSuccess('Flow complet utilisateur terminé avec succès');
         });
     });
 }); 

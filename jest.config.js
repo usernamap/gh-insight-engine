@@ -25,13 +25,19 @@ export default {
     }]
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(mongoose|dotenv)/)'
+    'node_modules/(?!(mongoose|dotenv|@octokit)/)'
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  testTimeout: 30000,
+  // Configuration pour tests avec données réelles GitHub
+  testTimeout: 60000, // Timeout plus long pour les vraies requêtes API
   verbose: true,
   detectOpenHandles: true,
   forceExit: true,
-  clearMocks: true,
-  resetMocks: true
+  // Suppression des configurations de mocks pour utiliser les vraies implémentations
+  clearMocks: false,
+  resetMocks: false,
+  // Configuration pour tests séquentiels (important pour le contexte partagé)
+  maxWorkers: 1, // Force l'exécution séquentielle pour préserver le contexte
+  // Variables d'environnement pour les tests
+  setupFiles: ['<rootDir>/tests/setup.ts']
 }; 
