@@ -7,20 +7,42 @@ info:
     Cette API permet d'analyser les profils GitHub, repositories et de générer des insights 
     quantitatifs et qualitatifs grâce à l'intelligence artificielle.
     
-    ## Authentification
-    L'API utilise l'authentification JWT Bearer Token. Pour vous connecter, utilisez votre token GitHub Classic.
+    ## 🔐 Authentification et Contexte Persistant
+    
+    L'API utilise l'authentification JWT Bearer Token. **Le contexte d'authentification est automatiquement persisté** 
+    lors des tests de documentation pour une expérience utilisateur optimale.
+    
+    ### Workflow d'authentification :
+    1. **Connexion initiale** : Utilisez l'endpoint `POST /auth/login` avec votre token GitHub Classic
+    2. **Contexte automatique** : Le token JWT retourné est automatiquement utilisé pour tous les endpoints suivants
+    3. **Persistance de session** : Votre authentification reste active pendant toute la session de test
+    4. **Endpoints protégés** : Testez directement les endpoints privés sans re-saisir le token
+    
+    ### Configuration du token GitHub Classic :
+    Votre token doit avoir les permissions suivantes :
+    - `repo` (accès aux repositories privés)
+    - `user` (lecture du profil utilisateur)  
+    - `read:org` (lecture des organisations)
+    
+    ### Test de la documentation :
+    1. 🚀 **Commencez par `/auth/login`** avec vos identifiants
+    2. ✅ **Le token JWT est automatiquement appliqué** à tous les endpoints
+    3. 🔒 **Testez les endpoints privés** sans configuration supplémentaire
+    4. 📊 **Explorez l'API complète** avec votre contexte utilisateur
     
     ## Rate Limiting
     - Global: 100 requêtes par 15 minutes par IP
     - Authentification: 5 tentatives par 15 minutes par IP  
     - Analyses: 10 analyses par heure par IP
     
-    ## Workflow d'analyse
-    1. Connexion avec token GitHub Classic
-    2. Lancement d'analyse utilisateur (GitHub + Analytics)
-    3. Génération d'insights IA
-    4. Consultation des résultats
-  version: 0.1.7
+    ## Workflow d'analyse recommandé
+    1. **Authentification** → `POST /auth/login`
+    2. **Vérification** → `GET /auth/validate` 
+    3. **Profil utilisateur** → `GET /users/{username}`
+    4. **Analyse complète** → `POST /analytics/{username}/analyze`
+    5. **Insights IA** → `POST /insights/{username}/generate`
+    6. **Consultation des résultats** → Endpoints GET correspondants
+  version: 0.1.8
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -89,11 +111,50 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Authentification réussie
+          description: |
+            Authentification réussie - **Le token JWT est automatiquement persisté pour les tests suivants**
+            
+            ✅ **Contexte activé** : Tous les endpoints protégés utilisent maintenant ce token automatiquement
+            
+            🔄 **Prochaines étapes recommandées :**
+            1. Testez `GET /auth/validate` pour vérifier votre token
+            2. Explorez `GET /users/{username}` avec votre profil
+            3. Lancez une analyse avec `POST /analytics/{username}/analyze`
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success_with_context:
+                  summary: "Authentification réussie avec contexte persisté"
+                  description: "Le token JWT sera automatiquement utilisé pour tous les endpoints suivants"
+                  value:
+                    message: "Authentification réussie"
+                    user:
+                      id: "507f1f77bcf86cd799439011"
+                      username: "octocat"
+                      name: "John Doe"
+                      fullName: "John Doe"
+                      email: "john@example.com"
+                      avatarUrl: "https://github.com/images/error/octocat_happy.gif"
+                      bio: "Developer passionate about open source"
+                      company: "GitHub"
+                      location: "San Francisco"
+                      publicRepos: 42
+                      followers: 1000
+                      following: 100
+                      createdAt: "2023-01-15T10:30:00.000Z"
+                      hasValidToken: true
+                      tokenScopes: ["repo", "user", "read:org"]
+                    tokens:
+                      accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJ1c2VybmFtZSI6Im9jdG9jYXQiLCJpYXQiOjE2NzM3ODQwMDAsImV4cCI6MTY3Mzg3MDQwMH0.example_signature"
+                      tokenType: "Bearer"
+                      expiresIn: "24h"
+                    permissions:
+                      canAccessPrivateRepos: true
+                      canReadOrgs: true
+                      canReadUser: true
+                    timestamp: "2023-01-15T10:30:00.000Z"
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1123,6 +1184,12 @@ components:
       description: |
         Token JWT obtenu via l'endpoint /auth/login.
         Format: `Authorization: Bearer <token>`
+        
+        **🔄 Persistance automatique :**
+        - Le token est automatiquement appliqué aux endpoints suivants
+        - Pas besoin de re-configurer manuellement pour chaque test
+        - La session reste active pendant toute la documentation
+        - Utilisez d'abord POST /auth/login pour initialiser le contexte
 
   schemas:
     # System Schemas
@@ -1321,44 +1388,7 @@ components:
           type: string
           format: date-time
 
-    AuthenticatedUser:
-      type: object
-      required:
-        - id
-        - username
-        - name
-        - email
-        - avatarUrl
-      properties:
-        id:
-          type: string
-          example: "507f1f77bcf86cd799439011"
-        username:
-          type: string
-          example: "octocat"
-        name:
-          type: string
-          example: "John Doe"
-        email:
-          type: string
-          format: email
-          example: "john@example.com"
-        avatarUrl:
-          type: string
-          format: uri
-          example: "https://github.com/images/error/octocat_happy.gif"
-        bio:
-          type: string
-          nullable: true
-          example: "There once was..."
-        company:
-          type: string
-          nullable: true
-          example: "GitHub"
-        location:
-          type: string
-          nullable: true
-          example: "San Francisco"
+
 
 
 
@@ -2333,25 +2363,7 @@ components:
           type: string
           format: date-time
 
-    AnalysisPhase:
-      type: object
-      required:
-        - status
-      properties:
-        status:
-          type: string
-          enum: [pending, running, completed, failed]
-        startedAt:
-          type: string
-          format: date-time
-          nullable: true
-        completedAt:
-          type: string
-          format: date-time
-          nullable: true
-        error:
-          type: string
-          nullable: true
+
 
     AnalyticsOverview:
       type: object
