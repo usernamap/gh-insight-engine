@@ -20,7 +20,7 @@ info:
     2. Lancement d'analyse utilisateur (GitHub + Analytics)
     3. Génération d'insights IA
     4. Consultation des résultats
-  version: 0.1.6
+  version: 0.1.7
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -1321,44 +1321,7 @@ components:
           type: string
           format: date-time
 
-    AuthenticatedUser:
-      type: object
-      required:
-        - id
-        - username
-        - name
-        - email
-        - avatarUrl
-      properties:
-        id:
-          type: string
-          example: "507f1f77bcf86cd799439011"
-        username:
-          type: string
-          example: "octocat"
-        name:
-          type: string
-          example: "John Doe"
-        email:
-          type: string
-          format: email
-          example: "john@example.com"
-        avatarUrl:
-          type: string
-          format: uri
-          example: "https://github.com/images/error/octocat_happy.gif"
-        bio:
-          type: string
-          nullable: true
-          example: "There once was..."
-        company:
-          type: string
-          nullable: true
-          example: "GitHub"
-        location:
-          type: string
-          nullable: true
-          example: "San Francisco"
+
 
 
 
@@ -2333,25 +2296,7 @@ components:
           type: string
           format: date-time
 
-    AnalysisPhase:
-      type: object
-      required:
-        - status
-      properties:
-        status:
-          type: string
-          enum: [pending, running, completed, failed]
-        startedAt:
-          type: string
-          format: date-time
-          nullable: true
-        completedAt:
-          type: string
-          format: date-time
-          nullable: true
-        error:
-          type: string
-          nullable: true
+
 
     AnalyticsOverview:
       type: object
