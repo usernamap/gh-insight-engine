@@ -20,7 +20,7 @@ info:
     2. Lancement d'analyse utilisateur (GitHub + Analytics)
     3. Génération d'insights IA
     4. Consultation des résultats
-  version: 0.1.6
+  version: 0.1.7
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -130,16 +130,34 @@ paths:
               schema:
                 type: object
                 required:
-                  - token
-                  - expiresIn
+                  - message
+                  - tokens
+                  - timestamp
                 properties:
-                  token:
+                  message:
                     type: string
-                    description: Nouveau token JWT
-                  expiresIn:
+                    example: "Token rafraîchi avec succès"
+                  tokens:
+                    type: object
+                    required:
+                      - accessToken
+                      - tokenType
+                      - expiresIn
+                    properties:
+                      accessToken:
+                        type: string
+                        description: Nouveau token JWT
+                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      tokenType:
+                        type: string
+                        example: "Bearer"
+                      expiresIn:
+                        type: string
+                        description: Durée de validité
+                        example: "24h"
+                  timestamp:
                     type: string
-                    description: Durée de validité
-                    example: "24h"
+                    format: date-time
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -159,16 +177,59 @@ paths:
                 type: object
                 required:
                   - valid
-                  - expiresAt
+                  - user
+                  - github
+                  - permissions
+                  - timestamp
                 properties:
                   valid:
                     type: boolean
                     example: true
-                  expiresAt:
+                  user:
+                    type: object
+                    required:
+                      - id
+                      - username
+                    properties:
+                      id:
+                        type: string
+                        example: "507f1f77bcf86cd799439011"
+                      username:
+                        type: string
+                        example: "octocat"
+                  github:
+                    type: object
+                    required:
+                      - tokenValid
+                      - scopes
+                    properties:
+                      tokenValid:
+                        type: boolean
+                        example: true
+                      scopes:
+                        type: array
+                        items:
+                          type: string
+                        example: ["repo", "user", "read:org"]
+                  permissions:
+                    type: object
+                    required:
+                      - canAccessPrivateRepos
+                      - canReadOrgs
+                      - canReadUser
+                    properties:
+                      canAccessPrivateRepos:
+                        type: boolean
+                        example: true
+                      canReadOrgs:
+                        type: boolean
+                        example: true
+                      canReadUser:
+                        type: boolean
+                        example: true
+                  timestamp:
                     type: string
                     format: date-time
-                  user:
-                    $ref: '#/components/schemas/AuthenticatedUser'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -319,7 +380,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfile'
+                $ref: '#/components/schemas/UserProfileResponse'
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
@@ -1139,34 +1200,123 @@ components:
     LoginResponse:
       type: object
       required:
-        - success
         - message
-        - data
+        - user
+        - tokens
+        - permissions
         - timestamp
       properties:
-        success:
-          type: boolean
-          example: true
         message:
           type: string
           example: "Authentification réussie"
-        data:
+        user:
           type: object
           required:
-            - token
-            - expiresIn
-            - user
+            - id
+            - username
+            - name
+            - fullName
+            - email
+            - avatarUrl
+            - bio
+            - company
+            - location
+            - publicRepos
+            - followers
+            - following
+            - createdAt
+            - hasValidToken
+            - tokenScopes
           properties:
-            token:
+            id:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            username:
+              type: string
+              example: "octocat"
+            name:
+              type: string
+              example: "John Doe"
+            fullName:
+              type: string
+              example: "John Doe"
+            email:
+              type: string
+              format: email
+              example: "john@example.com"
+            avatarUrl:
+              type: string
+              format: uri
+              example: "https://github.com/images/error/octocat_happy.gif"
+            bio:
+              type: string
+              nullable: true
+              example: "There once was..."
+            company:
+              type: string
+              nullable: true
+              example: "GitHub"
+            location:
+              type: string
+              nullable: true
+              example: "San Francisco"
+            publicRepos:
+              type: integer
+              minimum: 0
+              example: 42
+            followers:
+              type: integer
+              minimum: 0
+              example: 1000
+            following:
+              type: integer
+              minimum: 0
+              example: 100
+            createdAt:
+              type: string
+              format: date-time
+            hasValidToken:
+              type: boolean
+              example: true
+            tokenScopes:
+              type: array
+              items:
+                type: string
+              example: ["repo", "user", "read:org"]
+        tokens:
+          type: object
+          required:
+            - accessToken
+            - tokenType
+            - expiresIn
+          properties:
+            accessToken:
               type: string
               description: Token JWT pour l'authentification
               example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            tokenType:
+              type: string
+              example: "Bearer"
             expiresIn:
               type: string
               description: Durée de validité du token
               example: "24h"
-            user:
-              $ref: '#/components/schemas/AuthenticatedUser'
+        permissions:
+          type: object
+          required:
+            - canAccessPrivateRepos
+            - canReadOrgs
+            - canReadUser
+          properties:
+            canAccessPrivateRepos:
+              type: boolean
+              example: true
+            canReadOrgs:
+              type: boolean
+              example: true
+            canReadUser:
+              type: boolean
+              example: true
         timestamp:
           type: string
           format: date-time
@@ -1215,15 +1365,19 @@ components:
     LogoutResponse:
       type: object
       required:
-        - success
         - message
+        - instruction
+        - timestamp
       properties:
-        success:
-          type: boolean
-          example: true
         message:
           type: string
           example: "Déconnexion réussie"
+        instruction:
+          type: string
+          example: "Supprimez le token JWT côté client"
+        timestamp:
+          type: string
+          format: date-time
 
 
 
@@ -1235,7 +1389,94 @@ components:
         - timestamp
       properties:
         user:
-          $ref: '#/components/schemas/AuthenticatedUser'
+          type: object
+          required:
+            - id
+            - username
+            - name
+            - email
+            - avatarUrl
+            - bio
+            - company
+            - location
+            - blog
+            - twitterUsername
+            - publicRepos
+            - privateRepos
+            - followers
+            - following
+            - createdAt
+            - updatedAt
+            - organizations
+          properties:
+            id:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            username:
+              type: string
+              example: "octocat"
+            name:
+              type: string
+              example: "John Doe"
+            email:
+              type: string
+              format: email
+              example: "john@example.com"
+            avatarUrl:
+              type: string
+              format: uri
+              example: "https://github.com/images/error/octocat_happy.gif"
+            bio:
+              type: string
+              nullable: true
+              example: "There once was..."
+            company:
+              type: string
+              nullable: true
+              example: "GitHub"
+            location:
+              type: string
+              nullable: true
+              example: "San Francisco"
+            blog:
+              type: string
+              nullable: true
+              example: "https://johndoe.com"
+            twitterUsername:
+              type: string
+              nullable: true
+              example: "johndoe"
+            publicRepos:
+              type: integer
+              minimum: 0
+              example: 42
+            privateRepos:
+              type: integer
+              minimum: 0
+              example: 5
+            followers:
+              type: integer
+              minimum: 0
+              example: 1000
+            following:
+              type: integer
+              minimum: 0
+              example: 100
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            organizations:
+              type: object
+              properties:
+                totalCount:
+                  type: integer
+                nodes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Organization'
         status:
           type: object
           required:
@@ -1244,7 +1485,7 @@ components:
           properties:
             tokenStatus:
               type: string
-              enum: [valid, invalid, expired, error]
+              enum: [valid, invalid, error, unknown]
               example: "valid"
             lastLogin:
               type: string
@@ -1258,7 +1499,7 @@ components:
       type: object
       required:
         - id
-        - login
+        - username
         - name
         - email
         - avatarUrl
@@ -1274,7 +1515,7 @@ components:
         id:
           type: string
           example: "507f1f77bcf86cd799439011"
-        login:
+        username:
           type: string
           example: "octocat"
         name:
@@ -1377,17 +1618,110 @@ components:
       required:
         - users
         - pagination
-        - totalCount
+        - filters
+        - timestamp
       properties:
         users:
           type: array
           items:
-            $ref: '#/components/schemas/UserProfile'
+            type: object
+            required:
+              - id
+              - username
+              - name
+              - avatarUrl
+              - bio
+              - company
+              - location
+              - publicRepos
+              - followers
+              - following
+              - createdAt
+              - updatedAt
+            properties:
+              id:
+                type: string
+                example: "507f1f77bcf86cd799439011"
+              username:
+                type: string
+                example: "octocat"
+              name:
+                type: string
+                example: "John Doe"
+              avatarUrl:
+                type: string
+                format: uri
+              bio:
+                type: string
+                nullable: true
+              company:
+                type: string
+                nullable: true
+              location:
+                type: string
+                nullable: true
+              publicRepos:
+                type: integer
+                minimum: 0
+              followers:
+                type: integer
+                minimum: 0
+              following:
+                type: integer
+                minimum: 0
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                type: string
+                format: date-time
         pagination:
-          $ref: '#/components/schemas/Pagination'
-        totalCount:
-          type: integer
-          minimum: 0
+          type: object
+          required:
+            - page
+            - limit
+            - totalCount
+            - totalPages
+            - hasNextPage
+            - hasPreviousPage
+          properties:
+            page:
+              type: integer
+              minimum: 1
+            limit:
+              type: integer
+              minimum: 1
+            totalCount:
+              type: integer
+              minimum: 0
+            totalPages:
+              type: integer
+              minimum: 0
+            hasNextPage:
+              type: boolean
+            hasPreviousPage:
+              type: boolean
+        filters:
+          type: object
+          properties:
+            query:
+              type: string
+              nullable: true
+            location:
+              type: string
+              nullable: true
+            language:
+              type: string
+              nullable: true
+            minFollowers:
+              type: integer
+              nullable: true
+            minRepos:
+              type: integer
+              nullable: true
+        timestamp:
+          type: string
+          format: date-time
 
     # Repository Schemas
     Repository:
@@ -1755,18 +2089,145 @@ components:
       type: object
       required:
         - repositories
+        - user
         - pagination
-        - totalCount
+        - timestamp
       properties:
         repositories:
           type: array
           items:
-            $ref: '#/components/schemas/Repository'
+            type: object
+            required:
+              - id
+              - nameWithOwner
+              - name
+              - description
+              - isPrivate
+              - isArchived
+              - isFork
+              - isTemplate
+              - stargazerCount
+              - forkCount
+              - watchersCount
+              - openIssuesCount
+              - primaryLanguage
+              - languages
+              - topics
+              - license
+              - homepageUrl
+              - pushedAt
+              - createdAt
+              - updatedAt
+              - hasIssuesEnabled
+              - hasProjectsEnabled
+              - hasWikiEnabled
+            properties:
+              id:
+                type: string
+              nameWithOwner:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+                nullable: true
+              isPrivate:
+                type: boolean
+              isArchived:
+                type: boolean
+              isFork:
+                type: boolean
+              isTemplate:
+                type: boolean
+              stargazerCount:
+                type: integer
+                minimum: 0
+              forkCount:
+                type: integer
+                minimum: 0
+              watchersCount:
+                type: integer
+                minimum: 0
+              openIssuesCount:
+                type: integer
+                minimum: 0
+              primaryLanguage:
+                type: string
+                nullable: true
+              languages:
+                type: object
+              topics:
+                type: array
+                items:
+                  type: string
+              license:
+                type: object
+                nullable: true
+              homepageUrl:
+                type: string
+                nullable: true
+              pushedAt:
+                type: string
+                format: date-time
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                type: string
+                format: date-time
+              hasIssuesEnabled:
+                type: boolean
+              hasProjectsEnabled:
+                type: boolean
+              hasWikiEnabled:
+                type: boolean
+        user:
+          type: object
+          required:
+            - id
+            - username
+            - name
+            - avatarUrl
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            name:
+              type: string
+            avatarUrl:
+              type: string
+              format: uri
         pagination:
-          $ref: '#/components/schemas/Pagination'
-        totalCount:
-          type: integer
-          minimum: 0
+          type: object
+          required:
+            - page
+            - limit
+            - totalCount
+            - totalPages
+            - hasNextPage
+            - hasPreviousPage
+          properties:
+            page:
+              type: integer
+              minimum: 1
+            limit:
+              type: integer
+              minimum: 1
+            totalCount:
+              type: integer
+              minimum: 0
+            totalPages:
+              type: integer
+              minimum: 0
+            hasNextPage:
+              type: boolean
+            hasPreviousPage:
+              type: boolean
+        timestamp:
+          type: string
+          format: date-time
 
     RepositorySearchResponse:
       type: object
@@ -1806,37 +2267,71 @@ components:
     AnalysisStatusResponse:
       type: object
       required:
-        - status
-        - progress
-        - startedAt
+        - message
+        - analysis
+        - dataset
+        - timestamp
       properties:
-        status:
+        message:
           type: string
-          enum: [pending, running, completed, failed]
-        progress:
-          type: integer
-          minimum: 0
-          maximum: 100
-          description: Pourcentage de progression
-        startedAt:
-          type: string
-          format: date-time
-        completedAt:
-          type: string
-          format: date-time
-          nullable: true
-        error:
-          type: string
-          nullable: true
-        phases:
+          example: "Analyse terminée avec succès"
+        analysis:
           type: object
+          required:
+            - completed
+            - duration
+            - fresh
           properties:
-            githubData:
-              $ref: '#/components/schemas/AnalysisPhase'
-            analytics:
-              $ref: '#/components/schemas/AnalysisPhase'
-            insights:
-              $ref: '#/components/schemas/AnalysisPhase'
+            completed:
+              type: boolean
+              example: true
+            duration:
+              type: number
+              description: Durée de l'analyse en millisecondes
+              example: 45000
+            fresh:
+              type: boolean
+              example: true
+            cached:
+              type: boolean
+              description: Présent si l'analyse était en cache
+            ageHours:
+              type: number
+              nullable: true
+              description: Âge de l'analyse en cache en heures
+            lastAnalyzed:
+              type: string
+              format: date-time
+              nullable: true
+        dataset:
+          type: object
+          required:
+            - id
+            - hasAnalytics
+            - repositoriesCount
+          properties:
+            id:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            createdAt:
+              type: string
+              format: date-time
+            repositoriesCount:
+              type: integer
+              minimum: 0
+              example: 25
+            hasAnalytics:
+              type: boolean
+              example: true
+            hasAiInsights:
+              type: boolean
+              example: false
+        _analytics:
+          description: Données analytiques complètes (optionnel, présent seulement si analyse fraîche)
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
 
     AnalysisPhase:
       type: object
@@ -2669,6 +3164,147 @@ components:
                 description: Code d'erreur spécifique
               received:
                 description: Valeur reçue (si applicable)
+
+    UserProfileResponse:
+      type: object
+      required:
+        - user
+        - dataset
+        - timestamp
+      properties:
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        dataset:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            metadata:
+              $ref: '#/components/schemas/DatasetMetadata'
+            repositoriesCount:
+              type: integer
+              minimum: 0
+              example: 25
+            hasAnalytics:
+              type: boolean
+              example: true
+            hasAiInsights:
+              type: boolean
+              example: false
+        timestamp:
+          type: string
+          format: date-time
+
+    DatasetMetadata:
+      type: object
+      required:
+        - generatedAt
+        - totalRepositories
+        - organizations
+        - dataCollectionScope
+        - breakdown
+        - statistics
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        totalRepositories:
+          type: integer
+          minimum: 0
+        organizations:
+          type: array
+          items:
+            type: string
+        dataCollectionScope:
+          type: array
+          items:
+            type: string
+        breakdown:
+          type: object
+          properties:
+            userRepositories:
+              type: integer
+            organizationRepositories:
+              type: object
+              additionalProperties:
+                type: integer
+            privateRepositories:
+              type: integer
+            publicRepositories:
+              type: integer
+            forkedRepositories:
+              type: integer
+            archivedRepositories:
+              type: integer
+            templateRepositories:
+              type: integer
+        statistics:
+          type: object
+          properties:
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            totalWatchers:
+              type: integer
+            totalIssues:
+              type: integer
+            totalPullRequests:
+              type: integer
+            totalReleases:
+              type: integer
+            totalCommits:
+              type: integer
+            totalDeployments:
+              type: integer
+            totalEnvironments:
+              type: integer
+            totalLanguages:
+              type: integer
+            averageRepoSize:
+              type: number
+            mostUsedLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  language:
+                    type: string
+                  count:
+                    type: integer
+                  totalSize:
+                    type: integer
+            topTopics:
+              type: array
+              items:
+                type: object
+                properties:
+                  topic:
+                    type: string
+                  count:
+                    type: integer
+            repositoriesWithWebsite:
+              type: integer
+            repositoriesWithDeployments:
+              type: integer
+            repositoriesWithActions:
+              type: integer
+            repositoriesWithSecurityAlerts:
+              type: integer
+            repositoriesWithPackages:
+              type: integer
+            repositoriesWithBranchProtection:
+              type: integer
+            averageCommunityHealth:
+              type: number
 
   responses:
     BadRequest:
