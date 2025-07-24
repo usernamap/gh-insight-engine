@@ -351,90 +351,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /users/search:
-    get:
-      summary: Recherche d'utilisateurs avec filtres
-      description: |
-        Recherche d'utilisateurs GitHub avec filtres avancés.
-        Permet de filtrer par localisation, langage, nombre de followers, etc.
-      operationId: searchUsers
-      tags:
-        - Users
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: query
-          in: query
-          description: Terme de recherche dans le nom d'utilisateur ou nom complet
-          schema:
-            type: string
-            example: "john"
-        - name: location
-          in: query
-          description: Localisation de l'utilisateur
-          schema:
-            type: string
-            example: "Paris"
-        - name: language
-          in: query
-          description: Langage de programmation principal
-          schema:
-            type: string
-            example: "JavaScript"
-        - name: minFollowers
-          in: query
-          description: Nombre minimum de followers
-          schema:
-            type: integer
-            minimum: 0
-            example: 100
-        - name: minRepos
-          in: query
-          description: Nombre minimum de repositories publics
-          schema:
-            type: integer
-            minimum: 0
-            example: 10
-        - name: page
-          in: query
-          description: Numéro de page (commence à 1)
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          description: Nombre d'éléments par page
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: sortBy
-          in: query
-          description: Champ de tri
-          schema:
-            type: string
-            enum: [followers, repositories, created, updated]
-            default: followers
-        - name: sortOrder
-          in: query
-          description: Ordre de tri
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-      responses:
-        '200':
-          description: Liste des utilisateurs trouvés
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserSearchResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
   /users/{username}:
     get:
       summary: Récupération du profil d'un utilisateur
@@ -1667,115 +1583,7 @@ components:
           type: string
           format: uri
 
-    UserSearchResponse:
-      type: object
-      required:
-        - users
-        - pagination
-        - filters
-        - timestamp
-      properties:
-        users:
-          type: array
-          items:
-            type: object
-            required:
-              - id
-              - username
-              - name
-              - avatarUrl
-              - bio
-              - company
-              - location
-              - publicRepos
-              - followers
-              - following
-              - createdAt
-              - updatedAt
-            properties:
-              id:
-                type: string
-                example: "507f1f77bcf86cd799439011"
-              username:
-                type: string
-                example: "octocat"
-              name:
-                type: string
-                example: "John Doe"
-              avatarUrl:
-                type: string
-                format: uri
-              bio:
-                type: string
-                nullable: true
-              company:
-                type: string
-                nullable: true
-              location:
-                type: string
-                nullable: true
-              publicRepos:
-                type: integer
-                minimum: 0
-              followers:
-                type: integer
-                minimum: 0
-              following:
-                type: integer
-                minimum: 0
-              createdAt:
-                type: string
-                format: date-time
-              updatedAt:
-                type: string
-                format: date-time
-        pagination:
-          type: object
-          required:
-            - page
-            - limit
-            - totalCount
-            - totalPages
-            - hasNextPage
-            - hasPreviousPage
-          properties:
-            page:
-              type: integer
-              minimum: 1
-            limit:
-              type: integer
-              minimum: 1
-            totalCount:
-              type: integer
-              minimum: 0
-            totalPages:
-              type: integer
-              minimum: 0
-            hasNextPage:
-              type: boolean
-            hasPreviousPage:
-              type: boolean
-        filters:
-          type: object
-          properties:
-            query:
-              type: string
-              nullable: true
-            location:
-              type: string
-              nullable: true
-            language:
-              type: string
-              nullable: true
-            minFollowers:
-              type: integer
-              nullable: true
-            minRepos:
-              type: integer
-              nullable: true
-        timestamp:
-          type: string
-          format: date-time
+
 
     # Repository Schemas
     Repository:
@@ -3543,41 +3351,268 @@ components:
 
     UserProfileResponse:
       type: object
-      required:
-        - user
-        - dataset
-        - timestamp
-      properties:
-        user:
-          $ref: '#/components/schemas/UserProfile'
-        dataset:
+      description: "Réponse du profil utilisateur - format différent selon le contexte (utilisateur authentifié vs autre utilisateur)"
+      oneOf:
+        - # Format pour utilisateur authentifié (données GitHub complètes)
           type: object
-          nullable: true
+          required:
+            - userProfile
+            - metadata
+            - repositories
           properties:
-            id:
-              type: string
-              example: "507f1f77bcf86cd799439011"
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
+            userProfile:
+              $ref: '#/components/schemas/GitHubUserProfile'
             metadata:
               $ref: '#/components/schemas/DatasetMetadata'
-            repositoriesCount:
-              type: integer
-              minimum: 0
-              example: 25
-            hasAnalytics:
-              type: boolean
-              example: true
-            hasAiInsights:
-              type: boolean
-              example: false
-        timestamp:
+            repositories:
+              type: array
+              items:
+                $ref: '#/components/schemas/EnrichedRepository'
+        - # Format pour autres utilisateurs (données en base)
+          type: object
+          required:
+            - user
+            - timestamp
+          properties:
+            user:
+              $ref: '#/components/schemas/UserProfile'
+            dataset:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+                metadata:
+                  $ref: '#/components/schemas/DatasetMetadata'
+                repositoriesCount:
+                  type: integer
+                  minimum: 0
+                  example: 25
+                hasAnalytics:
+                  type: boolean
+                  example: true
+                hasAiInsights:
+                  type: boolean
+                  example: false
+            timestamp:
+              type: string
+              format: date-time
+
+    GitHubUserProfile:
+      type: object
+      description: "Profil utilisateur GitHub complet récupéré en temps réel"
+      required:
+        - login
+        - name
+        - email
+        - avatarUrl
+        - followers
+        - following
+        - publicRepos
+        - publicGists
+        - createdAt
+        - updatedAt
+        - type
+        - siteAdmin
+        - hireable
+        - organizations
+      properties:
+        login:
+          type: string
+          example: "octocat"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "john@example.com"
+        avatarUrl:
+          type: string
+          format: uri
+        bio:
+          type: string
+          nullable: true
+        company:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        blog:
+          type: string
+          nullable: true
+        twitterUsername:
+          type: string
+          nullable: true
+        followers:
+          type: integer
+          minimum: 0
+        following:
+          type: integer
+          minimum: 0
+        publicRepos:
+          type: integer
+          minimum: 0
+        publicGists:
+          type: integer
+          minimum: 0
+        privateRepos:
+          type: integer
+          minimum: 0
+        ownedPrivateRepos:
+          type: integer
+          minimum: 0
+        totalPrivateRepos:
+          type: integer
+          minimum: 0
+        collaborators:
+          type: integer
+          minimum: 0
+        createdAt:
           type: string
           format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+          example: "User"
+        siteAdmin:
+          type: boolean
+        hireable:
+          type: boolean
+          nullable: true
+        organizations:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+              minimum: 0
+            nodes:
+              type: array
+              items:
+                type: object
+                properties:
+                  login:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  avatarUrl:
+                    type: string
+                    format: uri
+
+    EnrichedRepository:
+      type: object
+      description: "Repository enrichi avec données DevOps complètes"
+      allOf:
+        - $ref: '#/components/schemas/Repository'
+        - type: object
+          properties:
+            githubActions:
+              type: object
+              nullable: true
+              properties:
+                workflowsCount:
+                  type: integer
+                lastRunStatus:
+                  type: string
+                workflows:
+                  type: array
+                  items:
+                    type: object
+                runs:
+                  type: object
+                  properties:
+                    totalCount:
+                      type: integer
+                    successful:
+                      type: integer
+                    failed:
+                      type: integer
+                    successRate:
+                      type: integer
+            security:
+              type: object
+              nullable: true
+              properties:
+                dependabotAlerts:
+                  type: object
+                  properties:
+                    totalCount:
+                      type: integer
+                    open:
+                      type: integer
+                    fixed:
+                      type: integer
+                    dismissed:
+                      type: integer
+                secretScanning:
+                  type: object
+                  properties:
+                    totalCount:
+                      type: integer
+                    resolved:
+                      type: integer
+                codeScanning:
+                  type: object
+                  properties:
+                    totalCount:
+                      type: integer
+                    open:
+                      type: integer
+                    fixed:
+                      type: integer
+            packages:
+              type: object
+              nullable: true
+              properties:
+                totalCount:
+                  type: integer
+                types:
+                  type: array
+                  items:
+                    type: string
+            community:
+              type: object
+              nullable: true
+              properties:
+                healthPercentage:
+                  type: integer
+                hasReadme:
+                  type: boolean
+                hasLicense:
+                  type: boolean
+                hasContributing:
+                  type: boolean
+                hasCodeOfConduct:
+                  type: boolean
+            traffic:
+              type: object
+              nullable: true
+              properties:
+                views:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    uniques:
+                      type: integer
+                clones:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    uniques:
+                      type: integer
 
     DatasetMetadata:
       type: object

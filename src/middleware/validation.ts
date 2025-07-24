@@ -191,43 +191,6 @@ export const paginationQuerySchema = z.object({
 });
 
 /**
- * Schéma pour les filtres de recherche utilisateur
- */
-export const userSearchQuerySchema = z
-  .object({
-    query: z
-      .string()
-      .min(1, 'Le terme de recherche est requis')
-      .max(255, 'Le terme de recherche ne peut pas dépasser 255 caractères')
-      .optional(),
-    location: z
-      .string()
-      .max(100, 'La localisation ne peut pas dépasser 100 caractères')
-      .optional(),
-    language: z
-      .string()
-      .max(50, 'Le langage ne peut pas dépasser 50 caractères')
-      .optional(),
-    minFollowers: z
-      .string()
-      .optional()
-      .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
-      .refine(
-        (val) => val !== undefined && val >= 0 && val <= 1000000,
-        'Le nombre minimum de followers doit être entre 0 et 1,000,000',
-      ),
-    minRepos: z
-      .string()
-      .optional()
-      .transform((val) => (val !== undefined && val !== null && val !== '' ? parseInt(val, 10) : undefined))
-      .refine(
-        (val) => val !== undefined && val >= 0 && val <= 10000,
-        'Le nombre minimum de repos doit être entre 0 et 10,000',
-      ),
-  })
-  .merge(paginationQuerySchema);
-
-/**
  * Schéma pour les filtres de recherche repository
  */
 export const repoSearchQuerySchema = z
@@ -387,13 +350,6 @@ export const validateDatasetParams = validate({
  */
 export const validatePagination = validate({
   query: paginationQuerySchema,
-});
-
-/**
- * Validation pour la recherche d'utilisateurs
- */
-export const validateUserSearch = validate({
-  query: userSearchQuerySchema,
 });
 
 /**

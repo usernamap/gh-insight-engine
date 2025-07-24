@@ -4,23 +4,9 @@ import { authenticateJWT } from '@/middleware';
 import { optionalJWT } from '@/middleware';
 import { requireOwnership } from '@/middleware';
 import { validateUserParams } from '@/middleware';
-import { validateUserSearch } from '@/middleware';
 import { validateUserWithPagination } from '@/middleware';
 
 const router = Router();
-
-/**
- * @route   GET /api/users/search
- * @desc    Recherche d'utilisateurs avec filtres
- * @access  Public
- * @query   { query?: string, location?: string, language?: string, minFollowers?: number, minRepos?: number, page?: number, limit?: number, sortBy?: string, sortOrder?: 'asc'|'desc' }
- */
-router.get(
-  '/search',
-  optionalJWT,
-  validateUserSearch,
-  UserController.searchUsers,
-);
 
 /**
  * @route   GET /api/users/stats

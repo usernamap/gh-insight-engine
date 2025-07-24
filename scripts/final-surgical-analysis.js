@@ -35,7 +35,6 @@ const ENDPOINT_ORDER = [
   { method: 'DELETE', path: '/auth/logout', controller: 'AuthController.ts', description: 'Déconnexion' },
   
   // 3. UTILISATEURS (exploration)
-  { method: 'GET', path: '/users/search', controller: 'UserController.ts', description: 'Recherche utilisateurs' },
   { method: 'GET', path: '/users/stats', controller: 'UserController.ts', description: 'Statistiques globales' },
   { method: 'GET', path: '/users/{username}', controller: 'UserController.ts', description: 'Profil utilisateur spécifique' },
   { method: 'GET', path: '/users/{username}/repositories', controller: 'UserController.ts', description: 'Repositories utilisateur' },
