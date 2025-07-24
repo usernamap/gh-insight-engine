@@ -26,9 +26,11 @@ info:
     
     ### Test de la documentation :
     1. 🚀 **Commencez par `/auth/login`** avec vos identifiants
-    2. ✅ **Le token JWT est automatiquement appliqué** à tous les endpoints
-    3. 🔒 **Testez les endpoints privés** sans configuration supplémentaire
-    4. 📊 **Explorez l'API complète** avec votre contexte utilisateur
+    2. 📋 **Copiez le token** depuis `tokens.accessToken` dans la réponse
+    3. 🔐 **Cliquez sur "Authorize"** en haut de cette page
+    4. 📝 **Collez le token JWT** (sans "Bearer ") et validez
+    5. ✅ **Tous les endpoints protégés** utilisent maintenant votre token automatiquement
+    6. 📊 **Explorez l'API complète** avec votre contexte utilisateur authentifié
     
     ## Rate Limiting
     - Global: 100 requêtes par 15 minutes par IP
@@ -42,7 +44,7 @@ info:
     4. **Analyse complète** → `POST /analytics/{username}/analyze`
     5. **Insights IA** → `POST /insights/{username}/generate`
     6. **Consultation des résultats** → Endpoints GET correspondants
-  version: 0.1.8
+  version: 0.1.9
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -112,22 +114,29 @@ paths:
       responses:
         '200':
           description: |
-            Authentification réussie - **Le token JWT est automatiquement persisté pour les tests suivants**
+            ✅ **Authentification réussie !**
             
-            ✅ **Contexte activé** : Tous les endpoints protégés utilisent maintenant ce token automatiquement
+            **🔐 ÉTAPES OBLIGATOIRES pour configurer l'autorisation :**
+            1. **Copiez** la valeur de `tokens.accessToken` depuis cette réponse
+            2. **Cliquez** sur le bouton "🔒 Authorize" en haut de cette documentation
+            3. **Collez** le token JWT dans le champ "Value" (⚠️ SANS le préfixe "Bearer ")
+            4. **Cliquez** sur "Authorize" puis "Close"
+            5. **Testez** maintenant les endpoints protégés - ils utiliseront automatiquement votre token
             
-            🔄 **Prochaines étapes recommandées :**
-            1. Testez `GET /auth/validate` pour vérifier votre token
-            2. Explorez `GET /users/{username}` avec votre profil
-            3. Lancez une analyse avec `POST /analytics/{username}/analyze`
+            **🔄 Prochaines étapes recommandées :**
+            1. Vérifiez votre autorisation : `GET /auth/validate`
+            2. Explorez votre profil : `GET /users/{username}`
+            3. Lancez une analyse : `POST /analytics/{username}/analyze`
+            
+            **⏰ Le token expire dans 24h**
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
               examples:
                 success_with_context:
-                  summary: "Authentification réussie avec contexte persisté"
-                  description: "Le token JWT sera automatiquement utilisé pour tous les endpoints suivants"
+                  summary: "✅ Authentification réussie - Configurez maintenant l'autorisation"
+                  description: "IMPORTANT: Copiez le token accessToken et utilisez le bouton Authorize en haut de la page"
                   value:
                     message: "Authentification réussie"
                     user:
@@ -225,7 +234,17 @@ paths:
   /auth/validate:
     get:
       summary: Validation du token JWT
-      description: Vérifie la validité du token JWT courant
+      description: |
+        Vérifie la validité du token JWT courant.
+        
+        **🔒 Endpoint protégé** - Nécessite une autorisation Bearer Token.
+        
+        **Si vous obtenez une erreur 401 :**
+        1. Assurez-vous d'avoir cliqué sur "🔒 Authorize" en haut de la page
+        2. Vérifiez que vous avez collé le token JWT (sans "Bearer ")
+        3. Le token doit provenir de la réponse de `/auth/login`
+        
+        **✅ Si configuré correctement, cet endpoint confirmera votre authentification.**
       operationId: validateToken
       tags:
         - Authentication
@@ -1185,11 +1204,17 @@ components:
         Token JWT obtenu via l'endpoint /auth/login.
         Format: `Authorization: Bearer <token>`
         
-        **🔄 Persistance automatique :**
-        - Le token est automatiquement appliqué aux endpoints suivants
-        - Pas besoin de re-configurer manuellement pour chaque test
-        - La session reste active pendant toute la documentation
-        - Utilisez d'abord POST /auth/login pour initialiser le contexte
+        **🔄 Configuration automatique :**
+        1. Connectez-vous via POST /auth/login
+        2. Copiez le token depuis la réponse (champ tokens.accessToken)
+        3. Cliquez sur "Authorize" en haut de cette documentation
+        4. Collez le token dans le champ "Value" (sans "Bearer ")
+        5. Tous les endpoints protégés utiliseront automatiquement ce token
+        
+        **⚠️ Instructions importantes :**
+        - N'incluez PAS le mot "Bearer" dans le champ d'autorisation
+        - Utilisez uniquement la valeur du token JWT
+        - Le token expire après 24h
 
   schemas:
     # System Schemas

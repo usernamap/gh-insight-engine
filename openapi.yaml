@@ -1,3 +1,5 @@
+# GitHub Insight Engine API Specification
+# Description: API REST pour l'analyse en profondeur des données GitHub avec insights IA.
 openapi: 3.0.3
 info:
   title: GitHub Insight Engine API
@@ -44,7 +46,7 @@ info:
     4. **Analyse complète** → `POST /analytics/{username}/analyze`
     5. **Insights IA** → `POST /insights/{username}/generate`
     6. **Consultation des résultats** → Endpoints GET correspondants
-  version: 0.1.8
+  version: 0.1.9
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -1342,15 +1344,12 @@ components:
               example: "https://github.com/images/error/octocat_happy.gif"
             bio:
               type: string
-              nullable: true
               example: "There once was..."
             company:
               type: string
-              nullable: true
               example: "GitHub"
             location:
               type: string
-              nullable: true
               example: "San Francisco"
             publicRepos:
               type: integer
