@@ -1,4 +1,6 @@
 // Export de tous les controllers
-export { default as AuthController } from './AuthController';
-export { default as UserController } from './UserController';
-export { default as RepoController } from './RepoController';
+export { UserController } from './UserController';
+export { RepoController } from './RepoController';
+export { SummaryController } from './SummaryController';
+export { AuthController } from './AuthController';
+export { AIController } from './AIController';

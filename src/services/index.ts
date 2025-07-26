@@ -4,5 +4,5 @@
  */
 
 export { GitHubService } from './GitHubService';
-export { AIService } from './AIService';
 export { DatabaseService } from './DatabaseService';
+export { AIAnalysisService } from './AIAnalysisService';

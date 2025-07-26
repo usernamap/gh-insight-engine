@@ -5,16 +5,6 @@
  */
 
 import {
-  GitHubGraphQLOrganizationNode,
-  GitHubGraphQLOrganizationRepositoriesResponse,
-  GitHubGraphQLRepositoriesResponse,
-  GitHubGraphQLRepositoryNode,
-  GitHubGraphQLUserBasic,
-  GitHubGraphQLUserBasicResponse,
-  GitHubGraphQLUserCounters,
-  GitHubGraphQLUserCountersResponse,
-  GitHubGraphQLUserOrganizations,
-  GitHubGraphQLUserOrganizationsResponse,
   GitHubRepo,
   GitHubRestCodeScanningAlert,
   GitHubRestCommunityProfile,
@@ -23,12 +13,65 @@ import {
   GitHubRestTrafficPaths,
   GitHubRestWorkflow,
   GitHubRestWorkflowRun,
+  GitHubGraphQLRepositoriesResponse,
+  GitHubGraphQLRepositoryNode,
+  GitHubGraphQLOrganizationRepositoriesResponse,
   GraphQLResponse,
   UserProfile,
 } from '@/types/github';
 
 import { GitHubConfig } from '@/config/github';
 import logger from '@/utils/logger';
+
+// Interface temporaire pour la réponse de l'API REST GitHub /user
+interface GitHubUserResponse {
+  login: string;
+  id: number;
+  node_id: string;
+  avatar_url: string;
+  gravatar_id: string;
+  url: string;
+  html_url: string;
+  followers_url: string;
+  following_url: string;
+  gists_url: string;
+  starred_url: string;
+  subscriptions_url: string;
+  organizations_url: string;
+  repos_url: string;
+  events_url: string;
+  received_events_url: string;
+  type: string;
+  site_admin: boolean;
+  name: string | null;
+  company: string | null;
+  blog: string | null;
+  location: string | null;
+  email: string | null;
+  hireable: boolean | null;
+  bio: string | null;
+  twitter_username: string | null;
+  public_repos: number;
+  public_gists: number;
+  followers: number;
+  following: number;
+  created_at: string;
+  updated_at: string;
+  private_gists?: number;
+  total_private_repos?: number;
+  owned_private_repos?: number;
+  disk_usage?: number;
+  collaborators?: number;
+  two_factor_authentication?: boolean;
+  plan?: unknown;
+}
+
+interface GitHubOrgResponse {
+  login: string;
+  name?: string;
+  description?: string;
+  avatar_url: string;
+}
 
 // Fonction utilitaire stricte pour transformer un node GraphQL en GitHubRepo
 function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
@@ -207,119 +250,85 @@ export class GitHubService {
   }
 
   /**
-   * Récupère le profil utilisateur complet
-   * GraphQL: viewer (basic, counters, organizations)
+   * Récupère le profil utilisateur complet via REST API
+   * REST API: GET /user (retourne exactement la structure GitHub)
    */
   public async getUserProfile(): Promise<UserProfile> {
-    // Requête 1: Profil de base
-    const basicQuery = `
-      query {
-        viewer {
-          login
-          name
-          email
-          avatarUrl
-          bio
-          company
-          location
-          websiteUrl
-          twitterUsername
-          createdAt
-          updatedAt
-          __typename
-          isSiteAdmin
-          isHireable
-        }
-      }
-    `;
-
-    // Requête 2: Compteurs
-    const countersQuery = `
-      query {
-        viewer {
-          followers { totalCount }
-          following { totalCount }
-          repositories { totalCount }
-          gists { totalCount }
-          repositoriesContributedTo { totalCount }
-        }
-      }
-    `;
-
-    // Requête 3: Organisations
-    const orgsQuery = `
-      query {
-        viewer {
-          organizations(first: 10) {
-            totalCount
-            nodes {
-              login
-              name
-              description
-              avatarUrl
-            }
-          }
-        }
-      }
-    `;
-
     try {
-      const [basicResponse, countersResponse, orgsResponse] = await Promise.all([
-        this.githubConfig.executeGraphQLQuery(basicQuery),
-        this.githubConfig.executeGraphQLQuery(countersQuery),
-        this.githubConfig.executeGraphQLQuery(orgsQuery),
-      ]);
+      // Utiliser la méthode publique executeRestRequest avec types stricts
+      const githubUser = await this.githubConfig.executeRestRequest('GET /user') as GitHubUserResponse;
 
-      // Vérification des erreurs - supprimée car octokit.graphql lance automatiquement les erreurs
+      // Récupérer les organisations séparément
+      const orgsData = await this.githubConfig.executeRestRequest('GET /user/orgs', {
+        per_page: 10,
+      }) as GitHubOrgResponse[];
 
-      const basic = (basicResponse as unknown as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
-      const counters = (countersResponse as unknown as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
-      const orgs = (orgsResponse as unknown as GitHubGraphQLUserOrganizationsResponse)?.viewer ?? {} as GitHubGraphQLUserOrganizations;
-
+      // Transformer en structure exacte de l'API GitHub avec les nouveaux noms de champs
       const userProfile: UserProfile = {
-        login: basic.login,
-        name: basic.name,
-        email: basic.email,
-        avatarUrl: basic.avatarUrl,
-        bio: basic.bio,
-        company: basic.company,
-        location: basic.location,
-        blog: basic.websiteUrl,
-        twitterUsername: basic.twitterUsername,
-        followers: counters.followers?.totalCount ?? 0,
-        following: counters.following?.totalCount ?? 0,
-        publicRepos: counters.repositories?.totalCount ?? 0,
-        publicGists: counters.gists?.totalCount ?? 0,
-        privateRepos: 0,
-        ownedPrivateRepos: 0,
-        totalPrivateRepos: 0,
-        collaborators: 0,
-        createdAt: new Date(basic.createdAt),
-        updatedAt: new Date(basic.updatedAt),
-        type: basic.__typename,
-        siteAdmin: basic.isSiteAdmin,
-        hireable: basic.isHireable,
+        login: githubUser.login,
+        id: githubUser.id,
+        node_id: githubUser.node_id,
+        avatar_url: githubUser.avatar_url,
+        gravatar_id: githubUser.gravatar_id ?? '',
+        url: githubUser.url,
+        html_url: githubUser.html_url,
+        followers_url: githubUser.followers_url,
+        following_url: githubUser.following_url,
+        gists_url: githubUser.gists_url,
+        starred_url: githubUser.starred_url,
+        subscriptions_url: githubUser.subscriptions_url,
+        organizations_url: githubUser.organizations_url,
+        repos_url: githubUser.repos_url,
+        events_url: githubUser.events_url,
+        received_events_url: githubUser.received_events_url,
+        type: githubUser.type,
+        site_admin: githubUser.site_admin,
+        name: githubUser.name,
+        company: githubUser.company,
+        blog: githubUser.blog,
+        location: githubUser.location,
+        email: githubUser.email,
+        hireable: githubUser.hireable,
+        bio: githubUser.bio,
+        twitter_username: githubUser.twitter_username,
+        public_repos: githubUser.public_repos,
+        public_gists: githubUser.public_gists,
+        followers: githubUser.followers,
+        following: githubUser.following,
+        created_at: new Date(githubUser.created_at),
+        updated_at: new Date(githubUser.updated_at),
+
+        // Champs privés (seulement disponibles pour l'utilisateur authentifié)
+        private_gists: githubUser.private_gists,
+        total_private_repos: githubUser.total_private_repos,
+        owned_private_repos: githubUser.owned_private_repos,
+        disk_usage: githubUser.disk_usage,
+        collaborators: githubUser.collaborators,
+        two_factor_authentication: githubUser.two_factor_authentication,
+        plan: githubUser.plan as UserProfile['plan'],
+
+        // Organisations pour compatibilité avec notre système existant
         organizations: {
-          totalCount: orgs.organizations?.totalCount ?? 0,
-          nodes:
-            orgs.organizations?.nodes?.map((org: GitHubGraphQLOrganizationNode) => ({
-              login: org.login,
-              name: org.name,
-              description: org.description,
-              avatarUrl: org.avatarUrl,
-            })) ?? [],
+          totalCount: orgsData.length,
+          nodes: orgsData.map((org: GitHubOrgResponse) => ({
+            login: org.login,
+            name: org.name ?? org.login,
+            description: org.description ?? '',
+            avatarUrl: org.avatar_url,
+          })),
         },
       };
 
-      logger.info('Profil utilisateur récupéré', {
+      logger.info('Profil utilisateur récupéré via REST API', {
         login: userProfile.login,
         followers: userProfile.followers,
-        repositories: userProfile.publicRepos,
+        public_repos: userProfile.public_repos,
+        id: userProfile.id,
       });
 
       return userProfile;
     } catch (_error: unknown) {
-      logger.error('Erreur récupération profil utilisateur', {
+      logger.error('Erreur récupération profil utilisateur REST API', {
         error: (_error as Error).message,
       });
       throw new Error(
@@ -660,9 +669,9 @@ export class GitHubService {
 
       // Gestion spécifique des erreurs de timeout/connectivité
       if (error.message.includes('timeout') ||
-          error.message.includes('Connect Timeout Error') ||
-          error.message.includes('ECONNRESET') ||
-          error.message.includes('ENOTFOUND')) {
+        error.message.includes('Connect Timeout Error') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('ENOTFOUND')) {
         logger.warn('Timeout lors de la récupération GitHub Actions, retour de données par défaut', {
           owner,
           repo,

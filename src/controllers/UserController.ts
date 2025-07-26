@@ -4,17 +4,52 @@ import { createError } from '@/middleware/errorHandler';
 import { databaseService } from '@/services/DatabaseService';
 import { logWithContext } from '@/utils/logger';
 import { UserModel } from '@/models/User';
-import { DatasetModel } from '@/models/Dataset';
 import { AuthenticatedUser } from '@/types/github';
 import { GitHubService } from '@/services/GitHubService';
-import { DatasetMetadata, GitHubRepo } from '@/types/github';
+import { GitHubRepo } from '@/types/github';
+
+// Interface pour les données utilisateur avec tous les champs nécessaires
+interface UserDataForResponse {
+  login: string;
+  githubId?: number | null;
+  nodeId?: string | null;
+  avatarUrl: string;
+  gravatarId?: string | null;
+  url?: string | null;
+  htmlUrl?: string | null;
+  followersUrl?: string | null;
+  followingUrl?: string | null;
+  gistsUrl?: string | null;
+  starredUrl?: string | null;
+  subscriptionsUrl?: string | null;
+  organizationsUrl?: string | null;
+  reposUrl?: string | null;
+  eventsUrl?: string | null;
+  receivedEventsUrl?: string | null;
+  type: string;
+  siteAdmin: boolean;
+  name?: string | null;
+  company?: string | null;
+  blog?: string | null;
+  location?: string | null;
+  email?: string | null;
+  hireable?: boolean | null;
+  bio?: string | null;
+  twitterUsername?: string | null;
+  publicRepos: number;
+  publicGists: number;
+  followers: number;
+  following: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 /**
  * Contrôleur des utilisateurs
  */
 export class UserController {
   /**
-   * Collecte et stockage des données GitHub d'un utilisateur
+   * Collecte et stockage du profil utilisateur GitHub uniquement
    * POST /api/users/:username
    */
   static collectUserData = asyncHandler(
@@ -36,137 +71,36 @@ export class UserController {
       });
 
       try {
-        // Récupération des données complètes depuis GitHub API
+        // Récupération UNIQUEMENT du profil utilisateur depuis GitHub API
         const githubService = await GitHubService.create(authenticatedUser.githubToken);
-
-        // Récupération du profil utilisateur
         const userProfile = await githubService.getUserProfile();
 
-        // Récupération des organisations
-        const organizations = await githubService.getUserOrganizations();
-
-        // Récupération de tous les repositories (utilisateur + organisations)
-        let allRepositories = await githubService.getUserRepos();
-
-        // Enrichir avec les repositories des organisations
-        for (const orgName of organizations) {
-          try {
-            const orgRepos = await githubService.getOrgRepos(orgName);
-            allRepositories = [...allRepositories, ...orgRepos];
-          } catch (error) {
-            logWithContext.api('get_org_repos_error', req.path, false, {
-              orgName,
-              error: String(error),
-            });
-            // Continuer même si une organisation échoue
-          }
-        }
-
-        // Enrichir tous les repositories avec des données DevOps
-        const enrichedRepositories = await Promise.all(
-          allRepositories.map(async (repo) => {
-            try {
-              return await githubService.enrichWithDevOpsData(repo);
-            } catch (error) {
-              logWithContext.api('enrich_repo_error', req.path, false, {
-                repo: repo.nameWithOwner,
-                error: String(error),
-              });
-              return repo; // Retourner le repo sans enrichissement en cas d'erreur
-            }
-          }),
-        );
-
-        // Générer les métadonnées avec structure dataset complète
-        const metadata: DatasetMetadata = {
-          generatedAt: new Date(),
-          totalRepositories: enrichedRepositories.length,
-          organizations,
-          dataCollectionScope: [
-            'User repositories',
-            'Repository details',
-            'Language statistics',
-            'Issue and PR metrics',
-            'Release information',
-            'Security and compliance data',
-            'Collaboration metrics',
-            'GitHub Actions & CI/CD data',
-            'Advanced security scanning',
-            'Traffic and analytics data',
-            'Community health metrics',
-            'Package information',
-          ],
-          breakdown: {
-            userRepositories: enrichedRepositories.filter(r => r.owner.login === username).length,
-            organizationRepositories: organizations.reduce((acc, org) => {
-              acc[org] = enrichedRepositories.filter(r => r.owner.login === org).length;
-              return acc;
-            }, {} as Record<string, number>),
-            privateRepositories: enrichedRepositories.filter(r => r.isPrivate).length,
-            publicRepositories: enrichedRepositories.filter(r => !r.isPrivate).length,
-            forkedRepositories: enrichedRepositories.filter(r => r.isFork).length,
-            archivedRepositories: enrichedRepositories.filter(r => r.isArchived).length,
-            templateRepositories: enrichedRepositories.filter(r => r.isTemplate).length,
-          },
-          statistics: {
-            totalStars: enrichedRepositories.reduce((sum, r) => sum + r.stargazerCount, 0),
-            totalForks: enrichedRepositories.reduce((sum, r) => sum + r.forkCount, 0),
-            totalWatchers: enrichedRepositories.reduce((sum, r) => sum + r.watchersCount, 0),
-            totalIssues: enrichedRepositories.reduce((sum, r) => sum + r.issues.totalCount, 0),
-            totalPullRequests: enrichedRepositories.reduce((sum, r) => sum + r.pullRequests.totalCount, 0),
-            totalReleases: enrichedRepositories.reduce((sum, r) => sum + r.releases.totalCount, 0),
-            totalCommits: enrichedRepositories.reduce((sum, r) => sum + r.commits.totalCount, 0),
-            totalDeployments: enrichedRepositories.reduce((sum, r) => sum + r.deployments.totalCount, 0),
-            totalEnvironments: enrichedRepositories.reduce((sum, r) => sum + r.environments.totalCount, 0),
-            totalLanguages: [...new Set(enrichedRepositories.flatMap(r => r.languages.nodes.map(l => l.name)))].length,
-            averageRepoSize: Math.round(enrichedRepositories.reduce((sum, r) => sum + r.size, 0) / enrichedRepositories.length) || 0,
-            mostUsedLanguages: UserController.calculateLanguageStats(enrichedRepositories).map(stat => ({
-              language: stat.name,
-              count: stat.repoCount,
-              totalSize: stat.totalSize,
-            })),
-            topTopics: UserController.calculateTopicStats(enrichedRepositories).map(stat => ({
-              topic: stat.name,
-              count: stat.count,
-            })),
-            repositoriesWithWebsite: enrichedRepositories.filter(r => r.homepageUrl).length,
-            repositoriesWithDeployments: enrichedRepositories.filter(r => r.deployments.totalCount > 0).length,
-            repositoriesWithActions: enrichedRepositories.filter(r => (r.githubActions?.workflowsCount ?? 0) > 0).length,
-            repositoriesWithSecurityAlerts: enrichedRepositories.filter(r => (r.security?.dependabotAlerts.totalCount ?? 0) > 0).length,
-            repositoriesWithPackages: enrichedRepositories.filter(r => (r.packages?.totalCount ?? 0) > 0).length,
-            repositoriesWithBranchProtection: enrichedRepositories.filter(r => (r.branchProtection?.rules.length ?? 0) > 0).length,
-            averageCommunityHealth: Math.round(enrichedRepositories.reduce((sum, r) => sum + (r.community?.healthPercentage ?? 0), 0) / enrichedRepositories.length) || 0,
-          },
-        };
-
-        // Stocker en base de données avec l'architecture correcte
-        // Sauvegarder l'utilisateur et les repositories avec l'architecture correcte
-        const savedData = await databaseService.saveCompleteUserDataset(
-          userProfile,
-          enrichedRepositories,
-          metadata,
-        );
+        // Sauvegarder UNIQUEMENT le profil utilisateur (pas de repositories)
+        const savedUser = await UserModel.upsert(userProfile);
 
         logWithContext.api('collect_user_data_success', req.path, true, {
           targetUsername: username,
-          repositoriesCount: enrichedRepositories.length,
-          organizationsCount: organizations.length,
-          datasetId: savedData.dataset.id,
+          userId: savedUser.id,
+          userGithubId: userProfile.id,
         });
 
         res.status(201).json({
-          message: 'Collecte des données utilisateur réussie',
+          message: 'Collecte du profil utilisateur réussie',
           status: 'completed',
-          summary: {
-            username: userProfile.login,
-            repositoriesCollected: enrichedRepositories.length,
-            organizationsScanned: organizations.length,
-            dataFreshness: 'live',
+          userProfile: {
+            login: userProfile.login,
+            id: userProfile.id,
+            name: userProfile.name,
+            public_repos: userProfile.public_repos,
+            followers: userProfile.followers,
+            following: userProfile.following,
+            created_at: userProfile.created_at,
           },
           metadata: {
             collectedAt: new Date().toISOString(),
+            dataSource: 'github_api',
+            dataType: 'user_profile_only',
             nextCollectionRecommended: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h plus tard
-            datasetId: savedData.dataset.id,
           },
           timestamp: new Date().toISOString(),
         });
@@ -182,7 +116,7 @@ export class UserController {
   );
 
   /**
-   * Récupération des données utilisateur depuis la base de données
+   * Récupération du profil utilisateur depuis la base de données (SANS repositories)
    * GET /api/users/:username
    */
   static getUserProfile = asyncHandler(
@@ -204,60 +138,85 @@ export class UserController {
           throw createError.notFound('Aucune donnée trouvée pour cet utilisateur. Utilisez POST /users/{username} pour collecter les données.');
         }
 
-        // Récupération du dataset le plus récent
-        const dataset = await DatasetModel.findByUsername(username);
-
-        if (dataset == null) {
-          // Retourner juste le profil utilisateur sans dataset complet
-          const responseData = {
-            userProfile: userData,
-            metadata: {
-              generatedAt: userData.updatedAt,
-              dataSource: 'database',
-              isPartialData: true,
-              message: 'Données de profil uniquement. Utilisez POST /users/{username} pour une collecte complète.',
-            },
-            timestamp: new Date().toISOString(),
-          };
-
-          res.status(200).json(responseData);
-          return;
-        }
-
-        // Vérifier la fraîcheur des données
-        const dataAge = Date.now() - new Date(dataset.generatedAt).getTime();
+        // Calculer l'âge des données utilisateur
+        const dataAge = Date.now() - new Date(userData.updatedAt).getTime();
         const isStale = dataAge > 24 * 60 * 60 * 1000; // Plus de 24h
 
+        // Préparer le profil utilisateur selon le niveau d'accès
+        const isOwner = authenticatedUser?.username === username;
+
+        // Structure de réponse conforme à l'API GitHub REST avec vraies données DB
+        const userDataWithExtras = userData as UserDataForResponse;
+        const baseProfile = {
+          login: userData.login,
+          id: userDataWithExtras.githubId ?? 0,
+          node_id: userDataWithExtras.nodeId ?? '',
+          avatar_url: userData.avatarUrl,
+          gravatar_id: userDataWithExtras.gravatarId ?? '',
+          url: userDataWithExtras.url ?? '',
+          html_url: userDataWithExtras.htmlUrl ?? '',
+          followers_url: userDataWithExtras.followersUrl ?? '',
+          following_url: userDataWithExtras.followingUrl ?? '',
+          gists_url: userDataWithExtras.gistsUrl ?? '',
+          starred_url: userDataWithExtras.starredUrl ?? '',
+          subscriptions_url: userDataWithExtras.subscriptionsUrl ?? '',
+          organizations_url: userDataWithExtras.organizationsUrl ?? '',
+          repos_url: userDataWithExtras.reposUrl ?? '',
+          events_url: userDataWithExtras.eventsUrl ?? '',
+          received_events_url: userDataWithExtras.receivedEventsUrl ?? '',
+          type: userData.type,
+          site_admin: userData.siteAdmin,
+          name: userData.name,
+          company: userData.company,
+          blog: userData.blog,
+          location: userData.location,
+          email: userData.email,
+          hireable: userData.hireable,
+          bio: userData.bio,
+          twitter_username: userData.twitterUsername,
+          public_repos: userData.publicRepos,
+          public_gists: userData.publicGists,
+          followers: userData.followers,
+          following: userData.following,
+          created_at: userData.createdAt,
+          updated_at: userData.updatedAt,
+        };
+
+        // Ajouter les champs privés si l'utilisateur est le propriétaire
+        // TODO: Ces champs seront ajoutés après la migration du schéma DB
+        const userProfile = isOwner ? {
+          ...baseProfile,
+          // private_gists: userData.privateGists, // TODO: Ajouter après migration DB
+          total_private_repos: userData.totalPrivateRepos,
+          owned_private_repos: userData.ownedPrivateRepos,
+          // disk_usage: userData.diskUsage, // TODO: Ajouter après migration DB
+          collaborators: userData.collaborators,
+          // two_factor_authentication: userData.twoFactorAuth, // TODO: Ajouter après migration DB
+          // plan: userData.plan, // TODO: Ajouter après migration DB
+        } : baseProfile;
+
         const responseData = {
-          userProfile: dataset.userProfile,
+          userProfile,
           metadata: {
-            ...(dataset.metadata as Record<string, unknown>),
             dataSource: 'database',
             dataAge: Math.round(dataAge / (60 * 60 * 1000)), // Age en heures
             isStale,
+            accessLevel: isOwner ? 'full' : 'public',
+            message: isOwner
+              ? 'Profil complet avec données privées'
+              : 'Profil public uniquement',
             recommendation: isStale
               ? 'Les données ont plus de 24h. Considérez une nouvelle collecte avec POST /users/{username}.'
               : 'Données récentes',
+            lastUpdated: userData.updatedAt,
           },
-          repositories: dataset.repositories,
           timestamp: new Date().toISOString(),
         };
-
-        // Si l'utilisateur demande ses propres données et est authentifié, retourner toutes les données
-        // Sinon, filtrer les données sensibles
-        if (authenticatedUser?.username !== username) {
-          // Filtrer les données privées pour les autres utilisateurs
-          responseData.repositories = (dataset.repositories as GitHubRepo[]).filter((repo: GitHubRepo) => !repo.isPrivate);
-          (responseData.metadata as Record<string, unknown>).accessLevel = 'public';
-          (responseData.metadata as Record<string, unknown>).message = 'Seules les données publiques sont visibles';
-        } else {
-          (responseData.metadata as Record<string, unknown>).accessLevel = 'full';
-        }
 
         logWithContext.api('get_user_profile_success', req.path, true, {
           targetUsername: username,
           dataAge: Math.round(dataAge / (60 * 60 * 1000)),
-          hasFullAccess: authenticatedUser?.username === username,
+          accessLevel: isOwner ? 'full' : 'public',
         });
 
         res.status(200).json(responseData);
@@ -402,19 +361,19 @@ export class UserController {
               username: userProfile.login,
               name: userProfile.name,
               email: userProfile.email,
-              avatarUrl: userProfile.avatarUrl,
+              avatarUrl: userProfile.avatar_url,
               bio: userProfile.bio,
               company: userProfile.company,
               location: userProfile.location,
               blog: userProfile.blog,
-              twitterUsername: userProfile.twitterUsername,
-              publicRepos: userProfile.publicRepos,
-              privateRepos: userProfile.privateRepos,
+              twitterUsername: userProfile.twitter_username,
+              publicRepos: userProfile.public_repos,
+              // privateRepos: userProfile.privateRepos, // N'existe plus dans l'API publique
               followers: userProfile.followers,
               following: userProfile.following,
               organizations: userProfile.organizations,
-              createdAt: userProfile.createdAt,
-              updatedAt: userProfile.updatedAt,
+              createdAt: userProfile.created_at,
+              updatedAt: userProfile.updated_at,
             },
             pagination: {
               page: Number(page),
@@ -573,17 +532,17 @@ export class UserController {
               id: userProfile.login,
               username: userProfile.login,
               name: userProfile.name,
-              avatarUrl: userProfile.avatarUrl,
+              avatarUrl: userProfile.avatar_url,
               bio: userProfile.bio,
               company: userProfile.company,
               location: userProfile.location,
-              publicRepos: userProfile.publicRepos,
-              privateRepos: userProfile.privateRepos,
+              publicRepos: userProfile.public_repos,
+              // privateRepos: userProfile.privateRepos, // N'existe plus dans l'API publique
               followers: userProfile.followers,
               following: userProfile.following,
               organizations: userProfile.organizations,
-              createdAt: userProfile.createdAt,
-              updatedAt: userProfile.updatedAt,
+              createdAt: userProfile.created_at,
+              updatedAt: userProfile.updated_at,
             },
             analysis: {
               hasDataset: !!latestDataset,
@@ -798,8 +757,8 @@ export class UserController {
                 name: userProfile.name,
                 followers: userProfile.followers,
                 following: userProfile.following,
-                publicRepos: userProfile.publicRepos,
-                privateRepos: userProfile.privateRepos,
+                publicRepos: userProfile.public_repos,
+                // privateRepos: userProfile.privateRepos, // N'existe plus dans l'API publique
                 organizations: organizations.length,
               },
               repositories: {
@@ -975,23 +934,7 @@ export class UserController {
       .slice(0, 10);
   }
 
-  private static calculateTopicStats(repositories: GitHubRepo[]): Array<{
-    name: string;
-    count: number;
-  }> {
-    const topicMap = new Map<string, number>();
-
-    repositories.forEach(repo => {
-      repo.topics.forEach(topic => {
-        topicMap.set(topic, (topicMap.get(topic) ?? 0) + 1);
-      });
-    });
-
-    return Array.from(topicMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-  }
+  // Supprimé calculateTopicStats car non utilisée
 
   /**
    * Calcule le percentile approximatif pour une métrique donnée

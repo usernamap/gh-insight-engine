@@ -225,32 +225,66 @@ export interface GitHubRepo {
   userId?: string; // Reference to users collection
 }
 
-// User Profile Interface
+// User Profile Interface - Structure exacte de l'API GitHub REST
 export interface UserProfile {
-  _id?: string;
+  _id?: string; // Pour MongoDB
+
+  // Champs publics de base (toujours présents)
   login: string;
-  name: string;
-  email: string;
-  avatarUrl: string;
-  bio: string;
-  company: string;
-  location: string;
-  blog: string;
-  twitterUsername: string;
+  id: number; // GitHub ID numérique
+  node_id: string;
+  avatar_url: string;
+  gravatar_id: string;
+  url: string;
+  html_url: string;
+  followers_url: string;
+  following_url: string;
+  gists_url: string;
+  starred_url: string;
+  subscriptions_url: string;
+  organizations_url: string;
+  repos_url: string;
+  events_url: string;
+  received_events_url: string;
+  type: string; // "User" ou "Organization"
+  site_admin: boolean;
+
+  // Informations de profil (peuvent être null)
+  name: string | null;
+  company: string | null;
+  blog: string | null;
+  location: string | null;
+  email: string | null;
+  hireable: boolean | null;
+  bio: string | null;
+  twitter_username: string | null;
+
+  // Compteurs publics
+  public_repos: number;
+  public_gists: number;
   followers: number;
   following: number;
-  publicRepos: number;
-  publicGists: number;
-  privateRepos: number;
-  ownedPrivateRepos: number;
-  totalPrivateRepos: number;
-  collaborators: number;
-  createdAt: Date;
-  updatedAt: Date;
-  type: string;
-  siteAdmin: boolean;
-  hireable: boolean;
-  organizations: {
+
+  // Dates
+  created_at: Date;
+  updated_at: Date;
+
+  // Champs privés (seulement si authentifié et propriétaire)
+  private_gists?: number;
+  total_private_repos?: number;
+  owned_private_repos?: number;
+  disk_usage?: number;
+  collaborators?: number;
+  two_factor_authentication?: boolean;
+  plan?: {
+    name: string;
+    space: number;
+    private_repos: number;
+    collaborators: number;
+  };
+
+  // Champs pour compatibilité avec notre système existant
+  organizations?: {
     totalCount: number;
     nodes: GitHubOrganization[];
   };

@@ -168,8 +168,43 @@ export const authenticateJWT = async (
     }
 
     // Chargement des données utilisateur depuis la base de données
-    const user = await UserModel.findById(decoded.userId);
+    // ✅ CORRECTION: Gérer les userId temporaires (login) et les vrais ObjectIds
+    let user;
+
+    // Détecter si c'est un ObjectID MongoDB valide ou un login temporaire
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(decoded.userId);
+
+    if (isObjectId) {
+      // Cas normal : chercher par ObjectID
+      user = await UserModel.findById(decoded.userId);
+    } else {
+      // Cas temporaire : chercher par login (userId contient le login GitHub)
+      user = await UserModel.findByLogin(decoded.userId);
+    }
+
     if (!user) {
+      // ✅ NOUVEAU: Pour les userid temporaires, créer un user minimal si nécessaire
+      if (!isObjectId) {
+        // Permettre l'authentification avec user temporaire pour POST /users/{username}
+        logWithContext.auth('authenticate_jwt_temp_user', decoded.username, true, {
+          reason: 'temporary_authentication',
+          tempUserId: decoded.userId,
+        });
+
+        // Créer un utilisateur temporaire pour la requête
+        req.jwt = decoded;
+        req.user = {
+          id: decoded.userId, // ID temporaire (login)
+          username: decoded.username,
+          fullName: decoded.username,
+          githubToken: decoded.githubToken,
+        };
+
+        _next();
+        return;
+      }
+
+      // Cas normal : utilisateur avec ObjectID introuvable
       logWithContext.auth('authenticate_jwt', decoded.username, false, {
         reason: 'user_not_found',
       });

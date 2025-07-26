@@ -13,32 +13,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Collection: users
+// Collection: users - Structure exacte de l'API GitHub REST
 model User {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Champs publics de base (toujours présents) - Structure GitHub REST API
   login           String   @unique
-  name            String
-  email           String
-  avatarUrl       String
-  bio             String?
-  company         String?
-  location        String?
-  blog            String?
-  twitterUsername String?
-  followers       Int
-  following       Int
-  publicRepos     Int
-  publicGists     Int
-  privateRepos    Int?
-  ownedPrivateRepos Int?
-  totalPrivateRepos Int?
-  collaborators   Int?
-  createdAt       DateTime
-  updatedAt       DateTime
-  type            String
-  siteAdmin       Boolean
-  hireable        Boolean?
-  organizations   Json // { totalCount, nodes: [{ login, name, description, avatarUrl }] }
+  githubId        Int?     // GitHub ID numérique (field 'id' dans l'API) - optionnel temporairement
+  nodeId          String?  // GitHub node_id - optionnel temporairement
+  avatarUrl       String   // avatar_url
+  gravatarId      String?  // gravatar_id (peut être vide)
+  url             String?  // API URL - optionnel temporairement
+  htmlUrl         String?  // html_url - optionnel temporairement
+  followersUrl    String?  // followers_url - optionnel temporairement
+  followingUrl    String?  // following_url - optionnel temporairement
+  gistsUrl        String?  // gists_url - optionnel temporairement
+  starredUrl      String?  // starred_url - optionnel temporairement
+  subscriptionsUrl String? // subscriptions_url - optionnel temporairement
+  organizationsUrl String? // organizations_url - optionnel temporairement
+  reposUrl        String?  // repos_url - optionnel temporairement
+  eventsUrl       String?  // events_url - optionnel temporairement
+  receivedEventsUrl String? // received_events_url - optionnel temporairement
+  type            String   // "User" ou "Organization"
+  siteAdmin       Boolean  // site_admin
+  
+  // Informations de profil (peuvent être null)
+  name            String   // name (peut être vide mais pas null)
+  company         String?  // company
+  blog            String?  // blog
+  location        String?  // location
+  email           String   // email (peut être vide mais pas null)
+  hireable        Boolean? // hireable
+  bio             String?  // bio
+  twitterUsername String?  // twitter_username
+  
+  // Compteurs publics
+  publicRepos     Int      @default(0) // public_repos
+  publicGists     Int      @default(0) // public_gists
+  followers       Int      @default(0) // followers
+  following       Int      @default(0) // following
+  
+  // Dates
+  createdAt       DateTime // created_at
+  updatedAt       DateTime @updatedAt // updated_at - auto-update
+  
+  // Champs privés (seulement si authentifié et propriétaire)
+  privateGists    Int?     // private_gists
+  totalPrivateRepos Int?   // total_private_repos
+  ownedPrivateRepos Int?   // owned_private_repos
+  diskUsage       Int?     // disk_usage
+  collaborators   Int?     // collaborators
+  twoFactorAuth   Boolean? // two_factor_authentication
+  plan            Json?    // plan object { name, space, private_repos, collaborators }
+  
+  // Champs pour compatibilité avec notre système existant
+  organizations   Json?    // { totalCount, nodes: [{ login, name, description, avatarUrl }] }
   
   // Relations
   repositories    Repository[]

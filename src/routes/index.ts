@@ -2,6 +2,8 @@ import { Express, Request, Response, Router } from 'express';
 import authRoutes from './auth';
 import repositoryRoutes from './repositories';
 import userRoutes from './users';
+import summaryRoutes from './summary';
+import aiRoutes from './ai';
 import logger from '@/utils/logger';
 
 /**
@@ -38,6 +40,12 @@ export const setupRoutes = (app: Express): void => {
   // Routes repositories - Endpoint unique pour tous les repositories d'un utilisateur avec analyses complètes
   apiRouter.use('/repositories', repositoryRoutes);
 
+  // Routes summary - Analytics ultra-complets pour intégrations portfolio/CV
+  apiRouter.use('/summary', summaryRoutes);
+
+  // Routes AI - Analyses avancées avec Intelligence Artificielle
+  apiRouter.use('/ai', aiRoutes);
+
   // Montage du router API sous le préfixe /api
   app.use('/api', apiRouter);
 
@@ -49,8 +57,10 @@ export const setupRoutes = (app: Express): void => {
       '/api/auth/login',
       '/api/users/{username} - Données GitHub complètes',
       '/api/repositories/{username} - Repositories avec analyses DevOps',
+      '/api/summary/{username} - Analytics ultra-complets pour portfolio/CV',
+      '/api/ai/{username} - Analyses IA: qualité, sécurité, performances',
     ],
-    totalRoutes: 5,
+    totalRoutes: 7,
   });
 };
 
@@ -59,4 +69,5 @@ export {
   authRoutes,
   userRoutes,
   repositoryRoutes,
+  summaryRoutes,
 };
