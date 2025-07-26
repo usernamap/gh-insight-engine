@@ -11,6 +11,17 @@ const router = Router();
  */
 
 /**
+ * @route   GET /api/ai/status
+ * @desc    Récupère le statut du service IA et ses capacités
+ * @access  Public
+ * @note    IMPORTANT: Cette route doit être définie AVANT /:username pour éviter les conflits
+ */
+router.get(
+  '/status',
+  AIController.getAIServiceStatus,
+);
+
+/**
  * @route   POST /api/ai/:username
  * @desc    Lance une nouvelle analyse IA complète d'un utilisateur
  * @access  Private (authentification requise - utilisateur ne peut analyser que son propre profil)
@@ -32,17 +43,6 @@ router.get(
   optionalJWT,
   validateUserParams,
   AIController.getAIAnalysis,
-);
-
-/**
- * @route   GET /api/ai/status
- * @desc    Récupère le statut du service IA et ses capacités
- * @access  Public
- */
-router.get(
-  '/status',
-  optionalJWT,
-  AIController.getAIServiceStatus,
 );
 
 export default router;

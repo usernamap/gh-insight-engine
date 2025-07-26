@@ -1,118 +1,110 @@
-import openaiConfig from '@/config/openai';
-import logger from '@/utils/logger';
+import { DatasetModel } from '@/models/Dataset';
 import { UserModel } from '@/models/User';
 import { RepositoryModel } from '@/models/Repository';
-import { DatasetModel } from '@/models/Dataset';
+import openaiConfig from '@/config/openai';
+import logger from '@/utils/logger';
+import { InsightsExtension, AIInsightsSummary } from '@/types/insights';
 
-/**
- * Types pour l'analyse IA
- */
+// Types helpers pour le typage strict
 interface GitHubLicense {
-  key?: string;
-  name?: string;
-  url?: string;
-  spdx_id?: string;
+    key?: string;
+    name?: string;
+    url?: string;
+    spdx_id?: string;
 }
 
 interface CommitData {
-  totalCount: number;
+    totalCount: number;
 }
 
 interface LanguageData {
-  totalSize: number;
-  nodes: Array<{ name: string; size: number }>;
+    totalSize: number;
+    nodes: Array<{ name: string; size: number }>;
 }
 
-interface DatasetWithInsights {
-  userProfile: unknown;
-  repositories: unknown[];
-  metadata: unknown;
-  generatedAt: Date;
-  aiInsights?: unknown;
-}
-
+// Interface pour les données d'entrée de l'analyse IA
 export interface AIAnalysisInput {
-  userProfile: {
-    login: string;
-    name: string | null;
-    bio: string | null;
-    company: string | null;
-    location: string | null;
-    publicRepos: number;
-    followers: number;
-    following: number;
-    createdAt: Date;
-  };
-  repositories: Array<{
-    name: string;
-    description: string | null;
-    primaryLanguage: string | null;
-    languages: Record<string, number>;
-    stargazerCount: number;
-    forkCount: number;
-    openIssuesCount: number;
-    topics: string[];
-    createdAt: Date;
-    updatedAt: Date;
-    pushedAt: Date | null;
-    size: number;
-    hasIssuesEnabled: boolean;
-    hasWikiEnabled: boolean;
-    hasProjectsEnabled: boolean;
-    readmeEnabled: boolean | null;
-    license: GitHubLicense | null;
-  }>;
-  statistics: {
-    totalRepositories: number;
-    totalStars: number;
-    totalForks: number;
-    totalCommits: number;
-    totalLanguages: number;
-    totalLinesOfCode: number;
-    activeProjects: number;
-  };
+    userProfile: {
+        login: string;
+        name: string | null;
+        bio: string | null;
+        company: string | null;
+        location: string | null;
+        publicRepos: number;
+        followers: number;
+        following: number;
+        createdAt: Date;
+    };
+    repositories: Array<{
+        name: string;
+        description: string | null;
+        primaryLanguage: string | null;
+        languages: Record<string, number>;
+        stargazerCount: number;
+        forkCount: number;
+        openIssuesCount: number;
+        topics: string[];
+        createdAt: Date;
+        updatedAt: Date;
+        pushedAt: Date | null;
+        size: number;
+        hasIssuesEnabled: boolean;
+        hasWikiEnabled: boolean;
+        hasProjectsEnabled: boolean;
+        readmeEnabled: boolean | null;
+        license: GitHubLicense | null;
+    }>;
+    statistics: {
+        totalRepositories: number;
+        totalStars: number;
+        totalForks: number;
+        totalCommits: number;
+        totalLanguages: number;
+        totalLinesOfCode: number;
+        activeProjects: number;
+    };
 }
 
 export interface AIAnalysisResult {
-  qualityScore: number; // 0-100
-  maintenabilityScore: number; // 0-100
-  securityScore: number; // 0-100
-  innovationScore: number; // 0-100
-  overallHealthScore: number; // 0-10
+    qualityScore: number; // 0-100
+    maintenabilityScore: number; // 0-100
+    securityScore: number; // 0-100
+    innovationScore: number; // 0-100
+    overallHealthScore: number; // 0-10
 
-  estimatedVulnerabilities: number;
-  estimatedBugs: number;
-  estimatedBuildTime: number; // seconds
-  estimatedTestCoverage: number; // 0-100
+    estimatedVulnerabilities: number;
+    estimatedBugs: number;
+    estimatedBuildTime: number; // seconds
+    estimatedTestCoverage: number; // 0-100
 
-  qualityByOrganization: {
-    personal: number;
-    organization: number;
-    school: number;
-  };
+    qualityByOrganization: {
+        personal: number;
+        organization: number;
+        school: number;
+    };
 
-  repositoryScores: Array<{
-    name: string;
-    qualityScore: number;
-    recommendation: string;
-    strengths: string[];
-    improvementAreas: string[];
-  }>;
+    repositoryScores: Array<{
+        name: string;
+        qualityScore: number;
+        recommendation: string;
+        strengths: string[];
+        improvementAreas: string[];
+    }>;
 
-  insights: {
-    summary: string;
-    strengths: string[];
-    weaknesses: string[];
-    recommendations: string[];
-    careerAdvice: string[];
-  };
+    insights: {
+        summary: string;
+        strengths: string[];
+        weaknesses: string[];
+        recommendations: string[];
+        careerAdvice: string[];
+    };
 
-  metadata: {
-    analysisDate: Date;
-    model: string;
-    confidenceScore: number;
-    analysisVersion: string;
-  };
+    metadata: {
+        analysisDate: Date;
+        model: string;
+        confidenceScore: number;
+        analysisVersion: string;
+    };
 }
 
 /**
@@ -120,8 +112,8 @@ export interface AIAnalysisResult {
  */
 export class AIAnalysisService {
   /**
-   * Lance une analyse IA complète d'un utilisateur
-   */
+         * Lance une analyse IA complète d'un utilisateur
+         */
   public static async analyzeUser(username: string): Promise<AIAnalysisResult> {
     const startTime = Date.now();
 
@@ -163,7 +155,7 @@ export class AIAnalysisService {
       const aiResult = await this.performAIAnalysis(analysisInput);
 
       // 5. Sauvegarde des résultats
-      await this.saveAIAnalysis(userData.id, aiResult);
+      await this.saveAIAnalysis(username, aiResult);
 
       const processingTime = Date.now() - startTime;
       logger.info('Analyse IA terminée', {
@@ -180,29 +172,76 @@ export class AIAnalysisService {
   }
 
   /**
-   * Récupère une analyse IA existante
-   */
-  public static async getExistingAnalysis(
-    username: string,
-  ): Promise<AIAnalysisResult | null> {
+         * Récupère une analyse IA existante depuis la base de données
+         */
+  public static async getExistingAnalysis(username: string): Promise<AIAnalysisResult | null> {
     try {
+      // Trouver l'utilisateur par username
       const userData = await UserModel.findByLogin(username);
+
       if (userData === null) {
+        logger.debug('Utilisateur non trouvé pour récupération analyse IA', { username });
         return null;
       }
 
-      const dataset = (await DatasetModel.findByUsername(
+      // Trouver le dataset le plus récent avec une analyse IA
+      const latestDataset = await DatasetModel.findLatestByUserId(userData.id);
+
+      if (latestDataset?.aiInsights == null) {
+        logger.debug('Aucune analyse IA trouvée', { username, userId: userData.id });
+        return null;
+      }
+
+      // Extraire les données d'analyse IA
+      const aiInsights = latestDataset.aiInsights as unknown as { aiInsights: AIInsightsSummary };
+
+      // Reconvertir vers notre format AIAnalysisResult
+      const analysisResult: AIAnalysisResult = {
+        qualityScore: this.extractScoreFromHighlights(aiInsights.aiInsights.executiveSummary.keyHighlights, 'qualité'),
+        maintenabilityScore: Math.round(aiInsights.aiInsights.confidence * 0.9),
+        securityScore: this.extractScoreFromHighlights(aiInsights.aiInsights.executiveSummary.keyHighlights, 'sécurité'),
+        innovationScore: this.extractScoreFromHighlights(aiInsights.aiInsights.executiveSummary.keyHighlights, 'innovation'),
+        overallHealthScore: Math.min(10, Math.round(aiInsights.aiInsights.confidence / 10)),
+        estimatedVulnerabilities: 10, // Valeur par défaut, à améliorer
+        estimatedBugs: 50, // Valeur par défaut, à améliorer
+        estimatedBuildTime: 120,
+        estimatedTestCoverage: 65,
+        qualityByOrganization: {
+          personal: 60,
+          organization: 70,
+          school: 50,
+        },
+        repositoryScores: aiInsights.aiInsights.skills.technical.map(skill => ({
+          name: skill.skill,
+          qualityScore: skill.confidence,
+          recommendation: skill.evidence[0] ?? 'Continuer à développer',
+          strengths: skill.evidence,
+          improvementAreas: ['Tests unitaires', 'Documentation'],
+        })),
+        insights: {
+          summary: aiInsights.aiInsights.personality.description,
+          strengths: aiInsights.aiInsights.executiveSummary.majorStrengths,
+          weaknesses: [], // À améliorer si nécessaire
+          recommendations: aiInsights.aiInsights.executiveSummary.primaryRecommendations,
+          careerAdvice: aiInsights.aiInsights.skills.leadership.indicators,
+        },
+        metadata: {
+          analysisDate: aiInsights.aiInsights.generatedAt,
+          model: aiInsights.aiInsights.model,
+          confidenceScore: aiInsights.aiInsights.confidence,
+          analysisVersion: aiInsights.aiInsights.metadata.analysisVersion,
+        },
+      };
+
+      logger.info('Analyse IA récupérée avec succès', {
         username,
-      )) as DatasetWithInsights | null;
+        datasetId: latestDataset.id,
+        analysisDate: aiInsights.aiInsights.generatedAt,
+      });
 
-      const hasAiInsights = dataset?.aiInsights !== null && dataset?.aiInsights !== undefined;
-      if (dataset === null || !hasAiInsights) {
-        return null;
-      }
-
-      return dataset.aiInsights as AIAnalysisResult;
+      return analysisResult;
     } catch (error) {
-      logger.error('Erreur récupération analyse IA', {
+      logger.error('Erreur lors de la récupération analyse IA', {
         username,
         error: String(error),
       });
@@ -211,8 +250,8 @@ export class AIAnalysisService {
   }
 
   /**
-   * Prépare les données pour l'analyse IA
-   */
+         * Prépare les données pour l'analyse IA
+         */
   private static prepareAnalysisInput(
     userData: { [key: string]: unknown },
     repositories: { [key: string]: unknown }[],
@@ -221,8 +260,8 @@ export class AIAnalysisService {
     const totalCommits = repositories.reduce((sum, repo) => {
       if (
         repo.commits !== null &&
-        repo.commits !== undefined &&
-        typeof repo.commits === 'object'
+                repo.commits !== undefined &&
+                typeof repo.commits === 'object'
       ) {
         const commits = repo.commits as CommitData;
         return sum + (commits.totalCount ?? 0);
@@ -233,8 +272,8 @@ export class AIAnalysisService {
     const totalLinesOfCode = repositories.reduce((sum, repo) => {
       if (
         repo.languages !== null &&
-        repo.languages !== undefined &&
-        typeof repo.languages === 'object'
+                repo.languages !== undefined &&
+                typeof repo.languages === 'object'
       ) {
         const languages = repo.languages as LanguageData;
         return sum + (languages.totalSize ?? 0);
@@ -300,13 +339,13 @@ export class AIAnalysisService {
   }
 
   /**
-   * Extrait les langages d'un repository
-   */
+         * Extrait les langages d'un repository
+         */
   private static extractLanguages(languages: unknown): Record<string, number> {
     if (
       languages === null ||
-      languages === undefined ||
-      typeof languages !== 'object'
+            languages === undefined ||
+            typeof languages !== 'object'
     ) {
       return {};
     }
@@ -315,14 +354,14 @@ export class AIAnalysisService {
     const languageData = languages as LanguageData;
     if (
       languageData.nodes !== null &&
-      languageData.nodes !== undefined &&
-      Array.isArray(languageData.nodes)
+            languageData.nodes !== undefined &&
+            Array.isArray(languageData.nodes)
     ) {
       languageData.nodes.forEach((lang) => {
         if (
           lang.name !== null &&
-          lang.name !== undefined &&
-          typeof lang.size === 'number'
+                    lang.name !== undefined &&
+                    typeof lang.size === 'number'
         ) {
           result[lang.name] = lang.size;
         }
@@ -333,8 +372,8 @@ export class AIAnalysisService {
   }
 
   /**
-   * Effectue l'analyse IA avec GPT-4o-mini
-   */
+         * Effectue l'analyse IA avec GPT-4o-mini
+         */
   private static async performAIAnalysis(
     input: AIAnalysisInput,
   ): Promise<AIAnalysisResult> {
@@ -353,7 +392,7 @@ export class AIAnalysisService {
           {
             role: 'system',
             content:
-              'Tu es un expert en analyse de code et développement logiciel. Tu analyses les profils GitHub pour fournir des insights précis sur la qualité, la sécurité et les performances. Réponds UNIQUEMENT en JSON valide selon le schéma demandé.',
+                            'Tu es un expert en analyse de code et développement logiciel. Tu analyses les profils GitHub pour fournir des insights précis sur la qualité, la sécurité et les performances. Réponds UNIQUEMENT en JSON valide selon le schéma demandé.',
           },
           {
             role: 'user',
@@ -383,8 +422,8 @@ export class AIAnalysisService {
   }
 
   /**
-   * Construit le prompt pour l'analyse IA
-   */
+         * Construit le prompt pour l'analyse IA
+         */
   private static buildAnalysisPrompt(input: AIAnalysisInput): string {
     return `
 Analyse ce profil GitHub et génère un JSON avec les métriques suivantes:
@@ -454,8 +493,8 @@ Génère UNIQUEMENT ce JSON (sans markdown):
   }
 
   /**
-   * Valide et complète le résultat IA
-   */
+         * Valide et complète le résultat IA
+         */
   private static validateAndCompleteResult(
     aiResult: Partial<AIAnalysisResult>,
     input: AIAnalysisInput,
@@ -506,8 +545,8 @@ Génère UNIQUEMENT ce JSON (sans markdown):
 
       insights: {
         summary:
-          aiResult.insights?.summary ??
-          `Développeur avec ${input.statistics.totalRepositories} repositories et ${input.statistics.totalStars} stars.`,
+                    aiResult.insights?.summary ??
+                    `Développeur avec ${input.statistics.totalRepositories} repositories et ${input.statistics.totalStars} stars.`,
         strengths: aiResult.insights?.strengths ?? [
           'Activité régulière',
           'Diversité technologique',
@@ -537,23 +576,23 @@ Génère UNIQUEMENT ce JSON (sans markdown):
   }
 
   /**
-   * Génère un résultat de fallback en cas d'erreur IA
-   */
+         * Génère un résultat de fallback en cas d'erreur IA
+         */
   private static generateFallbackResult(
     input: AIAnalysisInput,
   ): AIAnalysisResult {
     const avgStarsPerRepo =
-      input.statistics.totalRepositories > 0
-        ? input.statistics.totalStars / input.statistics.totalRepositories
-        : 0;
+            input.statistics.totalRepositories > 0
+              ? input.statistics.totalStars / input.statistics.totalRepositories
+              : 0;
 
     const qualityScore = Math.min(
       100,
       Math.round(
         avgStarsPerRepo * 20 +
-          input.statistics.activeProjects * 5 +
-          input.statistics.totalLanguages * 3 +
-          Math.min(30, input.userProfile.followers),
+                input.statistics.activeProjects * 5 +
+                input.statistics.totalLanguages * 3 +
+                Math.min(30, input.userProfile.followers),
       ),
     );
 
@@ -587,16 +626,16 @@ Génère UNIQUEMENT ce JSON (sans markdown):
           Math.max(
             20,
             repo.stargazerCount * 15 +
-              (repo.description !== null && repo.description !== undefined
-                ? 20
-                : 0),
+                        (repo.description !== null && repo.description !== undefined
+                          ? 20
+                          : 0),
           ),
         ),
         recommendation: 'Améliorer la documentation',
         strengths:
-          repo.description !== null && repo.description !== undefined
-            ? ['Documentation présente']
-            : [],
+                    repo.description !== null && repo.description !== undefined
+                      ? ['Documentation présente']
+                      : [],
         improvementAreas: ['Tests automatisés', 'CI/CD'],
       })),
 
@@ -624,32 +663,245 @@ Génère UNIQUEMENT ce JSON (sans markdown):
   }
 
   /**
-   * Sauvegarde l'analyse IA dans la base de données
-   */
+         * Sauvegarde l'analyse IA dans la base de données
+         */
   private static async saveAIAnalysis(
-    userId: string,
-    analysis: AIAnalysisResult,
+    username: string,
+    analysisResult: AIAnalysisResult,
   ): Promise<void> {
     try {
-      // Pour l'instant, on log seulement car les méthodes DatasetModel semblent avoir des problèmes
-      logger.info('Analyse IA à sauvegarder', {
-        userId,
-        qualityScore: analysis.qualityScore,
-        model: analysis.metadata.model,
-      });
+      // Trouver le dataset le plus récent de l'utilisateur
+      const userData = await UserModel.findByLogin(username);
 
-      // TODO: Implémenter la sauvegarde quand les méthodes DatasetModel seront corrigées
-      // const dataset = await DatasetModel.findByUserId(userId);
-      // if (dataset) {
-      //   await DatasetModel.updateInsights(dataset.id, analysis);
-      // }
+      if (userData === null) {
+        logger.warn('Utilisateur non trouvé pour sauvegarde analyse IA', { username });
+        return;
+      }
+
+      const latestDataset = await DatasetModel.findLatestByUserId(userData.id);
+
+      if (latestDataset === null) {
+        logger.warn('Aucun dataset trouvé pour sauvegarde analyse IA', { username, userId: userData.id });
+        return;
+      }
+
+      // Convertir notre format vers InsightsExtension
+      const insightsExtension = this.convertToInsightsExtension(analysisResult);
+
+      // Sauvegarder l'analyse IA
+      await DatasetModel.updateInsights(latestDataset.id, insightsExtension);
+
+      logger.info('Analyse IA sauvegardée avec succès', {
+        username,
+        datasetId: latestDataset.id,
+        qualityScore: analysisResult.qualityScore,
+        securityScore: analysisResult.securityScore,
+      });
     } catch (error) {
-      logger.error('Erreur sauvegarde analyse IA', {
-        userId,
+      logger.error('Erreur lors de la sauvegarde analyse IA', {
+        username,
         error: String(error),
       });
-      // Ne pas throw car c'est un problème de sauvegarde, pas d'analyse
+      // Ne pas lancer l'erreur pour ne pas interrompre le processus principal
     }
+  }
+
+  /**
+         * Convertit notre format d'analyse vers InsightsExtension
+         */
+  private static convertToInsightsExtension(analysisResult: AIAnalysisResult): InsightsExtension {
+    const now = new Date();
+
+    // Créer un format compatible avec AIInsightsSummary
+    const aiInsightsSummary: AIInsightsSummary = {
+      userId: 'temp_user_id', // Sera mis à jour par le DatasetModel
+      generatedAt: now,
+      model: 'gpt-4o-mini',
+      confidence: analysisResult.metadata?.confidenceScore ?? 50,
+
+      // Mapper nos données vers le format attendu
+      personality: {
+        archetype: 'builder',
+        description: analysisResult.insights?.summary ?? 'Analyse du profil développeur',
+        strengths: analysisResult.insights?.strengths ?? [],
+        workingStyle: {
+          preferredProjectSize: 'mixed',
+          collaborationStyle: 'contributor',
+          learningApproach: 'hands_on',
+          problemSolving: 'analytical',
+        },
+        motivations: analysisResult.insights?.strengths ?? [],
+        potentialChallenges: analysisResult.insights?.recommendations ?? [],
+      },
+
+      skills: {
+        technical: (analysisResult.repositoryScores ?? []).slice(0, 5).map(repo => ({
+          skill: repo.name,
+          proficiency: repo.qualityScore > 70 ? 'proficient' : repo.qualityScore > 50 ? 'competent' : 'advanced_beginner' as const,
+          confidence: repo.qualityScore,
+          evidenceStrength: repo.qualityScore > 70 ? 'strong' : repo.qualityScore > 50 ? 'moderate' : 'weak' as const,
+          evidence: repo.strengths ?? [],
+          growthPotential: 'moderate' as const,
+          marketDemand: 'moderate' as const,
+        })),
+        soft: [
+          {
+            skill: 'Problem Solving',
+            level: 'competent' as const,
+            indicators: analysisResult.insights?.strengths ?? [],
+            impactOnCareer: 'significant' as const,
+          },
+        ],
+        leadership: {
+          current: 'individual_contributor' as const,
+          potential: 'emerging' as const,
+          indicators: analysisResult.insights?.careerAdvice ?? [],
+        },
+      },
+
+      career: {
+        currentLevel: analysisResult.qualityScore > 80 ? 'senior' : analysisResult.qualityScore > 60 ? 'mid_level' : 'junior' as const,
+        experienceIndicators: analysisResult.insights?.strengths ?? [],
+        trajectory: {
+          direction: 'ascending' as const,
+          velocity: 'steady' as const,
+          confidence: analysisResult.metadata?.confidenceScore ?? 50,
+        },
+        suitableRoles: (analysisResult.insights?.careerAdvice ?? []).map(advice => ({
+          role: advice,
+          fit: 75,
+          reasoning: 'Basé sur l\'analyse des compétences',
+          requirements: [],
+          growthPath: 'Continue learning and practicing',
+        })),
+        marketPosition: {
+          competitiveness: analysisResult.qualityScore > 70 ? 'above_average' : 'average' as const,
+          uniqueValueProposition: analysisResult.insights?.summary ?? '',
+          differentiators: analysisResult.insights?.strengths ?? [],
+          gaps: analysisResult.insights?.recommendations ?? [],
+        },
+      },
+
+      productivity: {
+        patterns: {
+          peakPerformance: {
+            timeOfDay: 'Matin',
+            dayOfWeek: 'Jours de semaine',
+            seasonality: 'Constante',
+            reasoning: 'Basé sur l\'analyse des commits',
+          },
+          consistency: {
+            level: 'consistent' as const,
+            factors: ['Engagement régulier'],
+            recommendations: analysisResult.insights?.recommendations ?? [],
+          },
+        },
+        efficiency: {
+          codeToImpactRatio: analysisResult.qualityScore > 70 ? 'high' : 'moderate' as const,
+          problemSolvingSpeed: 'steady' as const,
+          qualityConsistency: 'consistent' as const,
+          analysis: analysisResult.insights?.summary ?? '',
+        },
+        workLifeBalance: {
+          sustainabilityScore: Math.max(50, analysisResult.qualityScore),
+          riskFactors: [],
+          positiveIndicators: analysisResult.insights?.strengths ?? [],
+          recommendations: analysisResult.insights?.recommendations ?? [],
+        },
+      },
+
+      recommendations: {
+        immediate: (analysisResult.insights?.recommendations ?? []).slice(0, 3).map(rec => ({
+          category: 'skill' as const,
+          recommendation: rec,
+          reasoning: 'Amélioration prioritaire identifiée',
+          expectedImpact: 'moderate' as const,
+          effort: 'medium' as const,
+          resources: [],
+        })),
+        shortTerm: [
+          {
+            goal: 'Amélioration de la qualité du code',
+            timeframe: '3-6 mois',
+            steps: analysisResult.insights?.recommendations ?? [],
+            metrics: ['Couverture de tests', 'Complexité du code'],
+          },
+        ],
+        longTerm: [
+          {
+            vision: 'Développeur expérimenté',
+            milestones: analysisResult.insights?.careerAdvice ?? [],
+            skills: [],
+            experience: [],
+          },
+        ],
+      },
+
+      strengths: {
+        core: (analysisResult.insights?.strengths ?? []).map(strength => ({
+          strength,
+          manifestation: ['Visible dans les projets'],
+          evidence: ['Analyse des repositories'],
+          leverageOpportunities: ['Projets plus complexes'],
+        })),
+        emerging: [],
+        unique: [],
+      },
+
+      growth: {
+        skills: (analysisResult.insights?.recommendations ?? []).map(rec => ({
+          skill: rec,
+          currentGap: 'moderate' as const,
+          importance: 'beneficial' as const,
+          learningPath: ['Formation', 'Pratique'],
+          timeToCompetency: '3-6 mois',
+          careerImpact: 'Amélioration des opportunités',
+        })),
+        experiences: [],
+        relationships: [],
+      },
+
+      executiveSummary: {
+        keyHighlights: [
+          `Score de qualité: ${analysisResult.qualityScore}%`,
+          `Score de sécurité: ${analysisResult.securityScore}%`,
+          `Score d'innovation: ${analysisResult.innovationScore}%`,
+        ],
+        majorStrengths: analysisResult.insights?.strengths ?? [],
+        primaryRecommendations: analysisResult.insights?.recommendations ?? [],
+        careerOutlook: analysisResult.insights?.summary ?? '',
+      },
+
+      metadata: {
+        analysisVersion: analysisResult.metadata?.analysisVersion ?? '1.0.0',
+        dataPoints: (analysisResult.repositoryScores ?? []).length,
+        processingTime: 10, // Approximation
+        tokens: {
+          input: 1000,
+          output: 500,
+          total: 1500,
+        },
+      },
+    };
+
+    return {
+      aiInsights: aiInsightsSummary,
+      updatedAt: now,
+    };
+  }
+
+  /**
+         * Extrait un score numérique depuis les highlights
+         */
+  private static extractScoreFromHighlights(highlights: string[], keyword: string): number {
+    const highlight = highlights.find(h => h.toLowerCase().includes(keyword.toLowerCase()));
+    if (highlight != null) {
+      const match = highlight.match(/(\d+)%?/);
+      if (match != null) {
+        return parseInt(match[1], 10);
+      }
+    }
+    return 50; // Valeur par défaut
   }
 }
 
