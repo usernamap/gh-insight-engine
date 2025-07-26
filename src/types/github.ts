@@ -290,63 +290,6 @@ export interface UserProfile {
   };
 }
 
-// Dataset Metadata Interface
-export interface DatasetMetadata {
-  generatedAt: Date;
-  totalRepositories: number;
-  organizations: string[];
-  dataCollectionScope: string[];
-  breakdown: {
-    userRepositories: number;
-    organizationRepositories: Record<string, number>;
-    privateRepositories: number;
-    publicRepositories: number;
-    forkedRepositories: number;
-    archivedRepositories: number;
-    templateRepositories: number;
-  };
-  statistics: {
-    totalStars: number;
-    totalForks: number;
-    totalWatchers: number;
-    totalIssues: number;
-    totalPullRequests: number;
-    totalReleases: number;
-    totalCommits: number;
-    totalDeployments: number;
-    totalEnvironments: number;
-    totalLanguages: number;
-    averageRepoSize: number;
-    mostUsedLanguages: Array<{
-      language: string;
-      count: number;
-      totalSize: number;
-    }>;
-    topTopics: Array<{
-      topic: string;
-      count: number;
-    }>;
-    repositoriesWithWebsite: number;
-    repositoriesWithDeployments: number;
-    repositoriesWithActions: number;
-    repositoriesWithSecurityAlerts: number;
-    repositoriesWithPackages: number;
-    repositoriesWithBranchProtection: number;
-    averageCommunityHealth: number;
-  };
-}
-
-// Main Dataset Interface
-export interface Dataset {
-  _id?: string;
-  userProfile: string; // ObjectId reference
-  metadata: DatasetMetadata;
-  repositories: string[]; // ObjectId references
-  createdAt: Date;
-  updatedAt: Date;
-  aiInsights?: string; // Extension pour analyses IA
-}
-
 // API Request/Response Types
 export interface GitHubTokenValidationResult {
   valid: boolean;
@@ -354,20 +297,6 @@ export interface GitHubTokenValidationResult {
   scopes?: string[];
   error?: string;
   isNetworkError?: boolean;
-}
-
-export interface DatasetGenerationRequest {
-  username: string;
-  fullName: string;
-  githubToken: string;
-}
-
-export interface DatasetGenerationResponse {
-  message: string;
-  datasetId: string;
-  status: 'generated' | 'error';
-  file?: string;
-  error?: string;
 }
 
 // GraphQL Query Types

@@ -277,19 +277,6 @@ export const analysisQuerySchema = z.object({
 });
 
 /**
- * Schéma pour les paramètres de dataset
- */
-export const datasetParamsSchema = z.object({
-  id: z
-    .string()
-    .length(24, "L'ID du dataset doit être un ObjectId MongoDB valide")
-    .regex(
-      /^[0-9a-fA-F]{24}$/,
-      "L'ID du dataset doit être un ObjectId MongoDB valide",
-    ),
-});
-
-/**
  * Schéma pour la mise à jour des métadonnées
  */
 export const metadataUpdateSchema = z.object({
@@ -336,13 +323,6 @@ export const validateUserParams = validate({
  */
 export const validateRepoParams = validate({
   params: repoParamsSchema,
-});
-
-/**
- * Validation pour les paramètres dataset
- */
-export const validateDatasetParams = validate({
-  params: datasetParamsSchema,
 });
 
 /**

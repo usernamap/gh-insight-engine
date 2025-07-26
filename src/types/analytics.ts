@@ -250,7 +250,7 @@ export interface AnalyticsRecommendation {
   metrics: string[]; // Métriques qui seront impactées
 }
 
-// Export du type principal pour l'extension du Dataset
+// Export du type principal pour les analyses quantitatives
 export interface AnalyticsExtension {
   analytics: AnalyticsOverview;
   benchmarks: ComparisonMetrics;

@@ -326,7 +326,7 @@ export interface InsightValidation {
   timestamp: Date;
 }
 
-// Export du type principal pour l'extension du Dataset
+// Export du type principal pour les analyses IA
 export interface InsightsExtension {
   aiInsights: AIInsightsSummary;
   validation?: InsightValidation[];

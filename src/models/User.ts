@@ -87,10 +87,6 @@ export class UserModel {
             take: 10, // Limite pour éviter les réponses trop lourdes
             orderBy: { pushedAt: 'desc' },
           },
-          datasets: {
-            take: 5,
-            orderBy: { updatedAt: 'desc' },
-          },
         },
       });
 
@@ -219,11 +215,6 @@ export class UserModel {
 
     try {
       await databaseConfig.transaction(async (tx: PrismaClient) => {
-        // Supprimer les datasets associés
-        await tx.dataset.deleteMany({
-          where: { userProfileId: id },
-        });
-
         // Supprimer les repositories associés
         await tx.repository.deleteMany({
           where: { userId: id },

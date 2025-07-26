@@ -15,193 +15,172 @@ datasource db {
 
 // Collection: users - Structure exacte de l'API GitHub REST
 model User {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
   // Champs publics de base (toujours présents) - Structure GitHub REST API
-  login           String   @unique
-  githubId        Int?     // GitHub ID numérique (field 'id' dans l'API) - optionnel temporairement
-  nodeId          String?  // GitHub node_id - optionnel temporairement
-  avatarUrl       String   // avatar_url
-  gravatarId      String?  // gravatar_id (peut être vide)
-  url             String?  // API URL - optionnel temporairement
-  htmlUrl         String?  // html_url - optionnel temporairement
-  followersUrl    String?  // followers_url - optionnel temporairement
-  followingUrl    String?  // following_url - optionnel temporairement
-  gistsUrl        String?  // gists_url - optionnel temporairement
-  starredUrl      String?  // starred_url - optionnel temporairement
-  subscriptionsUrl String? // subscriptions_url - optionnel temporairement
-  organizationsUrl String? // organizations_url - optionnel temporairement
-  reposUrl        String?  // repos_url - optionnel temporairement
-  eventsUrl       String?  // events_url - optionnel temporairement
+  login             String  @unique
+  githubId          Int? // GitHub ID numérique (field 'id' dans l'API) - optionnel temporairement
+  nodeId            String? // GitHub node_id - optionnel temporairement
+  avatarUrl         String // avatar_url
+  gravatarId        String? // gravatar_id (peut être vide)
+  url               String? // API URL - optionnel temporairement
+  htmlUrl           String? // html_url - optionnel temporairement
+  followersUrl      String? // followers_url - optionnel temporairement
+  followingUrl      String? // following_url - optionnel temporairement
+  gistsUrl          String? // gists_url - optionnel temporairement
+  starredUrl        String? // starred_url - optionnel temporairement
+  subscriptionsUrl  String? // subscriptions_url - optionnel temporairement
+  organizationsUrl  String? // organizations_url - optionnel temporairement
+  reposUrl          String? // repos_url - optionnel temporairement
+  eventsUrl         String? // events_url - optionnel temporairement
   receivedEventsUrl String? // received_events_url - optionnel temporairement
-  type            String   // "User" ou "Organization"
-  siteAdmin       Boolean  // site_admin
-  
+  type              String // "User" ou "Organization"
+  siteAdmin         Boolean // site_admin
+
   // Informations de profil (peuvent être null)
-  name            String   // name (peut être vide mais pas null)
-  company         String?  // company
-  blog            String?  // blog
-  location        String?  // location
-  email           String   // email (peut être vide mais pas null)
+  name            String // name (peut être vide mais pas null)
+  company         String? // company
+  blog            String? // blog
+  location        String? // location
+  email           String // email (peut être vide mais pas null)
   hireable        Boolean? // hireable
-  bio             String?  // bio
-  twitterUsername String?  // twitter_username
-  
+  bio             String? // bio
+  twitterUsername String? // twitter_username
+
   // Compteurs publics
-  publicRepos     Int      @default(0) // public_repos
-  publicGists     Int      @default(0) // public_gists
-  followers       Int      @default(0) // followers
-  following       Int      @default(0) // following
-  
+  publicRepos Int @default(0) // public_repos
+  publicGists Int @default(0) // public_gists
+  followers   Int @default(0) // followers
+  following   Int @default(0) // following
+
   // Dates
-  createdAt       DateTime // created_at
-  updatedAt       DateTime @updatedAt // updated_at - auto-update
-  
+  createdAt DateTime // created_at
+  updatedAt DateTime @updatedAt // updated_at - auto-update
+
   // Champs privés (seulement si authentifié et propriétaire)
-  privateGists    Int?     // private_gists
-  totalPrivateRepos Int?   // total_private_repos
-  ownedPrivateRepos Int?   // owned_private_repos
-  diskUsage       Int?     // disk_usage
-  collaborators   Int?     // collaborators
-  twoFactorAuth   Boolean? // two_factor_authentication
-  plan            Json?    // plan object { name, space, private_repos, collaborators }
-  
+  privateGists      Int? // private_gists
+  totalPrivateRepos Int? // total_private_repos
+  ownedPrivateRepos Int? // owned_private_repos
+  diskUsage         Int? // disk_usage
+  collaborators     Int? // collaborators
+  twoFactorAuth     Boolean? // two_factor_authentication
+  plan              Json? // plan object { name, space, private_repos, collaborators }
+
   // Champs pour compatibilité avec notre système existant
-  organizations   Json?    // { totalCount, nodes: [{ login, name, description, avatarUrl }] }
-  
+  organizations Json? // { totalCount, nodes: [{ login, name, description, avatarUrl }] }
+
   // Relations
-  repositories    Repository[]
-  datasets        Dataset[]
-  aiAnalyses      AIAnalysis[]
-  
+  repositories Repository[]
+  aiAnalyses   AIAnalysis[]
+
   @@map("users")
 }
 
 // Collection: repositories  
 model Repository {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  nameWithOwner     String   @unique
-  name              String
-  description       String?
-  isPrivate         Boolean
-  isArchived        Boolean
-  isFork            Boolean
-  isTemplate        Boolean
-  stargazerCount    Int
-  forkCount         Int
-  watchersCount     Int
-  subscriberCount   Int?
-  networkCount      Int?
-  openIssuesCount   Int
-  primaryLanguage   String?
-  languages         Json // { totalSize, nodes: [{ name, size, percentage }] }
-  topics            String[]
-  pushedAt          DateTime?
-  updatedAt         DateTime
-  createdAt         DateTime
-  homepageUrl       String?
-  size              Int
-  defaultBranchRef  String?
-  license           Json? // { name, spdxId, url }
-  hasIssuesEnabled  Boolean
-  hasProjectsEnabled Boolean
-  hasWikiEnabled    Boolean
-  hasPages          Boolean?
-  hasDownloads      Boolean?
-  hasDiscussions    Boolean?
-  vulnerabilityAlertsEnabled Boolean?
-  securityPolicyEnabled Boolean?
-  codeOfConductEnabled Boolean?
+  id                            String    @id @default(auto()) @map("_id") @db.ObjectId
+  nameWithOwner                 String    @unique
+  name                          String
+  description                   String?
+  isPrivate                     Boolean
+  isArchived                    Boolean
+  isFork                        Boolean
+  isTemplate                    Boolean
+  stargazerCount                Int
+  forkCount                     Int
+  watchersCount                 Int
+  subscriberCount               Int?
+  networkCount                  Int?
+  openIssuesCount               Int
+  primaryLanguage               String?
+  languages                     Json // { totalSize, nodes: [{ name, size, percentage }] }
+  topics                        String[]
+  pushedAt                      DateTime?
+  updatedAt                     DateTime
+  createdAt                     DateTime
+  homepageUrl                   String?
+  size                          Int
+  defaultBranchRef              String?
+  license                       Json? // { name, spdxId, url }
+  hasIssuesEnabled              Boolean
+  hasProjectsEnabled            Boolean
+  hasWikiEnabled                Boolean
+  hasPages                      Boolean?
+  hasDownloads                  Boolean?
+  hasDiscussions                Boolean?
+  vulnerabilityAlertsEnabled    Boolean?
+  securityPolicyEnabled         Boolean?
+  codeOfConductEnabled          Boolean?
   contributingGuidelinesEnabled Boolean?
-  readmeEnabled     Boolean?
-  deployments       Json // { totalCount }
-  environments      Json // { totalCount }
-  commits           Json // { totalCount, recent: [{ oid, message, committedDate, author, additions, deletions, changedFiles }] }
-  releases          Json // { totalCount, latestRelease: { name, tagName, publishedAt, isLatest } | null }
-  issues            Json // { totalCount, openCount, closedCount }
-  pullRequests      Json // { totalCount, openCount, closedCount, mergedCount }
-  branchProtectionRules Json // { totalCount }
-  collaborators     Json // { totalCount }
-  
-  // Champs optionnels - DevOps enrichment
-  githubActions     Json? // GitHubActions type
-  security          Json? // GitHubSecurity type  
-  packages          Json? // GitHubPackages type
-  branchProtection  Json? // GitHubBranchProtection type
-  community         Json? // GitHubCommunity type
-  traffic           Json? // GitHubTraffic type
-  
-  diskUsage         Int?
-  owner             Json // { login, type, avatarUrl }
-  
-  // Relations
-  userId            String @db.ObjectId
-  user              User   @relation(fields: [userId], references: [id])
-  
-  @@map("repositories")
-}
+  readmeEnabled                 Boolean?
+  deployments                   Json // { totalCount }
+  environments                  Json // { totalCount }
+  commits                       Json // { totalCount, recent: [{ oid, message, committedDate, author, additions, deletions, changedFiles }] }
+  releases                      Json // { totalCount, latestRelease: { name, tagName, publishedAt, isLatest } | null }
+  issues                        Json // { totalCount, openCount, closedCount }
+  pullRequests                  Json // { totalCount, openCount, closedCount, mergedCount }
+  branchProtectionRules         Json // { totalCount }
+  collaborators                 Json // { totalCount }
 
-// Collection: datasets
-model Dataset {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  userProfileId String   @db.ObjectId
-  metadata     Json     // DatasetMetadata type selon spécifications
-  repositories String[] @db.ObjectId // References to repositories collection
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  // Extensions pour analyses
-  aiInsights   Json?    // AIInsightsSummary type - Extension pour analyses IA
-  analytics    Json?    // AnalyticsExtension type - Extension pour analyses quantitatives
-  
-  // Relation
-  userProfile  User     @relation(fields: [userProfileId], references: [id])
-  
-  @@map("datasets")
+  // Champs optionnels - DevOps enrichment
+  githubActions    Json? // GitHubActions type
+  security         Json? // GitHubSecurity type  
+  packages         Json? // GitHubPackages type
+  branchProtection Json? // GitHubBranchProtection type
+  community        Json? // GitHubCommunity type
+  traffic          Json? // GitHubTraffic type
+
+  diskUsage Int?
+  owner     Json // { login, type, avatarUrl }
+
+  // Relations
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("repositories")
 }
 
 // Collection: ai_analyses - Analyses IA spécialisées
 model AIAnalysis {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  username        String   // GitHub username
-  userId          String   @db.ObjectId // Référence vers User
-  
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  username String // GitHub username
+  userId   String @db.ObjectId // Référence vers User
+
   // Données d'analyse IA complètes
-  qualityScore           Float
-  maintenabilityScore    Float
-  securityScore          Float
-  innovationScore        Float
-  overallHealthScore     Float
-  
+  qualityScore        Float
+  maintenabilityScore Float
+  securityScore       Float
+  innovationScore     Float
+  overallHealthScore  Float
+
   // Estimations IA
   estimatedVulnerabilities Int
-  estimatedBugs           Int
-  estimatedBuildTime      Int
-  estimatedTestCoverage   Float
-  
+  estimatedBugs            Int
+  estimatedBuildTime       Int
+  estimatedTestCoverage    Float
+
   // Scores par organisation
-  qualityByOrganization  Json // { personal: number, organization: number, school: number }
-  
+  qualityByOrganization Json // { personal: number, organization: number, school: number }
+
   // Scores des repositories
-  repositoryScores       Json // Array<{ name: string, qualityScore: number, recommendation: string, strengths: string[], improvementAreas: string[] }>
-  
+  repositoryScores Json // Array<{ name: string, qualityScore: number, recommendation: string, strengths: string[], improvementAreas: string[] }>
+
   // Insights générés par l'IA
-  insights               Json // { summary: string, strengths: string[], weaknesses: string[], recommendations: string[], careerAdvice: string[] }
-  
+  insights Json // { summary: string, strengths: string[], weaknesses: string[], recommendations: string[], careerAdvice: string[] }
+
   // Métadonnées
-  metadata               Json // { analysisDate: Date, model: string, confidenceScore: number, analysisVersion: string }
-  
+  metadata Json // { analysisDate: Date, model: string, confidenceScore: number, analysisVersion: string }
+
   // Timestamps
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relation
-  user           User     @relation(fields: [userId], references: [id])
-  
+  user User @relation(fields: [userId], references: [id])
+
   // Index pour requêtes optimisées
   @@index([username])
   @@index([userId])
   @@index([createdAt])
-  
   @@map("ai_analyses")
 }

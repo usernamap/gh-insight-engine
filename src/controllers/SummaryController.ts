@@ -12,9 +12,9 @@ import { AuthenticatedUser } from '@/types/github';
  */
 export class SummaryController {
   /**
-   * Génère un summary ultra-complet d'un développeur
-   * GET /api/summary/:username
-   */
+       * Génère un summary ultra-complet d'un développeur
+       * GET /api/summary/:username
+       */
   static getDeveloperSummary = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { username } = req.params;
@@ -76,9 +76,9 @@ export class SummaryController {
         const totalLinesOfCode = repositories.reduce((sum, repo) => {
           if (repo.languages != null && typeof repo.languages === 'object') {
             const languages = repo.languages as {
-              totalSize: number;
-              nodes: Array<{ name: string; size: number }>;
-            };
+                            totalSize: number;
+                            nodes: Array<{ name: string; size: number }>;
+                        };
             return sum + (languages.totalSize ?? 0);
           }
           return sum;
@@ -98,10 +98,10 @@ export class SummaryController {
               const owner = repo.owner as { type?: string; name?: string };
               return (
                 owner.type === 'Organization' &&
-                (owner.name?.toLowerCase().includes('company') === true ||
-                  owner.name?.toLowerCase().includes('corp') === true ||
-                  owner.name?.toLowerCase().includes('ltd') === true ||
-                  owner.name?.toLowerCase().includes('inc') === true)
+                                (owner.name?.toLowerCase().includes('company') === true ||
+                                    owner.name?.toLowerCase().includes('corp') === true ||
+                                    owner.name?.toLowerCase().includes('ltd') === true ||
+                                    owner.name?.toLowerCase().includes('inc') === true)
               );
             }
             return false;
@@ -111,10 +111,10 @@ export class SummaryController {
               const owner = repo.owner as { type?: string; name?: string };
               return (
                 owner.type === 'Organization' &&
-                (owner.name?.toLowerCase().includes('school') === true ||
-                  owner.name?.toLowerCase().includes('university') === true ||
-                  owner.name?.toLowerCase().includes('college') === true ||
-                  owner.name?.toLowerCase().includes('edu') === true)
+                                (owner.name?.toLowerCase().includes('school') === true ||
+                                    owner.name?.toLowerCase().includes('university') === true ||
+                                    owner.name?.toLowerCase().includes('college') === true ||
+                                    owner.name?.toLowerCase().includes('edu') === true)
               );
             }
             return false;
@@ -123,9 +123,9 @@ export class SummaryController {
 
         // 2. Calcul des langages (à partir des vraies données)
         const languageStats: Record<
-          string,
-          { count: number; totalBytes: number; repositories: string[] }
-        > = {};
+                    string,
+                    { count: number; totalBytes: number; repositories: string[] }
+                > = {};
         let totalCommits = 0;
         let totalPullRequests = 0;
         let totalIssues = 0;
@@ -147,9 +147,9 @@ export class SummaryController {
           // Langages détaillés depuis le JSON
           if (repo.languages != null && typeof repo.languages === 'object') {
             const languages = repo.languages as {
-              totalSize: number;
-              nodes: Array<{ name: string; size: number }>;
-            };
+                            totalSize: number;
+                            nodes: Array<{ name: string; size: number }>;
+                        };
             if (languages.nodes != null) {
               languages.nodes.forEach((lang) => {
                 if (!(lang.name in languageStats)) {
@@ -177,7 +177,7 @@ export class SummaryController {
 
           if (
             repo.pullRequests != null &&
-            typeof repo.pullRequests === 'object'
+                        typeof repo.pullRequests === 'object'
           ) {
             const prs = repo.pullRequests as { totalCount: number };
             totalPullRequests += prs.totalCount ?? 0;
@@ -208,14 +208,14 @@ export class SummaryController {
               const repo = repositories.find((r) => r.name === repoName);
               return (
                 repo?.pushedAt != null &&
-                new Date(repo.pushedAt) >
-                  new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+                                new Date(repo.pushedAt) >
+                                new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
               );
             }),
             trend:
-              stats.totalBytes > 100000
-                ? 'growing'
-                : ('stable' as 'growing' | 'stable' | 'declining'),
+                            stats.totalBytes > 100000
+                              ? 'growing'
+                              : ('stable' as 'growing' | 'stable' | 'declining'),
           }));
 
         const emergingLanguages = sortedLanguages
@@ -255,60 +255,60 @@ export class SummaryController {
           100,
           Math.round(
             (userData.followers || 0) * 2 +
-              totalStars * 3 +
-              totalForks * 2 +
-              publicRepositories,
+                        totalStars * 3 +
+                        totalForks * 2 +
+                        publicRepositories,
           ),
         );
 
         const averageStarsPerRepo =
-          repositories.length > 0 ? totalStars / repositories.length : 0;
+                    repositories.length > 0 ? totalStars / repositories.length : 0;
         const portfolioQualityScore = Math.min(
           100,
           Math.round(
             averageStarsPerRepo * 20 +
-              (repositories.filter(
-                (r) => r.description != null && r.description.length > 10,
-              ).length /
-                repositories.length) *
-                30 +
-              (repositories.filter((r) => r.homepageUrl != null).length /
-                repositories.length) *
-                20 +
-              (repositories.filter((r) => r.readmeEnabled != null).length /
-                repositories.length) *
-                30,
+                        (repositories.filter(
+                          (r) => r.description != null && r.description.length > 10,
+                        ).length /
+                            repositories.length) *
+                        30 +
+                        (repositories.filter((r) => r.homepageUrl != null).length /
+                            repositories.length) *
+                        20 +
+                        (repositories.filter((r) => r.readmeEnabled != null).length /
+                            repositories.length) *
+                        30,
           ),
         );
 
         // 5. Années d'activité basées sur le premier repository
         const oldestRepo = repositories.reduce((oldest, repo) => {
           return oldest == null ||
-            new Date(repo.createdAt) < new Date(oldest.createdAt)
+                        new Date(repo.createdAt) < new Date(oldest.createdAt)
             ? repo
             : oldest;
         }, repositories[0]);
         const activeYears =
-          oldestRepo != null
-            ? Math.max(
-              1,
-              new Date().getFullYear() -
-                  new Date(oldestRepo.createdAt).getFullYear(),
-            )
-            : 1;
+                    oldestRepo != null
+                      ? Math.max(
+                        1,
+                        new Date().getFullYear() -
+                            new Date(oldestRepo.createdAt).getFullYear(),
+                      )
+                      : 1;
 
         // 6. Détermination du niveau de carrière basé sur les vraies métriques
         let careerLevel = 'Entry-Level';
         if (
           reputationScore > 70 &&
-          activeYears > 3 &&
-          primaryLanguages.length > 3
+                    activeYears > 3 &&
+                    primaryLanguages.length > 3
         ) {
           careerLevel = 'Senior-Level';
         } else if (
           reputationScore > 40 &&
-          activeYears > 1 &&
-          primaryLanguages.length > 2
+                    activeYears > 1 &&
+                    primaryLanguages.length > 2
         ) {
           careerLevel = 'Mid-Level';
         }
@@ -340,11 +340,11 @@ export class SummaryController {
             // VRAIES MÉTRIQUES
             reputationScore,
             influenceLevel:
-              reputationScore > 70
-                ? 'Expert'
-                : reputationScore > 40
-                  ? 'Growing'
-                  : 'Emerging',
+                            reputationScore > 70
+                              ? 'Expert'
+                              : reputationScore > 40
+                                ? 'Growing'
+                                : 'Emerging',
             expertiseAreas: primaryLanguages
               .slice(0, 3)
               .map((lang) => lang.name),
@@ -393,24 +393,24 @@ export class SummaryController {
               webApplications: repositories.filter(
                 (r) =>
                   r.primaryLanguage != null &&
-                  [
-                    'JavaScript',
-                    'TypeScript',
-                    'React',
-                    'Vue',
-                    'Angular',
-                  ].includes(r.primaryLanguage),
+                                    [
+                                      'JavaScript',
+                                      'TypeScript',
+                                      'React',
+                                      'Vue',
+                                      'Angular',
+                                    ].includes(r.primaryLanguage),
               ).length,
               mobileApplications: repositories.filter(
                 (r) =>
                   r.primaryLanguage != null &&
-                  [
-                    'Swift',
-                    'Kotlin',
-                    'Java',
-                    'React Native',
-                    'Flutter',
-                  ].includes(r.primaryLanguage),
+                                    [
+                                      'Swift',
+                                      'Kotlin',
+                                      'Java',
+                                      'React Native',
+                                      'Flutter',
+                                    ].includes(r.primaryLanguage),
               ).length,
               libraries: repositories.filter(
                 (r) =>
@@ -463,8 +463,8 @@ export class SummaryController {
               legacy: repositories.filter((r) => {
                 return (
                   r.pushedAt != null &&
-                  new Date(r.pushedAt) <
-                    new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
+                                    new Date(r.pushedAt) <
+                                    new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
                 );
               }).length,
             },
@@ -530,20 +530,20 @@ export class SummaryController {
                     ].includes(l.name),
                   )
                   .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                  Math.max(
-                    1,
-                    primaryLanguages.filter((l) =>
-                      [
-                        'JavaScript',
-                        'TypeScript',
-                        'React',
-                        'Vue',
-                        'Angular',
-                        'CSS',
-                        'HTML',
-                      ].includes(l.name),
-                    ).length,
-                  ),
+                                Math.max(
+                                  1,
+                                  primaryLanguages.filter((l) =>
+                                    [
+                                      'JavaScript',
+                                      'TypeScript',
+                                      'React',
+                                      'Vue',
+                                      'Angular',
+                                      'CSS',
+                                      'HTML',
+                                    ].includes(l.name),
+                                  ).length,
+                                ),
               ),
               dominantTechnologies: primaryLanguages
                 .filter((l) =>
@@ -581,20 +581,20 @@ export class SummaryController {
                     ].includes(l.name),
                   )
                   .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                  Math.max(
-                    1,
-                    primaryLanguages.filter((l) =>
-                      [
-                        'Node.js',
-                        'Python',
-                        'Java',
-                        'PHP',
-                        'Go',
-                        'Rust',
-                        'C#',
-                      ].includes(l.name),
-                    ).length,
-                  ),
+                                Math.max(
+                                  1,
+                                  primaryLanguages.filter((l) =>
+                                    [
+                                      'Node.js',
+                                      'Python',
+                                      'Java',
+                                      'PHP',
+                                      'Go',
+                                      'Rust',
+                                      'C#',
+                                    ].includes(l.name),
+                                  ).length,
+                                ),
               ),
               dominantTechnologies: primaryLanguages
                 .filter((l) =>
@@ -617,31 +617,31 @@ export class SummaryController {
 
             mobileExpertise: {
               score:
-                Math.round(
-                  primaryLanguages
-                    .filter((l) =>
-                      [
-                        'Swift',
-                        'Kotlin',
-                        'Java',
-                        'Flutter',
-                        'React Native',
-                      ].includes(l.name),
-                    )
-                    .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                    Math.max(
-                      1,
-                      primaryLanguages.filter((l) =>
-                        [
-                          'Swift',
-                          'Kotlin',
-                          'Java',
-                          'Flutter',
-                          'React Native',
-                        ].includes(l.name),
-                      ).length,
-                    ),
-                ) || 30,
+                                Math.round(
+                                  primaryLanguages
+                                    .filter((l) =>
+                                      [
+                                        'Swift',
+                                        'Kotlin',
+                                        'Java',
+                                        'Flutter',
+                                        'React Native',
+                                      ].includes(l.name),
+                                    )
+                                    .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
+                                    Math.max(
+                                      1,
+                                      primaryLanguages.filter((l) =>
+                                        [
+                                          'Swift',
+                                          'Kotlin',
+                                          'Java',
+                                          'Flutter',
+                                          'React Native',
+                                        ].includes(l.name),
+                                      ).length,
+                                    ),
+                                ) || 30,
               dominantTechnologies: primaryLanguages
                 .filter((l) =>
                   [
@@ -659,13 +659,13 @@ export class SummaryController {
 
             devOpsExpertise: {
               score:
-                repositories.filter((r) =>
-                  r.topics.some((topic) =>
-                    ['docker', 'kubernetes', 'ci-cd', 'devops'].includes(topic),
-                  ),
-                ).length > 0
-                  ? 60
-                  : 30,
+                                repositories.filter((r) =>
+                                  r.topics.some((topic) =>
+                                    ['docker', 'kubernetes', 'ci-cd', 'devops'].includes(topic),
+                                  ),
+                                ).length > 0
+                                  ? 60
+                                  : 30,
               dominantTechnologies: repositories.some((r) =>
                 r.topics.includes('docker'),
               )
@@ -677,19 +677,19 @@ export class SummaryController {
 
             dataExpertise: {
               score:
-                Math.round(
-                  primaryLanguages
-                    .filter((l) =>
-                      ['Python', 'R', 'SQL', 'Scala'].includes(l.name),
-                    )
-                    .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                    Math.max(
-                      1,
-                      primaryLanguages.filter((l) =>
-                        ['Python', 'R', 'SQL', 'Scala'].includes(l.name),
-                      ).length,
-                    ),
-                ) || 40,
+                                Math.round(
+                                  primaryLanguages
+                                    .filter((l) =>
+                                      ['Python', 'R', 'SQL', 'Scala'].includes(l.name),
+                                    )
+                                    .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
+                                    Math.max(
+                                      1,
+                                      primaryLanguages.filter((l) =>
+                                        ['Python', 'R', 'SQL', 'Scala'].includes(l.name),
+                                      ).length,
+                                    ),
+                                ) || 40,
               dominantTechnologies: primaryLanguages
                 .filter((l) => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
                 .map((l) => l.name),
@@ -699,11 +699,11 @@ export class SummaryController {
 
             aiMlExpertise: {
               score:
-                repositories.filter((r) =>
-                  r.topics.some((topic) =>
-                    ['ai', 'ml', 'tensorflow', 'pytorch'].includes(topic),
-                  ),
-                ).length * 20,
+                                repositories.filter((r) =>
+                                  r.topics.some((topic) =>
+                                    ['ai', 'ml', 'tensorflow', 'pytorch'].includes(topic),
+                                  ),
+                                ).length * 20,
               dominantTechnologies: [],
               emergingInterests: ['TensorFlow', 'PyTorch'],
               marketabilityScore: 100,
@@ -782,34 +782,34 @@ export class SummaryController {
 
           devOpsMaturity: {
             devOpsScore:
-              repositories.filter((r) =>
-                r.topics.some((topic) =>
-                  ['ci-cd', 'docker', 'kubernetes'].includes(topic),
-                ),
-              ).length > 0
-                ? 70
-                : 40,
+                            repositories.filter((r) =>
+                              r.topics.some((topic) =>
+                                ['ci-cd', 'docker', 'kubernetes'].includes(topic),
+                              ),
+                            ).length > 0
+                              ? 70
+                              : 40,
             maturityLevel: 'Developing',
             cicdAdoption:
-              repositories.filter(
-                (r) =>
-                  r.deployments != null &&
-                  (r.deployments as { totalCount: number }).totalCount > 0,
-              ).length > 0
-                ? 70
-                : 30,
+                            repositories.filter(
+                              (r) =>
+                                r.deployments != null &&
+                                    (r.deployments as { totalCount: number }).totalCount > 0,
+                            ).length > 0
+                              ? 70
+                              : 30,
             testingMaturity: 60,
             securityMaturity:
-              repositories.filter((r) => r.securityPolicyEnabled != null)
-                .length * 20,
+                            repositories.filter((r) => r.securityPolicyEnabled != null)
+                              .length * 20,
             monitoringMaturity: 30,
             automationScore: 45,
             workflowEfficiency: 55,
             codeQualityScore: Math.round(portfolioQualityScore * 0.8),
             documentationScore:
-              (repositories.filter((r) => r.readmeEnabled != null).length /
-                repositories.length) *
-              100,
+                            (repositories.filter((r) => r.readmeEnabled != null).length /
+                                repositories.length) *
+                            100,
             bestPractices: [
               {
                 practice: 'Version Control',
@@ -848,16 +848,16 @@ export class SummaryController {
               trajectory: 'Steady' as const,
             },
             starsMilestones:
-              totalStars > 0
-                ? [
-                  {
-                    type: 'First Star',
-                    value: 1,
-                    achievedAt: new Date(),
-                    significance: totalStars > 10 ? 'Significant' : 'Minor',
-                  },
-                ]
-                : [],
+                            totalStars > 0
+                              ? [
+                                {
+                                  type: 'First Star',
+                                  value: 1,
+                                  achievedAt: new Date(),
+                                  significance: totalStars > 10 ? 'Significant' : 'Minor',
+                                },
+                              ]
+                              : [],
             featuredProjects: repositories
               .sort((a, b) => b.stargazerCount - a.stargazerCount)
               .slice(0, 3)
@@ -867,9 +867,9 @@ export class SummaryController {
                 description: repo.description ?? 'A notable project',
                 stars: repo.stargazerCount,
                 significance:
-                  repo.stargazerCount > 10
-                    ? 'Growing impact'
-                    : 'Emerging project',
+                                    repo.stargazerCount > 10
+                                      ? 'Growing impact'
+                                      : 'Emerging project',
                 technologies: [repo.primaryLanguage].filter(Boolean),
                 impactScore: Math.min(100, repo.stargazerCount * 10),
               })),
@@ -905,22 +905,22 @@ export class SummaryController {
             careerProgression: {
               currentLevel: careerLevel,
               yearsToNext:
-                careerLevel === 'Entry-Level'
-                  ? 2
-                  : careerLevel === 'Mid-Level'
-                    ? 3
-                    : 5,
+                                careerLevel === 'Entry-Level'
+                                  ? 2
+                                  : careerLevel === 'Mid-Level'
+                                    ? 3
+                                    : 5,
               progressToNext: Math.min(100, reputationScore),
               keyMilestones:
-                careerLevel === 'Entry-Level'
-                  ? ['Build portfolio projects', 'Learn new technologies']
-                  : ['Lead a project', 'Mentor junior developers'],
+                                careerLevel === 'Entry-Level'
+                                  ? ['Build portfolio projects', 'Learn new technologies']
+                                  : ['Lead a project', 'Mentor junior developers'],
             },
             activityTrends: [
               {
                 metric: 'Commits',
                 trend:
-                  recentRepos30 > recentRepos90 / 3 ? 'Increasing' : 'Stable',
+                                    recentRepos30 > recentRepos90 / 3 ? 'Increasing' : 'Stable',
                 changeRate: 15,
                 seasonality: false,
               },
@@ -943,13 +943,13 @@ export class SummaryController {
               reputationScore + emergingLanguages.length * 10,
             ),
             recommendedFocusAreas:
-              careerLevel === 'Entry-Level'
-                ? [
-                  'Portfolio Building',
-                  'Skill Development',
-                  'Open Source Contribution',
-                ]
-                : ['DevOps Skills', 'System Design', 'Technical Leadership'],
+                            careerLevel === 'Entry-Level'
+                              ? [
+                                'Portfolio Building',
+                                'Skill Development',
+                                'Open Source Contribution',
+                              ]
+                              : ['DevOps Skills', 'System Design', 'Technical Leadership'],
           },
 
           recommendations: {
@@ -957,13 +957,13 @@ export class SummaryController {
               {
                 type: 'Skill',
                 title:
-                  primaryLanguages.length < 3
-                    ? 'Learn Additional Programming Languages'
-                    : 'Deepen Existing Skills',
+                                    primaryLanguages.length < 3
+                                      ? 'Learn Additional Programming Languages'
+                                      : 'Deepen Existing Skills',
                 description:
-                  primaryLanguages.length < 3
-                    ? 'Expand your technology stack'
-                    : 'Become expert in your core technologies',
+                                    primaryLanguages.length < 3
+                                      ? 'Expand your technology stack'
+                                      : 'Become expert in your core technologies',
                 priority: 'High',
                 effort: 'Medium',
                 timeline: '3 months',
@@ -973,9 +973,9 @@ export class SummaryController {
             technologyRecommendations: [
               {
                 technology:
-                  emergingLanguages.length > 0
-                    ? emergingLanguages[0].name
-                    : 'Docker',
+                                    emergingLanguages.length > 0
+                                      ? emergingLanguages[0].name
+                                      : 'Docker',
                 rationale: 'High growth potential technology',
                 currentRelevance: 90,
                 futureRelevance: 95,
@@ -987,13 +987,13 @@ export class SummaryController {
               {
                 type: 'Portfolio',
                 title:
-                  repositories.filter((r) => r.homepageUrl != null).length < 3
-                    ? 'Build Deployed Applications'
-                    : 'Contribute to Open Source',
+                                    repositories.filter((r) => r.homepageUrl != null).length < 3
+                                      ? 'Build Deployed Applications'
+                                      : 'Contribute to Open Source',
                 description:
-                  repositories.filter((r) => r.homepageUrl != null).length < 3
-                    ? 'Create projects with live demos'
-                    : 'Build community reputation',
+                                    repositories.filter((r) => r.homepageUrl != null).length < 3
+                                      ? 'Create projects with live demos'
+                                      : 'Build community reputation',
                 technologies: primaryLanguages.slice(0, 3).map((l) => l.name),
                 estimatedImpact: 90,
                 complexity: 'Medium',
@@ -1002,9 +1002,9 @@ export class SummaryController {
             learningRecommendations: [
               {
                 topic:
-                  careerLevel === 'Entry-Level'
-                    ? 'Best Practices'
-                    : 'System Design',
+                                    careerLevel === 'Entry-Level'
+                                      ? 'Best Practices'
+                                      : 'System Design',
                 resources: ['Online courses', 'Books'],
                 priority: 80,
                 estimatedTime: '2 months',
@@ -1015,13 +1015,13 @@ export class SummaryController {
               {
                 type: 'Contribution',
                 title:
-                  totalStars < 10
-                    ? 'Build Notable Projects'
-                    : 'Contribute to OSS',
+                                    totalStars < 10
+                                      ? 'Build Notable Projects'
+                                      : 'Contribute to OSS',
                 description:
-                  totalStars < 10
-                    ? 'Create projects that attract stars'
-                    : 'Build community reputation',
+                                    totalStars < 10
+                                      ? 'Create projects that attract stars'
+                                      : 'Build community reputation',
                 potentialImpact: 75,
               },
             ],
@@ -1042,14 +1042,14 @@ export class SummaryController {
                   ),
                 ),
                 rank:
-                  primaryLanguages.reduce(
-                    (sum, l) => sum + l.proficiencyLevel,
-                    0,
-                  ) /
-                    primaryLanguages.length >
-                  70
-                    ? 'Above Average'
-                    : 'Average',
+                                    primaryLanguages.reduce(
+                                      (sum, l) => sum + l.proficiencyLevel,
+                                      0,
+                                    ) /
+                                        primaryLanguages.length >
+                                        70
+                                      ? 'Above Average'
+                                      : 'Average',
               },
               {
                 category: 'Community Impact',
@@ -1081,11 +1081,11 @@ export class SummaryController {
             ],
             marketPosition: {
               overallRank:
-                reputationScore > 70
-                  ? 'Top 25%'
-                  : reputationScore > 40
-                    ? 'Top 50%'
-                    : 'Average',
+                                reputationScore > 70
+                                  ? 'Top 25%'
+                                  : reputationScore > 40
+                                    ? 'Top 50%'
+                                    : 'Average',
               strengths: primaryLanguages
                 .slice(0, 2)
                 .map((l) => `${l.name} Development`),
@@ -1098,11 +1098,11 @@ export class SummaryController {
                   : 'Focused specialization',
               ],
               marketValue:
-                careerLevel === 'Senior-Level'
-                  ? 'High'
-                  : careerLevel === 'Mid-Level'
-                    ? 'Mid'
-                    : 'Entry',
+                                careerLevel === 'Senior-Level'
+                                  ? 'High'
+                                  : careerLevel === 'Mid-Level'
+                                    ? 'Mid'
+                                    : 'Entry',
             },
             competitiveAdvantages: primaryLanguages
               .slice(0, 2)
@@ -1150,33 +1150,33 @@ export class SummaryController {
               personal: {
                 count: organizationBreakdown.personal,
                 percentage:
-                  repositories.length > 0
-                    ? Math.round(
-                      (organizationBreakdown.personal / repositories.length) *
-                          100,
-                    )
-                    : 0,
+                                    repositories.length > 0
+                                      ? Math.round(
+                                        (organizationBreakdown.personal / repositories.length) *
+                                            100,
+                                      )
+                                      : 0,
               },
               organization: {
                 count: organizationBreakdown.organization,
                 percentage:
-                  repositories.length > 0
-                    ? Math.round(
-                      (organizationBreakdown.organization /
-                          repositories.length) *
-                          100,
-                    )
-                    : 0,
+                                    repositories.length > 0
+                                      ? Math.round(
+                                        (organizationBreakdown.organization /
+                                                repositories.length) *
+                                            100,
+                                      )
+                                      : 0,
               },
               school: {
                 count: organizationBreakdown.school,
                 percentage:
-                  repositories.length > 0
-                    ? Math.round(
-                      (organizationBreakdown.school / repositories.length) *
-                          100,
-                    )
-                    : 0,
+                                    repositories.length > 0
+                                      ? Math.round(
+                                        (organizationBreakdown.school / repositories.length) *
+                                            100,
+                                      )
+                                      : 0,
               },
             },
 
@@ -1190,7 +1190,7 @@ export class SummaryController {
             // Score moyen basé sur les vraies données
             averageScore: Math.round(
               primaryLanguages.reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                Math.max(1, primaryLanguages.length),
+                            Math.max(1, primaryLanguages.length),
             ),
 
             // Données repository individuelles
@@ -1201,16 +1201,16 @@ export class SummaryController {
                 name: repo.name,
                 description: repo.description ?? 'No description',
                 category:
-                  organizationBreakdown.personal > 0 &&
-                  repo.owner != null &&
-                  typeof repo.owner === 'object' &&
-                  (repo.owner as { type?: string }).type === 'User'
-                    ? 'Personal'
-                    : 'Organization',
+                                    organizationBreakdown.personal > 0 &&
+                                        repo.owner != null &&
+                                        typeof repo.owner === 'object' &&
+                                        (repo.owner as { type?: string }).type === 'User'
+                                      ? 'Personal'
+                                      : 'Organization',
                 stars: repo.stargazerCount,
                 forks: repo.forkCount,
                 languages:
-                  repo.primaryLanguage != null ? [repo.primaryLanguage] : [],
+                                    repo.primaryLanguage != null ? [repo.primaryLanguage] : [],
                 lastUpdate: repo.updatedAt,
                 source: 'GitHub',
                 // Note: qualityScore sera fourni par l'endpoint IA
@@ -1266,7 +1266,7 @@ export class SummaryController {
           generatedAt: new Date().toISOString(),
           computationTime: Date.now() - startTime,
           accessLevel:
-            authenticatedUser?.username === username ? 'complete' : 'public',
+                        authenticatedUser?.username === username ? 'complete' : 'public',
           timestamp: new Date().toISOString(),
           dataSource: 'realtime',
           repositoriesAnalyzed: repositories.length,

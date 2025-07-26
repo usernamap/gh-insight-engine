@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { createError } from '@/middleware/errorHandler';
-import { databaseService } from '@/services/DatabaseService';
 import { logWithContext } from '@/utils/logger';
 import { UserModel } from '@/models/User';
+import { RepositoryModel } from '@/models/Repository';
+import { AIAnalysisModel } from '@/models/AIAnalysis';
 import { AuthenticatedUser } from '@/types/github';
 import { GitHubService } from '@/services/GitHubService';
 import { GitHubRepo } from '@/types/github';
@@ -411,8 +412,7 @@ export class UserController {
         }
 
         // Récupération des repositories avec pagination
-        const result = await databaseService.searchRepositoriesWithUserInfo({
-          search: userData.login,
+        const result = await RepositoryModel.findByUserId(userData.id, {
           limit: Number(limit),
           offset: (Number(page) - 1) * Number(limit),
         });
@@ -424,7 +424,7 @@ export class UserController {
         });
 
         res.status(200).json({
-          repositories: result.repositories.map((repo) => ({
+          repositories: result.repositories.map((repo: { [key: string]: unknown }) => ({
             id: repo.id,
             nameWithOwner: repo.nameWithOwner,
             name: repo.name,
@@ -524,8 +524,10 @@ export class UserController {
 
           const totalRepositories = userRepos.length + orgReposCount;
 
-          // Récupération du dataset le plus récent pour comparaison
-          const latestDataset = await databaseService.getLatestUserDataset(username);
+          // Récupération des données d'analyse disponibles (pour info uniquement)
+          const storedUser = await UserModel.findByLogin(username);
+          const aiAnalysis = await AIAnalysisModel.findLatestByUsername(username);
+          const storedReposData = storedUser ? await RepositoryModel.findByUserId(storedUser.id, { limit: 10 }) : null;
 
           const responseData = {
             user: {
@@ -545,27 +547,24 @@ export class UserController {
               updatedAt: userProfile.updated_at,
             },
             analysis: {
-              hasDataset: !!latestDataset,
-              datasetId: latestDataset?.dataset.id,
-              lastAnalyzed: latestDataset?.dataset.updatedAt,
-              hasAnalytics: latestDataset?.dataset.analytics != null,
-              hasAiInsights: latestDataset?.dataset.aiInsights != null,
-              isUpToDate: true, // Les données GitHub sont toujours à jour
+              hasStoredData: storedUser != null,
+              lastAnalyzed: storedUser?.updatedAt,
+              hasAnalytics: false, // Plus utilisé avec la nouvelle architecture
+              hasAiInsights: aiAnalysis != null,
+              isUpToDate: true, // Simplifié - données toujours considérées à jour
               lastUpdate: new Date(),
-              needsUpdate: false, // Pas besoin de mise à jour car données en temps réel
-              dataSource: 'github_api_realtime',
+              needsUpdate: false,
+              dataSource: 'database',
             },
             repositories: {
-              total: totalRepositories,
-              userRepositories: userRepos.length,
-              organizationRepositories: orgReposCount,
-              analyzed: totalRepositories, // Toutes les données sont "analysées" car récupérées en direct
+              total: storedReposData?.total ?? 0,
+              analyzed: storedReposData?.total ?? 0,
               breakdown: {
-                private: userRepos.filter(r => r.isPrivate).length,
-                public: userRepos.filter(r => !r.isPrivate).length,
-                forked: userRepos.filter(r => r.isFork).length,
-                archived: userRepos.filter(r => r.isArchived).length,
-                template: userRepos.filter(r => r.isTemplate).length,
+                private: userRepos.filter((r: GitHubRepo) => r.isPrivate).length,
+                public: userRepos.filter((r: GitHubRepo) => !r.isPrivate).length,
+                forked: userRepos.filter((r: GitHubRepo) => r.isFork).length,
+                archived: userRepos.filter((r: GitHubRepo) => r.isArchived).length,
+                template: userRepos.filter((r: GitHubRepo) => r.isTemplate).length,
               },
             },
             statistics: {
@@ -611,14 +610,9 @@ export class UserController {
           throw createError.notFound('Utilisateur');
         }
 
-        // Récupération du dataset le plus récent
-        const latestDataset =
-          await databaseService.getLatestUserDataset(username);
-
-        // Vérification de la fraîcheur des analyses
-        const analysisAge = await databaseService.areUserAnalyticsUpToDate(
-          userData.id,
-        );
+        // Récupération des données d'analyse disponibles
+        const aiAnalysis = await AIAnalysisModel.findLatestByUsername(username);
+        const storedReposData = await RepositoryModel.findByUserId(userData.id, { limit: 10 });
 
         const responseData = {
           user: {
@@ -628,33 +622,31 @@ export class UserController {
             avatarUrl: userData.avatarUrl,
           },
           analysis: {
-            hasDataset: !!latestDataset,
-            datasetId: latestDataset?.dataset.id,
-            lastAnalyzed: latestDataset?.dataset.updatedAt,
-            hasAnalytics: latestDataset?.dataset.analytics != null,
-            hasAiInsights: latestDataset?.dataset.aiInsights != null,
-            isUpToDate: analysisAge.analyticsUpToDate,
-            lastUpdate: analysisAge.lastUpdate,
-            needsUpdate: !analysisAge.analyticsUpToDate,
+            hasStoredData: userData != null,
+            lastAnalyzed: userData.updatedAt,
+            hasAnalytics: false, // Plus utilisé avec la nouvelle architecture
+            hasAiInsights: aiAnalysis != null,
+            isUpToDate: true, // Simplifié - données toujours considérées à jour
+            lastUpdate: new Date(),
+            needsUpdate: false,
             dataSource: 'database',
           },
           repositories: {
-            total: latestDataset?.dataset.repositories?.length ?? 0,
-            analyzed: latestDataset
-              ? Array.isArray(latestDataset.dataset.repositories)
-                ? latestDataset.dataset.repositories.length
-                : 0
-              : 0,
+            total: storedReposData.total,
+            analyzed: storedReposData.total,
           },
-          metadata: latestDataset?.dataset.metadata ?? null,
+          metadata: {
+            lastCollected: userData.updatedAt,
+            repositoriesCount: storedReposData.total,
+          },
           timestamp: new Date().toISOString(),
         };
 
         logWithContext.api('get_user_analysis_status', req.path, true, {
           targetUsername: username,
-          hasDataset: !!latestDataset,
-          isUpToDate: analysisAge.analyticsUpToDate,
-          lastUpdate: analysisAge.lastUpdate,
+          hasStoredData: userData != null,
+          hasAiInsights: aiAnalysis != null,
+          repositoriesCount: storedReposData.total,
           dataSource: 'database',
         });
 
@@ -695,7 +687,13 @@ export class UserController {
       try {
         // Suppression complète des données utilisateur
         const deletionResult =
-          await databaseService.deleteAllUserData(username);
+          // Suppression des données utilisateur et de ses repositories
+          const userToDelete = await UserModel.findByLogin(username);
+          if (userToDelete) {
+            await RepositoryModel.deleteByUserId(userToDelete.id);
+            await AIAnalysisModel.delete(userToDelete.id);
+            await UserModel.delete(userToDelete.id);
+          }
 
         logWithContext.api('delete_user_data', req.path, true, {
           targetUsername: username,
@@ -740,7 +738,7 @@ export class UserController {
 
       try {
         // Récupération des statistiques de base de la plateforme
-        const stats = await databaseService.getPlatformStats();
+        const stats = await UserModel.getPlatformStats();
 
         // Si l'utilisateur est authentifié, ajouter ses propres statistiques en temps réel
         let userRealTimeStats = null;

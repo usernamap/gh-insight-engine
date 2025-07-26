@@ -4,7 +4,6 @@ import { createError } from '@/middleware/errorHandler';
 import { logWithContext } from '@/utils/logger';
 import { AuthenticatedUser, GitHubRepo } from '@/types/github';
 import { UserModel } from '@/models/User';
-import { DatasetModel } from '@/models/Dataset';
 import { RepositoryModel } from '@/models/Repository';
 import { GitHubService } from '@/services/GitHubService';
 
@@ -216,15 +215,6 @@ export class RepoController {
           return;
         }
 
-        // Récupération du dataset pour les métadonnées (pas pour les repositories)
-        const dataset = await DatasetModel.findByUsername(username);
-
-        // Vérifier la fraîcheur des données
-        const dataAge = dataset?.generatedAt
-          ? Date.now() - new Date(dataset.generatedAt).getTime()
-          : Date.now() - new Date(repositories[0].updatedAt).getTime();
-        const isStale = dataAge > 24 * 60 * 60 * 1000; // Plus de 24h
-
         let filteredRepositories = repositories;
 
         // Si l'utilisateur demande ses propres données et est authentifié, retourner tous les repositories
@@ -243,20 +233,14 @@ export class RepoController {
           metadata: {
             username,
             dataSource: 'database',
-            dataAge: Math.round(dataAge / (60 * 60 * 1000)), // Age en heures
-            isStale,
             accessLevel: authenticatedUser?.username === username ? 'full' : 'public',
             repositoriesCount: filteredRepositories.length,
-            recommendation: isStale
-              ? 'Les données ont plus de 24h. Considérez une nouvelle collecte avec POST /repositories/{username}.'
-              : 'Données récentes',
           },
           timestamp: new Date().toISOString(),
         };
 
         logWithContext.api('get_user_repositories_success', req.path, true, {
           targetUsername: username,
-          dataAge: Math.round(dataAge / (60 * 60 * 1000)),
           hasFullAccess: authenticatedUser?.username === username,
           repositoriesCount: filteredRepositories.length,
         });
