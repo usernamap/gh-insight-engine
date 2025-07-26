@@ -189,10 +189,18 @@ export class RepoController {
           throw createError.notFound('Aucune donnée trouvée pour cet utilisateur. Utilisez POST /repositories/{username} pour collecter les repositories.');
         }
 
-        // Récupération du dataset le plus récent
-        const dataset = await DatasetModel.findByUsername(username);
+        // ✅ CORRECTION: Récupérer les repositories directement depuis RepositoryModel
+        // au lieu de les prendre depuis le dataset qui contient des ObjectIds
+        const repositoriesResult = await RepositoryModel.findByUserId(userData.id, {
+          limit: 200, // Récupérer plus de repositories
+          includePrivate: true,
+          sortBy: 'updated',
+          sortOrder: 'desc',
+        });
 
-        if (!dataset?.repositories || dataset.repositories.length === 0) {
+        const repositories = repositoriesResult.repositories;
+
+        if (repositories.length === 0) {
           const responseData = {
             repositories: [],
             metadata: {
@@ -208,24 +216,29 @@ export class RepoController {
           return;
         }
 
+        // Récupération du dataset pour les métadonnées (pas pour les repositories)
+        const dataset = await DatasetModel.findByUsername(username);
+
         // Vérifier la fraîcheur des données
-        const dataAge = Date.now() - new Date(dataset.generatedAt).getTime();
+        const dataAge = dataset?.generatedAt
+          ? Date.now() - new Date(dataset.generatedAt).getTime()
+          : Date.now() - new Date(repositories[0].updatedAt).getTime();
         const isStale = dataAge > 24 * 60 * 60 * 1000; // Plus de 24h
 
-        let repositories = dataset.repositories;
+        let filteredRepositories = repositories;
 
         // Si l'utilisateur demande ses propres données et est authentifié, retourner tous les repositories
         // Sinon, filtrer les repositories privés
         if (authenticatedUser?.username !== username) {
           // Filtrer les repositories privés pour les autres utilisateurs
-          repositories = (dataset.repositories as GitHubRepo[]).filter((repo: GitHubRepo) => !repo.isPrivate);
+          filteredRepositories = repositories.filter((repo) => !repo.isPrivate);
         }
 
         // Calculer les analytics depuis les données stockées
-        const analytics = this.calculateAnalyticsFromStoredData(repositories as GitHubRepo[]);
+        const analytics = this.calculateAnalyticsFromStoredData(filteredRepositories as unknown as GitHubRepo[]);
 
         const responseData = {
-          repositories,
+          repositories: filteredRepositories,
           analytics,
           metadata: {
             username,
@@ -233,7 +246,7 @@ export class RepoController {
             dataAge: Math.round(dataAge / (60 * 60 * 1000)), // Age en heures
             isStale,
             accessLevel: authenticatedUser?.username === username ? 'full' : 'public',
-            repositoriesCount: repositories.length,
+            repositoriesCount: filteredRepositories.length,
             recommendation: isStale
               ? 'Les données ont plus de 24h. Considérez une nouvelle collecte avec POST /repositories/{username}.'
               : 'Données récentes',
@@ -245,7 +258,7 @@ export class RepoController {
           targetUsername: username,
           dataAge: Math.round(dataAge / (60 * 60 * 1000)),
           hasFullAccess: authenticatedUser?.username === username,
-          repositoriesCount: repositories.length,
+          repositoriesCount: filteredRepositories.length,
         });
 
         res.status(200).json(responseData);

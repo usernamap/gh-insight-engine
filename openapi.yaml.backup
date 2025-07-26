@@ -50,7 +50,7 @@ info:
     2. **Collecte des données** → `POST /users/{username}` puis `POST /repositories/{username}`
     3. **Consultation rapide** → `GET /users/{username}` et `GET /repositories/{username}`
     4. **Mise à jour** → Re-collecte avec POST si les données sont anciennes
-  version: 0.1.13
+  version: 0.1.15
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine

@@ -139,12 +139,15 @@ export class AuthController {
           );
         }
 
-        // Mise à jour ou création du profil utilisateur en base
-        const user = await UserModel.upsert(userProfile);
+        // ❌ SUPPRIMÉ: Ne pas créer/mettre à jour l'user lors du login
+        // const user = await UserModel.upsert(userProfile);
 
-        // Génération du JWT (adapter le payload au schéma attendu)
+        // ✅ NOUVEAU: Juste valider le token, pas d'interaction DB
+        // L'user sera créé/mis à jour lors de POST /users/{username}
+
+        // Génération du JWT avec un userId temporaire basé sur le login GitHub
         const jwtPayload = {
-          userId: user.id,
+          userId: userProfile.login, // Utiliser le login comme identifier temporaire
           username: userProfile.login,
           githubToken, // Inclure le token GitHub dans le JWT
         };
@@ -153,7 +156,7 @@ export class AuthController {
         const responseData = {
           message: 'Authentification réussie',
           user: {
-            id: user.id,
+            id: userProfile.login, // ID temporaire
             username: userProfile.login,
             hasValidToken: true,
           },
@@ -172,7 +175,7 @@ export class AuthController {
         };
 
         logWithContext.auth('login_success', username, true, {
-          userId: user.id,
+          userId: userProfile.login,
           tokenScopes: tokenValidation.scopes,
           hasPrivateAccess: tokenValidation.scopes?.includes('repo'),
         });
