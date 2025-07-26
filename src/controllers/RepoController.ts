@@ -326,34 +326,74 @@ export class RepoController {
    * Calcul des statistiques globales à partir des données stockées
    */
   private static calculateAnalyticsFromStoredData(repositories: GitHubRepo[]): Record<string, unknown> {
+    // Filtrer les repositories valides (pas des objets vides du parsing raté)
+    const validRepositories = repositories.filter((repo): repo is GitHubRepo =>
+      Boolean(repo) &&
+      typeof repo === 'object' &&
+      'nameWithOwner' in repo &&
+      typeof repo.nameWithOwner === 'string' &&
+      'stargazerCount' in repo &&
+      typeof repo.stargazerCount === 'number',
+    );
+
+    if (validRepositories.length === 0) {
+      // Retourner des statistiques par défaut si aucun repository valide
+      return {
+        totalStats: {
+          totalRepositories: 0,
+          totalStars: 0,
+          totalForks: 0,
+          totalWatchers: 0,
+          totalIssues: 0,
+          totalPullRequests: 0,
+          totalCommits: 0,
+          totalReleases: 0,
+          totalDeployments: 0,
+          repositoriesWithActions: 0,
+          repositoriesWithSecurity: 0,
+          repositoriesWithPackages: 0,
+          repositoriesWithProtection: 0,
+          averageCommunityHealth: 0,
+        },
+        languageAnalytics: {},
+        topicsAnalytics: {},
+        devOpsMaturity: {
+          cicdAdoption: 0,
+          securityMaturity: 0,
+          branchProtectionRate: 0,
+          averageCommunityHealth: 0,
+        },
+      };
+    }
+
     const totalStats = {
-      totalRepositories: repositories.length,
-      totalStars: repositories.reduce((sum, r) => sum + r.stargazerCount, 0),
-      totalForks: repositories.reduce((sum, r) => sum + r.forkCount, 0),
-      totalWatchers: repositories.reduce((sum, r) => sum + r.watchersCount, 0),
-      totalIssues: repositories.reduce((sum, r) => sum + r.issues.totalCount, 0),
-      totalPullRequests: repositories.reduce((sum, r) => sum + r.pullRequests.totalCount, 0),
-      totalCommits: repositories.reduce((sum, r) => sum + r.commits.totalCount, 0),
-      totalReleases: repositories.reduce((sum, r) => sum + r.releases.totalCount, 0),
-      totalDeployments: repositories.reduce((sum, r) => sum + r.deployments.totalCount, 0),
-      repositoriesWithActions: repositories.filter(r => (r.githubActions?.workflowsCount ?? 0) > 0).length,
-      repositoriesWithSecurity: repositories.filter(r => (r.security?.dependabotAlerts.totalCount ?? 0) > 0).length,
-      repositoriesWithPackages: repositories.filter(r => (r.packages?.totalCount ?? 0) > 0).length,
-      repositoriesWithProtection: repositories.filter(r => (r.branchProtection?.rules.length ?? 0) > 0).length,
-      averageCommunityHealth: Math.round(repositories.reduce((sum, r) => sum + (r.community?.healthPercentage ?? 0), 0) / repositories.length) || 0,
+      totalRepositories: validRepositories.length,
+      totalStars: validRepositories.reduce((sum, r) => sum + (r.stargazerCount || 0), 0),
+      totalForks: validRepositories.reduce((sum, r) => sum + (r.forkCount || 0), 0),
+      totalWatchers: validRepositories.reduce((sum, r) => sum + (r.watchersCount || 0), 0),
+      totalIssues: validRepositories.reduce((sum, r) => sum + (r.issues?.totalCount || 0), 0),
+      totalPullRequests: validRepositories.reduce((sum, r) => sum + (r.pullRequests?.totalCount || 0), 0),
+      totalCommits: validRepositories.reduce((sum, r) => sum + (r.commits?.totalCount || 0), 0),
+      totalReleases: validRepositories.reduce((sum, r) => sum + (r.releases?.totalCount || 0), 0),
+      totalDeployments: validRepositories.reduce((sum, r) => sum + (r.deployments?.totalCount || 0), 0),
+      repositoriesWithActions: validRepositories.filter(r => (r.githubActions?.workflowsCount ?? 0) > 0).length,
+      repositoriesWithSecurity: validRepositories.filter(r => (r.security?.dependabotAlerts?.totalCount ?? 0) > 0).length,
+      repositoriesWithPackages: validRepositories.filter(r => (r.packages?.totalCount ?? 0) > 0).length,
+      repositoriesWithProtection: validRepositories.filter(r => (r.branchProtection?.rules?.length ?? 0) > 0).length,
+      averageCommunityHealth: Math.round(validRepositories.reduce((sum, r) => sum + (r.community?.healthPercentage ?? 0), 0) / validRepositories.length) || 0,
     };
 
     // Analyse des langages
-    const languageStats = this.calculateLanguageAnalytics(repositories);
+    const languageStats = this.calculateLanguageAnalytics(validRepositories);
 
     // Analyse des topics
-    const topicStats = this.calculateTopicsAnalytics(repositories);
+    const topicStats = this.calculateTopicsAnalytics(validRepositories);
 
     // Calcul DevOps maturity
     const devOpsMaturity = {
-      cicdAdoption: totalStats.repositoriesWithActions / totalStats.totalRepositories * 100,
-      securityMaturity: totalStats.repositoriesWithSecurity / totalStats.totalRepositories * 100,
-      branchProtectionRate: totalStats.repositoriesWithProtection / totalStats.totalRepositories * 100,
+      cicdAdoption: totalStats.totalRepositories > 0 ? (totalStats.repositoriesWithActions / totalStats.totalRepositories * 100) : 0,
+      securityMaturity: totalStats.totalRepositories > 0 ? (totalStats.repositoriesWithSecurity / totalStats.totalRepositories * 100) : 0,
+      branchProtectionRate: totalStats.totalRepositories > 0 ? (totalStats.repositoriesWithProtection / totalStats.totalRepositories * 100) : 0,
       averageCommunityHealth: totalStats.averageCommunityHealth,
     };
 
