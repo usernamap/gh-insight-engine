@@ -139,32 +139,70 @@ curl -X POST http://localhost:3000/api/ai/octocat \
 - `GET /api/ping` - Connectivity test
 - `GET /api/ai/status` - AI service status
 
-## 🔄 Automatic Scheduling
+## Automatic Scheduling
 
-The system supports automatic data updates with configurable scheduling:
+The application includes an automatic scheduling system that can update user data at configurable intervals without manual intervention.
+
+### Configuration
+
+Enable automatic scheduling by setting these environment variables:
 
 ```env
-# Enable automatic updates
+# Enable automatic scheduling
 SCHEDULE_ENABLED=true
 
-# Frequency options: daily, weekly, monthly
+# Scheduling frequency (daily, weekly, monthly)
 SCHEDULE_FREQUENCY=weekly
 
-# Execution time (24h format)
+# Execution time in 24h format
 SCHEDULE_TIME=02:00
 
-# Timezone
+# Timezone for execution
 SCHEDULE_TIMEZONE=Europe/Paris
 
-# JWT token for API calls (generated after login)
-SCHEDULE_AUTH_TOKEN=your_jwt_token
+# Required user information
+GITHUB_USERNAME=your_github_username
+GITHUB_FULL_NAME=Your Full Name
+GH_TOKEN=your_github_classic_token
 ```
 
-The scheduling service will automatically:
-1. Call `POST /api/refresh/{username}` at the specified frequency
-2. Log all operations with detailed timing information
-3. Handle errors gracefully with retry mechanisms
-4. Preserve successfully collected data on partial failures
+### How It Works
+
+The scheduling service automatically:
+
+1. **Retrieves Authentication Tokens**: Calls `POST /auth/login` to get a valid JWT token
+2. **Manages Token Expiration**: Automatically renews tokens when they expire (24h default)
+3. **Executes Scheduled Updates**: Calls `POST /api/refresh/{username}` at the configured intervals
+4. **Handles Errors Gracefully**: Logs failures and continues operation
+
+### Features
+
+- **Automatic Token Management**: No manual token configuration required
+- **Flexible Scheduling**: Daily, weekly, or monthly updates
+- **Timezone Support**: Configurable timezone for execution
+- **Error Handling**: Robust error handling with detailed logging
+- **Status Monitoring**: Check scheduling status via service methods
+
+### Example Usage
+
+```typescript
+import { SchedulingService } from '@/services/SchedulingService';
+
+// Get scheduling status
+const status = SchedulingService.getInstance().getStatus();
+console.log('Scheduling enabled:', status.enabled);
+console.log('Next run:', status.nextRun);
+
+// Test configuration immediately
+const success = await SchedulingService.getInstance().testConfiguration();
+```
+
+### Security
+
+- Tokens are automatically retrieved and managed
+- No manual token storage required
+- Automatic token renewal prevents expiration issues
+- All operations are logged for audit purposes
 
 ## 🏗️ Architecture
 

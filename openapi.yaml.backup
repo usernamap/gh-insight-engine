@@ -9,7 +9,7 @@ info:
     **Authentication**: JWT tokens obtained via `/auth/login`
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
-  version: 0.1.26
+  version: 0.1.29
   contact:
     name: API Support
     url: https://github.com/org/gh-insight-engine
@@ -239,6 +239,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /ai/status:
+    get:
+      summary: AI service status
+      description: Get AI service availability and configuration
+      operationId: getAIServiceStatus
+      tags:
+        - AI Analysis
+      security: []
+      responses:
+        '200':
+          description: AI service status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIServiceStatusResponse'
+
   /ai/{username}:
     post:
       summary: Perform AI analysis
@@ -301,21 +317,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /ai/status:
-    get:
-      summary: AI service status
-      description: Get AI service availability and configuration
-      operationId: getAIServiceStatus
+  /refresh/{username}:
+    post:
+      summary: Refresh all user data
+      description: |
+        Complete data refresh for a user by chaining all collection steps:
+        1. User profile data collection (POST /users/{username})
+        2. Repository data collection (POST /repositories/{username})
+        3. AI analysis execution (POST /ai/{username})
+        
+        This operation can take several minutes. In case of partial failure,
+        successfully collected data is preserved.
+      operationId: refreshUserData
       tags:
-        - AI Analysis
-      security: []
+        - Refresh
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
       responses:
         '200':
-          description: AI service status retrieved
+          description: All data refreshed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIServiceStatusResponse'
+                $ref: '#/components/schemas/RefreshResponse'
+        '207':
+          description: Partial success - Some steps failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Can only refresh own data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Complete failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
@@ -1274,6 +1324,54 @@ components:
           type: string
           format: date-time
 
+    RefreshResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Overall success status
+          example: true
+        message:
+          type: string
+          description: Human-readable message
+          example: "All data refreshed successfully"
+        username:
+          type: string
+          description: Target username
+          example: "octocat"
+        totalDuration:
+          type: number
+          description: Total execution time in milliseconds
+          example: 125000
+        steps:
+          type: array
+          description: Detailed results for each step
+          items:
+            type: object
+            properties:
+              step:
+                type: string
+                enum: ["users", "repositories", "ai"]
+                description: Step identifier
+              success:
+                type: boolean
+                description: Step success status
+              duration:
+                type: number
+                description: Step execution time in milliseconds
+              error:
+                type: string
+                description: Error message if step failed
+        completedSteps:
+          type: number
+          description: Number of successfully completed steps
+          example: 3
+        failedAt:
+          type: string
+          enum: ["users", "repositories", "ai"]
+          description: Step where failure occurred (if any)
+          example: "ai"
+
     # Error Response
     ErrorResponse:
       type: object
@@ -1320,6 +1418,8 @@ tags:
     description: Comprehensive developer analytics
   - name: AI Analysis
     description: AI-powered code analysis
+  - name: Refresh
+    description: Complete data refresh operations
 
 externalDocs:
   description: API Documentation

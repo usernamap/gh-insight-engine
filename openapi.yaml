@@ -9,7 +9,8 @@ info:
     **Authentication**: JWT tokens obtained via `/auth/login`
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
-  version: 0.1.27
+    **Automatic Scheduling**: Built-in scheduling service with automatic token management
+  version: 0.1.28
   contact:
     name: API Support
     url: https://github.com/org/gh-insight-engine
@@ -71,6 +72,9 @@ paths:
         - `repo` - Private repository access
         - `user` - User profile information  
         - `read:org` - Organization data access
+        
+        **Used by scheduling service**: This endpoint is automatically called by the
+        scheduling service to obtain authentication tokens for automated operations.
       operationId: login
       tags:
         - Authentication
@@ -328,6 +332,11 @@ paths:
         
         This operation can take several minutes. In case of partial failure,
         successfully collected data is preserved.
+        
+        **Scheduling Integration**: This endpoint is used by the automatic
+        scheduling service with automatic token management. The scheduling
+        service calls `/auth/login` to obtain fresh JWT tokens before
+        executing this refresh operation.
       operationId: refreshUserData
       tags:
         - Refresh
@@ -373,7 +382,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token obtained from /auth/login (24h validity)
+      description: |
+        JWT token obtained from /auth/login (24h validity).
+        Used by both manual API calls and the automatic scheduling service.
 
   parameters:
     UsernameParam:
@@ -409,6 +420,23 @@ components:
         environment:
           type: string
           example: "development"
+        scheduling:
+          type: object
+          description: Automatic scheduling service status
+          properties:
+            enabled:
+              type: boolean
+              description: Whether automatic scheduling is enabled
+            running:
+              type: boolean
+              description: Whether the scheduling service is currently running
+            nextRun:
+              type: string
+              format: date-time
+              description: Next scheduled execution time
+            authTokenValid:
+              type: boolean
+              description: Whether the authentication token is valid
 
     PingResponse:
       type: object
@@ -434,7 +462,7 @@ components:
           example: "octocat"
         fullName:
           type: string
-          description: User full name
+          description: User full name (required for scheduling service)
           example: "The Octocat"
         githubToken:
           type: string
@@ -469,7 +497,7 @@ components:
           properties:
             accessToken:
               type: string
-              description: JWT token for API requests
+              description: JWT token for API requests (used by scheduling service)
             tokenType:
               type: string
               example: "Bearer"
@@ -1409,7 +1437,7 @@ tags:
   - name: System
     description: Health and connectivity endpoints
   - name: Authentication
-    description: GitHub token authentication
+    description: GitHub token authentication (used by scheduling service)
   - name: Users
     description: User profile management
   - name: Repositories
@@ -1419,7 +1447,7 @@ tags:
   - name: AI Analysis
     description: AI-powered code analysis
   - name: Refresh
-    description: Complete data refresh operations
+    description: Complete data refresh operations (used by scheduling service)
 
 externalDocs:
   description: API Documentation
