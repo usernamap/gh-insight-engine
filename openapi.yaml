@@ -11,7 +11,7 @@ info:
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
     **Automatic Scheduling**: Built-in scheduling service with automatic token management
-  version: 0.1.30
+  version: 0.1.31
   contact:
     name: API Support
     url: https://github.com/org/gh-insight-engine
@@ -408,12 +408,15 @@ components:
     UsernameParam:
       name: username
       in: path
-      required: true
-      description: GitHub username
+      required: false
+      description: |
+        GitHub username. When using UserAuth, this parameter is automatically extracted from the authentication context.
+        If not provided, the system will use the authenticated user's username.
       schema:
         type: string
         pattern: '^[a-zA-Z0-9]([a-zA-Z0-9\-]){0,38}$'
         example: "octocat"
+        nullable: true
 
   schemas:
     # System Responses
