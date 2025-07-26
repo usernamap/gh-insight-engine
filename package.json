@@ -1,6 +1,6 @@
 {
   "name": "gh-insight-engine",
-  "version": "0.1.32",
+  "version": "0.1.33",
   "private": true,
   "type": "module",
   "scripts": {
@@ -43,8 +43,7 @@
     "openapi:workflow": "npm run openapi:backup && npm run openapi:validate && npm run openapi:coverage && npm run openapi:diff && npm run openapi:build",
     "version:bump": "node scripts/version-bump.js",
     "release": "npm run version:bump && npm run openapi:workflow && git add . && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main",
-    "deploy": "npm run build:prod && npm run release",
-    "clean:datasets": "node scripts/clean-corrupted-datasets.cjs"
+    "deploy": "npm run build:prod && npm run release"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
