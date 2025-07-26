@@ -2,213 +2,26 @@
 # The most powerful GitHub analytics API ever built - analyze, visualize, and optimize your development journey
 openapi: 3.0.3
 info:
-  title: "🔥 GitHub Insight Engine API - Ultimate Edition with AI Intelligence"
+  title: "GitHub Insight Engine API"
   description: |
-    # 🚀 Transform Your GitHub Data Into Actionable Intelligence
+    REST API for GitHub data collection, analysis, and insights generation.
     
-    **The most comprehensive GitHub analytics platform** designed for developers, teams, and organizations who want to unlock the full potential of their development data with **cutting-edge AI analysis**.
-    
-    ---
-    
-    ## ✨ Why Choose GitHub Insight Engine?
-    
-    | Feature | Traditional Tools | **🔥 GitHub Insight Engine** |
-    |---------|------------------|------------------------------|
-    | **Data Coverage** | Basic metrics | 📊 Complete DevOps analytics |
-    | **Performance** | Slow API calls | ⚡ Lightning-fast database queries |
-    | **Intelligence** | Static reports | 🤖 AI-powered insights & recommendations |
-    | **Analysis Depth** | Surface-level | 🔬 Deep vulnerability & quality analysis |
-    | **Scalability** | Limited | 🌟 Enterprise-grade architecture |
-    | **User Experience** | Complex setup | 🎯 One-click data collection |
-    
-    ---
-    
-    ## 🤖 **NEW: Revolutionary AI Analysis Engine**
-    
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 15px 0;">
-      <h3>🧠 GPT-4o-mini Powered Intelligence</h3>
-      <p>Experience next-generation GitHub analysis with advanced AI that understands code patterns, security risks, and career opportunities!</p>
-    </div>
-    
-    ### 🎯 **AI-Powered Insights Include:**
-    - 🏆 **Quality Scoring** (0-100) with maintainability analysis
-    - 🛡️ **Security Assessment** with vulnerability estimation  
-    - 🚀 **Performance Optimization** recommendations
-    - 💼 **Career Guidance** and skill development paths
-    - 🔍 **Hidden Patterns** discovery in your development style
-    
-    ---
-    
-    ## 🎯 Perfect For
-    
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0;">
-      <div style="border: 2px solid #28a745; border-radius: 8px; padding: 15px; text-align: center;">
-        <h3>👨‍💻 Individual Developers</h3>
-        <p>Track your coding journey, identify growth opportunities, and showcase your expertise</p>
-      </div>
-      <div style="border: 2px solid #007bff; border-radius: 8px; padding: 15px; text-align: center;">
-        <h3>👥 Development Teams</h3>
-        <p>Optimize team performance, improve code quality, and enhance collaboration</p>
-      </div>
-      <div style="border: 2px solid #6f42c1; border-radius: 8px; padding: 15px; text-align: center;">
-        <h3>🏢 Organizations</h3>
-        <p>Enterprise-wide analytics, talent assessment, and strategic tech insights</p>
-      </div>
-    </div>
-    
-    ---
-    
-    ## 🔐 Quick Start - Authentication Made Simple
-    
-    ### 🎯 Super Fast Setup (< 2 minutes)
-    
-    ```bash
-    # 1️⃣ Get your GitHub token
-    curl -X POST "https://api.gh-insight-engine.com/auth/login" \
-         -H "Content-Type: application/json" \
-         -d '{
-           "username": "your_github_username",
-           "fullName": "Your Full Name", 
-           "githubToken": "ghp_your_classic_token_here"
-         }'
-    
-    # 2️⃣ Start collecting insights immediately!
-    curl -X POST "https://api.gh-insight-engine.com/users/your_username" \
-         -H "Authorization: Bearer your_jwt_token"
-    ```
-    
-    ### 🔑 GitHub Token Permissions Required
-    
-    | Permission | Purpose | Why Needed |
-    |------------|---------|------------|
-    | `repo` | 🔒 Private repositories access | Complete portfolio analysis |
-    | `user` | 👤 Profile information | Comprehensive user insights |
-    | `read:org` | 🏢 Organization data | Team and org-wide analytics |
-    
-    > 💡 **Pro Tip**: Create your token at [github.com/settings/tokens](https://github.com/settings/tokens) - select "Classic" token type!
-    
-    ---
-    
-    ## 🏗️ Revolutionary Two-Phase Architecture
-    
-    ### 🔄 Smart Data Flow Design
-    
-    ```mermaid
-    graph LR
-        A[🔐 Authenticate] --> B[📥 Collect Data]
-        B --> C[💾 Store & Process]
-        C --> D[⚡ Lightning Queries]
-        D --> E[📊 Rich Analytics]
-        E --> F[🤖 AI Insights]
-    ```
-    
-    ### 📥 Phase 1: Intelligent Data Collection
-    
-    **🎯 One-Time Setup, Lifetime Benefits**
-    
-    - **`POST /users/{username}`** → 📊 Complete profile & reputation analysis
-    - **`POST /repositories/{username}`** → 🔧 Full DevOps maturity assessment
-    
-    ### ⚡ Phase 2: Ultra-Fast Consumption
-    
-    **🚀 Sub-50ms Response Times**
-    
-    - **`GET /users/{username}`** → 👤 Instant profile insights  
-    - **`GET /repositories/{username}`** → 📈 Lightning-fast repository analytics
-    
-    ---
-    
-    ## 🌟 What Makes Us Different
-    
-    ### 🔬 Deep Technical Analysis
-    - ✅ **GitHub Actions CI/CD** analysis & optimization recommendations
-    - ✅ **Security posture** assessment with vulnerability insights  
-    - ✅ **Code quality metrics** and technical debt analysis
-    - ✅ **DevOps maturity scoring** with industry benchmarks
-    - ✅ **Community health** evaluation and improvement suggestions
-    
-    ### 🤖 AI-Powered Intelligence
-    - 🧠 **Smart recommendations** for career growth
-    - 📊 **Predictive analytics** for project success
-    - 🎯 **Personalized insights** based on your coding patterns
-    - 🚀 **Performance optimization** suggestions
-    
-    ### ⚡ Enterprise-Grade Performance  
-    - 🏃‍♂️ **Sub-50ms** response times for all queries
-    - 📈 **99.9% uptime** SLA with global CDN
-    - 🛡️ **Military-grade security** with end-to-end encryption
-    - 🌍 **Global availability** with edge computing
-    
-    ---
-    
-    ## 📊 Rate Limits & Performance
-    
-    | Tier | Requests/15min | Response Time | Features |
-    |------|----------------|---------------|----------|
-    | **Free** | 100 | <100ms | Core analytics |
-    | **Pro** | 1,000 | <50ms | AI insights + Export |
-    | **Enterprise** | Unlimited | <25ms | Custom integrations |
-    
-    ---
-    
-    ## 🎯 Complete Workflow Example
-    
-    ```typescript
-    // 🚀 Perfect developer experience in 4 simple steps
-    
-    // 1️⃣ Authenticate once
-    const auth = await fetch('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        username: 'octocat',
-        fullName: 'The Octocat',
-        githubToken: 'ghp_xxxxxxxxxxxx'
-      })
-    });
-    
-    // 2️⃣ Collect your data (one-time setup)
-    await fetch('/api/users/octocat', { 
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    // 3️⃣ Get instant insights (lightning fast!)
-    const insights = await fetch('/api/users/octocat');
-    
-    // 4️⃣ Analyze your repositories  
-    const repos = await fetch('/api/repositories/octocat');
-    ```
-    
-    ---
-    
-    ## 🎨 Rich Response Examples
-    
-    All our responses include beautiful, actionable data:
-    
-    - 📊 **Visual metrics** ready for dashboards
-    - 🏆 **Industry benchmarks** and percentile rankings  
-    - 🎯 **Actionable recommendations** for improvement
-    - ⏰ **Real-time freshness** indicators
-    - 🔄 **Smart caching** with update suggestions
-    
-    ---
-    
-    **Ready to revolutionize your GitHub analytics?** 🚀 
-    
-    Start exploring the endpoints below and unlock insights you never knew existed!
-  version: 0.1.23
+    **Authentication**: JWT tokens obtained via `/auth/login`
+    **Data Flow**: Collect → Store → Analyze → Retrieve
+    **Rate Limits**: Standard GitHub API rate limits apply during collection
+  version: 1.0.0
   contact:
-    name: GitHub Insight Engine Support
+    name: API Support
     url: https://github.com/org/gh-insight-engine
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
-  
+
 servers:
   - url: http://localhost:3000/api
-    description: Serveur de développement
+    description: Development server
   - url: https://api.gh-insight-engine.com/api
-    description: Serveur de production
+    description: Production server
 
 security:
   - BearerAuth: []
@@ -217,15 +30,15 @@ security:
 paths:
   /health:
     get:
-      summary: Health check du service
-      description: Vérifie l'état de santé de l'API et retourne des informations système
+      summary: Service health check
+      description: Returns API health status and system information
       operationId: healthCheck
       tags:
         - System
       security: []
       responses:
         '200':
-          description: Service en fonctionnement
+          description: Service healthy
           content:
             application/json:
               schema:
@@ -233,15 +46,15 @@ paths:
 
   /ping:
     get:
-      summary: Test de connectivité simple
-      description: Test de connectivité basique pour vérifier que l'API répond
+      summary: Connectivity test
+      description: Basic connectivity test endpoint
       operationId: ping
       tags:
         - System
       security: []
       responses:
         '200':
-          description: Pong
+          description: Pong response
           content:
             application/json:
               schema:
@@ -249,81 +62,40 @@ paths:
 
   /auth/login:
     post:
-      summary: "🚀 Lightning-Fast GitHub Authentication"
+      summary: GitHub token authentication
       description: |
-        # 🔐 Secure Authentication in Under 2 Seconds
+        Authenticate with GitHub Classic token to obtain JWT for API access.
+        Supports graceful degradation during GitHub API outages.
         
-        Transform your GitHub token into a powerful analytics key! Our ultra-fast authentication system gets you up and running in no time.
-        
-        ## 🎯 Why Our Auth is Different
-        
-        - ⚡ **Sub-second response** times
-        - 🛡️ **Military-grade security** with JWT tokens  
-        - 🔄 **24-hour sessions** for optimal productivity
-        - 🚦 **Smart rate limiting** with graceful degradation
-        - 🌍 **Global availability** with edge authentication
-        
-        ## 🔑 GitHub Token Setup (Super Easy!)
-        
-        ### Quick Setup Guide:
-        
-        1. **🎯 Go to GitHub** → [Settings > Tokens](https://github.com/settings/tokens) 
-        2. **🆕 Create new** → Select "Classic Token"
-        3. **✅ Check permissions:**
-           - `repo` → 🔒 **Private repository access** (complete analysis)
-           - `user` → 👤 **Profile information** (detailed insights) 
-           - `read:org` → 🏢 **Organization data** (team analytics)
-        4. **🎉 Copy token** → Use in the request below!
-        
-        ## 🚨 Pro Tips for Success
-        
-        - 💡 **Token expires?** Set 90+ days for best experience
-        - 🔒 **Keep it secure** - Never commit tokens to code
-        - 🚀 **Test immediately** after generation
-        - 🎯 **Save the JWT** for all future requests
-        
-        ## 🎉 What You Get Back
-        
-        - 🎫 **Powerful JWT token** (24h validity)
-        - ✅ **Permission verification** 
-        - 🏆 **Access level confirmation**
-        - ⚡ **Instant API readiness**
+        **Required GitHub token scopes:**
+        - `repo` - Private repository access
+        - `user` - User profile information  
+        - `read:org` - Organization data access
       operationId: login
       tags:
         - Authentication
       security: []
       requestBody:
-        description: Identifiants de connexion
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
-            example:
-              username: "octocat"
-              fullName: "The Octocat"
-              githubToken: "ghp_xxxxxxxxxxxxxxxxxxxx"
       responses:
         '200':
-          description: Authentification réussie
+          description: Authentication successful
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
         '400':
-          description: Données d'entrée invalides
+          description: Invalid request data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Token GitHub invalide
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
-          description: Trop de tentatives de connexion
+          description: Invalid GitHub token
           content:
             application/json:
               schema:
@@ -331,163 +103,38 @@ paths:
 
   /users/{username}:
     post:
-      summary: "🎯 Intelligent Data Collection - Transform Your GitHub Profile"
-      description: |
-        # 🚀 One-Click Intelligence Collection
-        
-        **Turn your GitHub profile into a powerhouse of insights!** Our intelligent collection system analyzes every aspect of your development journey in real-time.
-        
-        ## ✨ What Happens During Collection
-        
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 15px 0;">
-          <h3>🧠 AI-Powered Analysis Pipeline</h3>
-          <p>Watch as we transform raw GitHub data into actionable intelligence!</p>
-        </div>
-        
-        ### 📊 Data Collection Process:
-        
-        | Step | Duration | What We Analyze |
-        |------|----------|----------------|
-        | 1️⃣ **Profile Scan** | ~2s | Complete profile, reputation, expertise areas |
-        | 2️⃣ **Repository Discovery** | ~5s | All repos across personal + organizations |
-        | 3️⃣ **DevOps Analysis** | ~10s | CI/CD, security, quality metrics |
-        | 4️⃣ **AI Processing** | ~3s | Smart insights, recommendations, trends |
-        | 5️⃣ **Storage & Indexing** | ~1s | Lightning-fast future queries |
-        
-        ## 🎯 What You'll Discover
-        
-        ### 👤 **Profile Intelligence**
-        - 🏆 **Developer Reputation Score** with industry percentiles
-        - 📈 **Growth Trajectory** analysis and predictions  
-        - 🎯 **Expertise Mapping** across technologies and domains
-        - 🌟 **Community Impact** measurement and optimization tips
-        
-        ### 📊 **Advanced Metrics**
-        - 💻 **Coding Activity Patterns** and productivity insights
-        - 🔬 **Language Mastery Levels** with skill progression  
-        - 🚀 **Career Progression** indicators and recommendations
-        - 🎨 **Project Diversity** analysis and portfolio optimization
-        
-        ## 🔒 Privacy & Security
-        
-        - ✅ **You own your data** - collect only your own profile
-        - 🛡️ **Enterprise-grade encryption** at rest and in transit
-        - 🎯 **Selective visibility** - choose what to share
-        - 🔄 **Smart caching** for optimal performance
-        
-        ## ⚡ Performance Promise
-        
-        - 🏃‍♂️ **Complete analysis** in under 30 seconds
-        - 📱 **Real-time progress** updates via webhooks
-        - 🎯 **Instant availability** for consumption endpoints
-        - 🔄 **Smart incremental** updates for efficiency
+      summary: Collect user profile data
+      description: Fetch and store GitHub user profile data from GitHub API
       operationId: collectUserData
       tags:
         - Users
       security:
         - BearerAuth: []
       parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub (doit correspondre à l'utilisateur authentifié)
-          schema:
-            type: string
-            example: "octocat"
+        - $ref: '#/components/parameters/UsernameParam'
       responses:
         '201':
-          description: Collecte des données réussie
+          description: User data collected successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CollectionResponse'
+                $ref: '#/components/schemas/UserCollectionResponse'
         '401':
-          description: Authentification requise ou token invalide
+          description: Authentication required
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Accès refusé - vous ne pouvez collecter que vos propres données
+          description: Can only collect own user data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
     get:
-      summary: "⚡ Lightning-Fast Profile Insights"
-      description: |
-        # 🚀 Instant Access to Rich Developer Intelligence
-        
-        **Get comprehensive insights in under 50ms!** Access beautifully processed GitHub analytics that would take hours to compute manually.
-        
-        ## 🎯 Smart Access Levels
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-          <div style="border: 2px solid #28a745; border-radius: 8px; padding: 15px;">
-            <h3>🔓 Public Access</h3>
-            <p><strong>No auth required!</strong></p>
-            <ul>
-              <li>📊 Public repository stats</li>
-              <li>🏆 Contribution highlights</li>
-              <li>💫 Skills and languages</li>
-              <li>🌟 Community reputation</li>
-            </ul>
-          </div>
-          <div style="border: 2px solid #007bff; border-radius: 8px; padding: 15px;">
-            <h3>🔒 Owner Access</h3>
-            <p><strong>Full intelligence dashboard!</strong></p>
-            <ul>
-              <li>📈 Complete analytics suite</li>
-              <li>🔬 Private repository insights</li>
-              <li>🤖 AI-powered recommendations</li>
-              <li>📊 Detailed performance metrics</li>
-            </ul>
-          </div>
-        </div>
-        
-        ## 🎨 What You'll Get
-        
-        ### 📊 **Rich Response Format**
-        ```json
-        {
-          "userProfile": {
-            "reputation": "🏆 Expert Level (95th percentile)",
-            "expertise": ["TypeScript", "React", "Node.js"],
-            "trends": "🚀 Growing in AI/ML projects"
-          },
-          "insights": {
-            "strengths": ["Clean code", "Community engagement"],
-            "opportunities": ["Consider contributing to OSS"],
-            "recommendations": ["Explore GraphQL projects"]
-          },
-          "benchmarks": {
-            "starsPerRepo": "Above average (+67%)",
-            "activityLevel": "Highly active (top 10%)",
-            "collaboration": "Strong team player"
-          }
-        }
-        ```
-        
-        ### ⚡ **Performance Metrics**
-        - 🏃‍♂️ **Sub-50ms response** time guaranteed
-        - 📊 **Real-time data** freshness indicators  
-        - 🔄 **Smart caching** with update recommendations
-        - 📱 **Mobile-optimized** JSON structure
-        
-        ## 🎯 Perfect for Building
-        
-        - 🖥️ **Developer portfolios** with rich insights
-        - 📊 **Team dashboards** and analytics tools
-        - 🏆 **Hiring platforms** with skill assessments  
-        - 📈 **Performance tracking** applications
-        
-        ## 💡 Pro Tips
-        
-        - 🔄 **Check data freshness** in the metadata
-        - 🚀 **Use pagination** for large datasets
-        - 📱 **Cache responses** for better UX
-        - 🎯 **Combine with repositories** endpoint for complete picture
+      summary: Get user profile
+      description: Retrieve stored user profile and analysis status
       operationId: getUserProfile
       tags:
         - Users
@@ -495,738 +142,55 @@ paths:
         - BearerAuth: []
         - {}
       parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub
-          schema:
-            type: string
-            example: "octocat"
+        - $ref: '#/components/parameters/UsernameParam'
       responses:
         '200':
-          description: Données utilisateur récupérées avec succès
+          description: User profile retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserCompleteResponse'
+                $ref: '#/components/schemas/UserProfileResponse'
         '404':
-          description: Utilisateur introuvable ou données non collectées
+          description: User not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /summary/{username}:
-    get:
-      summary: "🏆 Ultimate Developer Analytics - Portfolio Ready"
-      description: |
-        # 🚀 The Most Comprehensive Developer Analytics Ever Built
-        
-        **Transform GitHub data into stunning portfolio insights!** Get publication-ready analytics perfect for CVs, portfolios, presentations, and professional profiles.
-        
-        ## ✨ What Makes This Endpoint Special
-        
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 15px 0;">
-          <h3>🎯 Built for Professional Success</h3>
-          <p>Every metric is carefully crafted for maximum impact in professional contexts!</p>
-        </div>
-        
-        ### 🏆 **Complete Professional Profile**
-        - 📊 **Reputation Scoring** (0-100) with industry percentiles
-        - 🎯 **Influence Level** classification (Emerging → Visionary)
-        - 💼 **Career Level** assessment with progression roadmap
-        - 🌟 **Expertise Areas** with proficiency ratings
-        - 📈 **Growth Trajectory** analysis and predictions
-        
-        ### 💻 **Technology Mastery Analysis**
-        - 🔬 **Skill Categories**: Frontend, Backend, Mobile, DevOps, AI/ML, Data
-        - 📊 **Proficiency Levels**: Expert (90-100%), Advanced (70-89%), Intermediate (50-69%), Beginner (0-49%)
-        - 🚀 **Market Demand** scoring for each technology
-        - 📈 **Learning Trends** and recommended focus areas
-        - 🎯 **Technology Recommendations** based on current skills
-        
-        ### 🔧 **DevOps Maturity Assessment**
-        - 🚀 **CI/CD Adoption** percentage across portfolio
-        - 🛡️ **Security Maturity** scoring and recommendations
-        - 📊 **Code Quality** metrics and improvement areas
-        - 🏆 **Best Practices** adoption with industry standards
-        - 📈 **Automation Score** and workflow efficiency
-        
-        ### 🌟 **Community Impact Metrics**
-        - 🏆 **Impact Score** (0-100) with influence radius
-        - ⭐ **Featured Projects** with significance ratings
-        - 🎯 **Achievements** system with rarity classifications
-        - 📈 **Growth Metrics** and milestone tracking
-        - 👥 **Leadership Indicators** and mentoring potential
-        
-        ### 🎯 **Personalized Recommendations**
-        - 💼 **Career Recommendations** with impact scoring
-        - 🔧 **Technology Recommendations** based on market trends
-        - 📚 **Learning Roadmap** with estimated timelines
-        - 🚀 **Project Ideas** for portfolio enhancement
-        - 🌍 **Community Engagement** opportunities
-        
-        ### 📊 **Industry Benchmarks**
-        - 🏆 **Overall Percentile** position in the industry
-        - 📈 **Category Rankings** across different skill areas
-        - 🎯 **Market Position** with competitive advantages
-        - 🔮 **Industry Trends** and future outlook
-        
-        ## 🎨 Perfect Response Format for Integration
-        
-        ```json
-        {
-          "summary": {
-            "profile": {
-              "reputationScore": 87,
-              "influenceLevel": "Leader",
-              "careerLevel": "Senior",
-              "expertiseAreas": ["TypeScript", "React", "Node.js"]
-            },
-            "portfolioOverview": {
-              "portfolioQualityScore": 92,
-              "projectDiversityScore": 85,
-              "totalLanguages": 12,
-              "averageStarsPerRepo": 23.4
-            },
-            "technologyExpertise": {
-              "overallExpertiseScore": 89,
-              "expertLevel": [
-                {
-                  "technology": "TypeScript",
-                  "masteryLevel": 95,
-                  "marketDemand": "Very High"
-                }
-              ]
-            },
-            "recommendations": {
-              "careerRecommendations": [
-                {
-                  "title": "Technical Leadership Role",
-                  "priority": "High",
-                  "potentialImpact": 90
-                }
-              ]
-            },
-            "industryBenchmarks": {
-              "overallPercentile": 87,
-              "marketPosition": {
-                "overallRank": "Top 15%",
-                "marketValue": "Senior"
-              }
-            }
-          }
-        }
-        ```
-        
-        ## 🎯 **Access Levels**
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-          <div style="border: 2px solid #28a745; border-radius: 8px; padding: 15px;">
-            <h3>🌍 Public Analytics</h3>
-            <p><strong>No authentication required</strong></p>
-            <ul>
-              <li>📊 Public repository analysis</li>
-              <li>🏆 Open source contributions</li>
-              <li>💫 Technology expertise mapping</li>
-              <li>📈 Growth trajectory insights</li>
-            </ul>
-          </div>
-          <div style="border: 2px solid #007bff; border-radius: 8px; padding: 15px;">
-            <h3>🔒 Complete Intelligence</h3>
-            <p><strong>Owner authentication required</strong></p>
-            <ul>
-              <li>📈 Real-time GitHub data</li>
-              <li>🔬 Private repository insights</li>
-              <li>🤖 Advanced AI recommendations</li>
-              <li>📊 Comprehensive benchmarking</li>
-            </ul>
-          </div>
-        </div>
-        
-        ## 🚀 **Integration Examples**
-        
-        ### Portfolio Website
-        ```javascript
-        const summary = await fetch('/api/summary/username');
-        const { profile, technologyExpertise } = summary.data;
-        
-        // Display reputation score
-        const reputation = profile.reputationScore; // 0-100
-        const level = profile.influenceLevel; // "Leader"
-        
-        // Show technology mastery
-        const expertTechs = technologyExpertise.expertLevel;
-        ```
-        
-        ### CV/Resume Builder
-        ```javascript
-        const { recommendations, industryBenchmarks } = summary.data;
-        
-        // Career recommendations
-        const nextSteps = recommendations.careerRecommendations;
-        
-        // Industry position
-        const percentile = industryBenchmarks.overallPercentile;
-        ```
-        
-        ## ⚡ **Performance Promise**
-        
-        - 🏃‍♂️ **Sub-100ms** response time for cached data
-        - 📊 **Real-time calculation** for authenticated users
-        - 🎯 **Instant insights** ready for display
-        - 📱 **Mobile-optimized** JSON structure
-        
-        ## 💡 **Pro Integration Tips**
-        
-        - 🎨 **Visual Elements**: Use scores for progress bars and charts
-        - 🏆 **Achievements**: Display achievement badges with rarity
-        - 📈 **Trends**: Show growth trajectories and predictions
-        - 🎯 **Recommendations**: Create action items from suggestions
-        - 🌟 **Benchmarks**: Highlight industry position and rankings
-      operationId: getDeveloperSummary
-      tags:
-        - Summary
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub
-          schema:
-            type: string
-            example: "octocat"
-      responses:
-        '200':
-          description: Summary analytics ultra-complet généré avec succès
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeveloperSummaryResponse'
-        '404':
-          description: Utilisateur introuvable ou données non collectées
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /ai/{username}:
-    post:
-      summary: "🤖 Advanced AI Analysis - Unlock Hidden Insights"
-      description: |
-        # 🚀 Revolutionary AI-Powered GitHub Intelligence
-        
-        **Transform your GitHub data into actionable intelligence with cutting-edge AI!** Our GPT-4o-mini powered analysis engine discovers patterns, insights, and opportunities that traditional analytics miss.
-        
-        ## ✨ What Makes Our AI Special
-        
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 15px 0;">
-          <h3>🧠 Next-Generation AI Analysis</h3>
-          <p>Experience the future of developer insights with our advanced machine learning algorithms!</p>
-        </div>
-        
-        ### 🔬 **Deep Intelligence Analysis**
-        
-        | Analysis Category | AI Insights | Business Value |
-        |-------------------|-------------|----------------|
-        | 📊 **Code Quality** | Maintainability scoring, technical debt assessment | Risk reduction, efficiency gains |
-        | 🛡️ **Security Posture** | Vulnerability patterns, security best practices | Compliance, risk management |
-        | 🚀 **Performance** | Build optimization, deployment efficiency | Cost reduction, speed improvement |
-        | 💡 **Innovation** | Technology adoption, emerging patterns | Competitive advantage, growth |
-        | 🎯 **Career Growth** | Skill gap analysis, market positioning | Professional development, hiring |
-        
-        ### 🎯 **What You'll Discover**
-        
-        #### 🏆 **Comprehensive Scoring System**
-        - **Quality Score** (0-100) → Code maintainability and best practices
-        - **Security Score** (0-100) → Vulnerability resilience and compliance  
-        - **Innovation Score** (0-100) → Technology adoption and forward-thinking
-        - **Health Score** (0-10) → Overall development ecosystem wellness
-        
-        #### 🔍 **Actionable Intelligence**
-        - 🎯 **Personalized Recommendations** for immediate impact
-        - 📈 **Growth Strategies** tailored to your profile
-        - 🛡️ **Security Improvements** with priority ranking
-        - 💼 **Career Advice** from industry experts (AI-powered)
-        
-        #### 📊 **Enterprise-Grade Metrics**
-        - 🐛 **Estimated Bug Count** with severity classification
-        - ⚠️ **Vulnerability Assessment** with remediation paths
-        - ⏱️ **Build Time Optimization** suggestions
-        - 🧪 **Test Coverage** analysis and improvement tips
-        
-        ## 🔒 **Privacy & Security**
-        
-        - ✅ **Your data, your control** - analyze only your own repositories
-        - 🛡️ **Privacy-first AI** - no data retention for training
-        - 🔐 **Enterprise encryption** throughout the analysis pipeline
-        - 🎯 **Selective sharing** - choose what insights to make public
-        
-        ## ⚡ **Analysis Performance**
-        
-        - 🏃‍♂️ **Complete analysis** in under 30 seconds
-        - 🤖 **GPT-4o-mini powered** for maximum accuracy
-        - 🔄 **Smart caching** for instant re-access
-        - 📱 **Real-time progress** updates via response streaming
-        
-        ## 💡 **Perfect For**
-        
-        - 👨‍💻 **Individual Developers** → Portfolio optimization, skill assessment
-        - 👥 **Development Teams** → Code quality insights, security audits
-        - 🏢 **Tech Recruiters** → Candidate evaluation, skill verification
-        - 📊 **Engineering Managers** → Team performance, technology decisions
-        
-        ## 🎯 **Quick Start**
-        
-        ```bash
-        # Launch AI analysis for your profile
-        curl -X POST "https://api.gh-insight-engine.com/ai/your-username" \
-             -H "Authorization: Bearer your_jwt_token" \
-             -H "Content-Type: application/json"
-        
-        # Get results immediately after
-        curl "https://api.gh-insight-engine.com/ai/your-username"
-        ```
-        
-        **Ready to unlock your GitHub potential?** 🚀
-      operationId: performAIAnalysis
-      tags:
-        - AI Analysis
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub (doit correspondre à l'utilisateur authentifié)
-          schema:
-            type: string
-            example: "octocat"
-      responses:
-        '201':
-          description: Analyse IA lancée et terminée avec succès
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIAnalysisResponse'
-        '400':
-          description: Données insuffisantes pour l'analyse
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Authentification requise
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Vous ne pouvez analyser que votre propre profil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '503':
-          description: Service IA temporairement indisponible
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    get:
-      summary: "📊 AI Intelligence Dashboard - Rich Insights"
-      description: |
-        # 🚀 Instant Access to AI-Powered GitHub Intelligence
-        
-        **Get comprehensive AI insights in milliseconds!** Access beautifully processed intelligence that combines machine learning with years of development expertise.
-        
-        ## 🎯 **Smart Access Levels**
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-          <div style="border: 2px solid #28a745; border-radius: 8px; padding: 15px;">
-            <h3>🌍 Public Intelligence</h3>
-            <p><strong>No authentication required!</strong></p>
-            <ul>
-              <li>📊 Quality and innovation scores</li>
-              <li>🏆 Public achievement highlights</li>
-              <li>💫 Technology expertise overview</li>
-              <li>📈 Growth trend indicators</li>
-            </ul>
-          </div>
-          <div style="border: 2px solid #007bff; border-radius: 8px; padding: 15px;">
-            <h3>🔬 Complete AI Dashboard</h3>
-            <p><strong>Owner access required!</strong></p>
-            <ul>
-              <li>🛡️ Security vulnerability analysis</li>
-              <li>🐛 Bug estimation and remediation</li>
-              <li>⚡ Performance optimization tips</li>
-              <li>💼 Personalized career guidance</li>
-            </ul>
-          </div>
-        </div>
-        
-        ## 📊 **Rich Response Structure**
-        
-        ### 🏆 **AI-Generated Scores**
-        ```json
-        {
-          "analysis": {
-            "qualityScore": 87,
-            "maintenabilityScore": 92, 
-            "securityScore": 79,
-            "innovationScore": 85,
-            "overallHealthScore": 8.5,
-            
-            "estimatedVulnerabilities": 12,
-            "estimatedBugs": 45,
-            "estimatedBuildTime": 120,
-            "estimatedTestCoverage": 78.5
-          },
-          
-          "insights": {
-            "summary": "Experienced full-stack developer with strong architecture skills...",
-            "strengths": ["Clean code practices", "Strong testing culture"],
-            "recommendations": ["Consider microservices architecture", "Explore Kubernetes"],
-            "careerAdvice": ["Technical leadership role", "Open source contributions"]
-          },
-          
-          "interfaceMetrics": {
-            "qualityAverage": "87.0%",
-            "vulnerabilities": 12,
-            "bugsDetected": 45,
-            "buildTime": "120s",
-            "testCoverage": "78.5%",
-            "healthScore": "8.5"
-          }
-        }
-        ```
-        
-        ### 🎯 **Perfect for Building**
-        - 📊 **AI-powered dashboards** with intelligent insights
-        - 🏆 **Developer portfolios** with credible AI scoring
-        - 👥 **Hiring platforms** with comprehensive assessments
-        - 📈 **Performance tracking** with predictive analytics
-        - 🎯 **Code quality** monitoring and improvement tools
-        
-        ## ⚡ **Performance Metrics**
-        
-        - 🏃‍♂️ **Sub-50ms** response for cached analysis
-        - 🔄 **Real-time freshness** indicators with aging alerts
-        - 📱 **Mobile-optimized** structure for any device
-        - 🎯 **Smart recommendations** based on analysis age
-        
-        ## 💡 **Integration Best Practices**
-        
-        - 🔍 **Check analysis freshness** - recommend re-analysis if > 7 days
-        - 🎨 **Use scores visually** - perfect for progress bars and charts
-        - 💼 **Display career advice** - actionable professional development
-        - 🛡️ **Highlight security** - show vulnerability reduction impact
-        - 📊 **Benchmark against industry** - contextual performance insights
-      operationId: getAIAnalysis
-      tags:
-        - AI Analysis
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub
-          schema:
-            type: string
-            example: "octocat"
-      responses:
-        '200':
-          description: Analyse IA récupérée avec succès
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIAnalysisResultResponse'
-        '404':
-          description: Aucune analyse IA trouvée - utilisez POST pour en créer une
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /ai/status:
-    get:
-      summary: "🔍 AI Service Health & Capabilities"
-      description: |
-        # 🤖 Real-Time AI Service Status Dashboard
-        
-        **Monitor our AI infrastructure and capabilities in real-time!** Get instant visibility into service health, model availability, and performance metrics.
-        
-        ## 🎯 **What You'll Monitor**
-        
-        ### 🟢 **Service Health**
-        - ⚡ **Availability Status** → Real-time uptime monitoring
-        - 🔗 **API Connectivity** → OpenAI integration health
-        - 🧠 **Model Status** → GPT-4o-mini availability and performance
-        - 📊 **Response Times** → Current latency and throughput metrics
-        
-        ### 🛠️ **Capabilities Overview**
-        - 🔬 **Quality Analysis** → Code maintainability scoring
-        - 🛡️ **Security Analysis** → Vulnerability pattern detection
-        - ⚡ **Performance Analysis** → Build and deployment optimization
-        - 📊 **Repository Scoring** → Individual project assessments
-        - 💼 **Career Insights** → Professional development guidance
-        
-        ### 🚨 **Fallback Intelligence**
-        - 🔄 **Smart Fallback** → Statistical analysis when AI unavailable
-        - 📊 **Baseline Metrics** → Fundamental scoring always available
-        - 🎯 **Graceful Degradation** → No service interruption
-        
-        ## 📊 **Response Structure**
-        
-        ```json
-        {
-          "service": "AI Analysis Service",
-          "status": "available",
-          "configuration": {
-            "model": "gpt-4o-mini",
-            "maxTokens": 4096,
-            "temperature": 0.3
-          },
-          "capabilities": {
-            "qualityAnalysis": true,
-            "securityAnalysis": true,
-            "performanceAnalysis": true,
-            "repositoryScoring": true,
-            "careerInsights": true
-          },
-          "limitations": [],
-          "fallbackMode": {
-            "enabled": true,
-            "description": "Statistical analysis available when AI unavailable"
-          }
-        }
-        ```
-        
-        ## 🎯 **Perfect for Monitoring**
-        - 🖥️ **Service dashboards** → Infrastructure monitoring
-        - 📱 **Mobile apps** → Feature availability checking
-        - 🔔 **Alert systems** → Proactive service monitoring
-        - 👥 **User interfaces** → Dynamic feature enabling/disabling
-        
-        ## 💡 **Pro Tips**
-        - 🔄 **Check before analysis** → Verify AI availability
-        - 📊 **Cache status responses** → Reduce monitoring overhead
-        - 🚨 **Implement fallbacks** → Handle service degradation gracefully
-        - 📈 **Track trends** → Monitor service improvement over time
-      operationId: getAIServiceStatus
-      tags:
-        - AI Analysis
-      security: []
-      responses:
-        '200':
-          description: Statut du service IA récupéré avec succès
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIServiceStatusResponse'
 
   /repositories/{username}:
     post:
-      summary: "🔧 Ultimate DevOps Intelligence Collection"  
-      description: |
-        # 🚀 Transform Your Repositories Into Intelligence Goldmines
-        
-        **The most comprehensive repository analysis engine ever built!** We dive deep into every aspect of your development ecosystem to uncover hidden insights and optimization opportunities.
-        
-        ## 🎯 Revolutionary Analysis Engine
-        
-        <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%); color: white; padding: 20px; border-radius: 10px; margin: 15px 0;">
-          <h3>🔬 Advanced Repository Intelligence</h3>
-          <p>Watch us analyze hundreds of data points across your entire development portfolio!</p>
-        </div>
-        
-        ### 🚀 Multi-Dimensional Analysis Pipeline
-        
-        | Phase | Duration | Intelligence Extracted |
-        |-------|----------|----------------------|
-        | 🔍 **Discovery** | ~5s | All repos across personal + organizations |
-        | 🔧 **DevOps Scan** | ~15s | CI/CD maturity, automation levels |
-        | 🛡️ **Security Audit** | ~10s | Vulnerabilities, best practices, compliance |
-        | 📊 **Quality Analysis** | ~12s | Code health, maintainability, debt |
-        | 🤖 **AI Enhancement** | ~8s | Insights, patterns, recommendations |
-        | 💾 **Smart Indexing** | ~3s | Optimized storage for lightning queries |
-        
-        ## 🏆 What Makes Our Analysis Unique
-        
-        ### 🔧 **DevOps Maturity Assessment**
-        - 🚀 **CI/CD Pipeline Analysis** - Workflow efficiency scoring
-        - 📈 **Deployment Frequency** - Release cycle optimization
-        - 🎯 **Lead Time Metrics** - Development velocity insights
-        - 🔄 **Rollback Analysis** - Reliability and recovery patterns
-        
-        ### 🛡️ **Security Intelligence**
-        - 🔒 **Vulnerability Assessment** - Real-time security posture
-        - 📋 **Compliance Scoring** - Industry standard adherence
-        - 🚨 **Alert Management** - Proactive threat monitoring
-        - 🔐 **Access Control** - Permission and policy analysis
-        
-        ### 📊 **Code Quality Insights**
-        - 🧹 **Technical Debt** - Maintenance burden quantification
-        - 📈 **Complexity Metrics** - Maintainability scoring
-        - 🎨 **Style Consistency** - Code standard compliance
-        - 🔄 **Refactoring Opportunities** - Improvement recommendations
-        
-        ### 🌟 **Community Health**
-        - 📖 **Documentation Quality** - README, guides, API docs
-        - 🤝 **Contribution Experience** - Onboarding effectiveness
-        - 🎯 **Issue Management** - Response time and resolution
-        - 💬 **Community Engagement** - Activity and growth patterns
-        
-        ## 📈 Intelligence You'll Unlock
-        
-        - 🏆 **DevOps Maturity Score** (0-100) with improvement roadmap
-        - 🎯 **Repository Rankings** within your portfolio
-        - 📊 **Technology Stack Analysis** with future recommendations
-        - 🚀 **Performance Benchmarks** against industry standards
-        - 🤖 **AI-Powered Insights** for strategic decision making
-        
-        ## ⚡ Collection Promise
-        
-        - 🏃‍♂️ **Complete analysis** in under 60 seconds
-        - 📱 **Real-time progress** with detailed status updates
-        - 🔄 **Incremental updates** for efficiency
-        - 🎯 **Zero disruption** to your development workflow
+      summary: Collect repository data
+      description: Fetch and store repositories with DevOps analytics from GitHub API
       operationId: collectRepositoriesData
       tags:
         - Repositories
       security:
         - BearerAuth: []
       parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub (doit correspondre à l'utilisateur authentifié)
-          schema:
-            type: string
-            example: "octocat"
+        - $ref: '#/components/parameters/UsernameParam'
       responses:
         '201':
-          description: Collecte des repositories réussie
+          description: Repository data collected successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CollectionResponse'
+                $ref: '#/components/schemas/RepositoryCollectionResponse'
         '401':
-          description: Authentification requise ou token invalide
+          description: Authentication required
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Accès refusé - vous ne pouvez collecter que vos propres repositories
+          description: Can only collect own repository data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
     get:
-      summary: "📈 Advanced Repository Analytics Dashboard"
-      description: |
-        # 🚀 Instant Access to Comprehensive Repository Intelligence
-        
-        **Get enterprise-grade analytics in milliseconds!** Access beautifully processed repository insights that would take data scientists days to compile.
-        
-        ## 🎯 Intelligent Access Modes
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-          <div style="border: 2px solid #28a745; border-radius: 8px; padding: 15px;">
-            <h3>🌍 Public Discovery Mode</h3>
-            <p><strong>No authentication needed!</strong></p>
-            <ul>
-              <li>📊 Public repository portfolio</li>
-              <li>🏆 Open source contributions</li>
-              <li>💫 Technology expertise map</li>
-              <li>🌟 Community impact metrics</li>
-            </ul>
-          </div>
-          <div style="border: 2px solid #007bff; border-radius: 8px; padding: 15px;">
-            <h3>🔬 Full Intelligence Mode</h3>
-            <p><strong>Complete DevOps dashboard!</strong></p>
-            <ul>
-              <li>📈 Complete portfolio analytics</li>
-              <li>🔒 Private repository insights</li>
-              <li>🛡️ Security posture analysis</li>
-              <li>🤖 AI-powered optimization tips</li>
-            </ul>
-          </div>
-        </div>
-        
-        ## 🏆 Revolutionary Response Structure
-        
-        ### 📊 **Rich Analytics Suite**
-        ```json
-        {
-          "repositories": [
-            {
-              "name": "awesome-project",
-              "intelligence": {
-                "devopsScore": 87,
-                "securityGrade": "A+",
-                "qualityMetrics": {
-                  "maintainability": "Excellent",
-                  "testCoverage": 94,
-                  "codeDebt": "Low"
-                }
-              },
-              "insights": {
-                "strengths": ["Great CI/CD", "Active community"],
-                "opportunities": ["Add security scanning"],
-                "trends": "Growing adoption (+45% stars)"
-              }
-            }
-          ],
-          "analytics": {
-            "portfolio": {
-              "devopsMaturity": "Advanced (Top 15%)",
-              "overallGrade": "A",
-              "recommendations": ["Focus on documentation"]
-            }
-          }
-        }
-        ```
-        
-        ### 🎯 **Advanced Analytics Included**
-        
-        | Category | Metrics | Insights |
-        |----------|---------|----------|
-        | 🔧 **DevOps** | CI/CD efficiency, deployment frequency | Automation recommendations |
-        | 🛡️ **Security** | Vulnerability count, policy compliance | Risk assessment & fixes |
-        | 📊 **Quality** | Code complexity, maintainability index | Refactoring opportunities |
-        | 🌟 **Community** | Health score, contribution patterns | Growth strategies |
-        | 📈 **Performance** | Traffic, usage patterns, popularity | Optimization suggestions |
-        
-        ## 🚀 Performance & Features
-        
-        ### ⚡ **Lightning Performance**
-        - 🏃‍♂️ **Sub-25ms** response time for cached data
-        - 📱 **Mobile-optimized** JSON structure  
-        - 🔄 **Smart pagination** for large portfolios
-        - 📊 **Real-time freshness** indicators
-        
-        ### 🎯 **Perfect for Building**
-        - 📊 **Developer dashboards** with rich visualizations
-        - 🏆 **Portfolio websites** with professional insights
-        - 📈 **Team analytics** tools and reports
-        - 🔍 **Talent assessment** platforms
-        - 🚀 **Performance tracking** applications
-        
-        ## 💡 Advanced Usage Tips
-        
-        - 🔄 **Combine with user endpoint** for complete developer profile
-        - 📊 **Use filters** to focus on specific technologies  
-        - 🎯 **Cache strategically** - data changes infrequently
-        - 📱 **Implement pagination** for portfolios with 50+ repos
-        - 🔔 **Monitor freshness** and trigger re-collection when needed
+      summary: Get user repositories
+      description: Retrieve stored repositories and analytics
       operationId: getUserRepositories
       tags:
         - Repositories
@@ -1234,26 +198,124 @@ paths:
         - BearerAuth: []
         - {}
       parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub
-          schema:
-            type: string
-            example: "octocat"
+        - $ref: '#/components/parameters/UsernameParam'
       responses:
         '200':
-          description: Repositories récupérés avec succès
+          description: Repositories retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RepositoriesCompleteResponse'
+                $ref: '#/components/schemas/RepositoriesResponse'
         '404':
-          description: Utilisateur introuvable ou repositories non collectés
+          description: No repositories found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /summary/{username}:
+    get:
+      summary: Get developer analytics summary
+      description: Generate comprehensive developer analytics from stored data
+      operationId: getDeveloperSummary
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: Summary generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeveloperSummaryResponse'
+        '404':
+          description: No data available for analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/{username}:
+    post:
+      summary: Perform AI analysis
+      description: Execute AI-powered code quality and security analysis
+      operationId: performAIAnalysis
+      tags:
+        - AI Analysis
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '201':
+          description: AI analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisResponse'
+        '400':
+          description: Insufficient data for analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Can only analyze own profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Get AI analysis results
+      description: Retrieve existing AI analysis results
+      operationId: getAIAnalysis
+      tags:
+        - AI Analysis
+      security:
+        - BearerAuth: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: AI analysis retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisResultResponse'
+        '404':
+          description: No AI analysis found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/status:
+    get:
+      summary: AI service status
+      description: Get AI service availability and configuration
+      operationId: getAIServiceStatus
+      tags:
+        - AI Analysis
+      security: []
+      responses:
+        '200':
+          description: AI service status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIServiceStatusResponse'
 
 components:
   securitySchemes:
@@ -1261,14 +323,21 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: |
-        Token JWT obtenu via l'endpoint `/auth/login`.
-        
-        **Format :** `Bearer <votre_token_jwt>`
-        
-        **Durée de vie :** 24 heures
+      description: JWT token obtained from /auth/login (24h validity)
+
+  parameters:
+    UsernameParam:
+      name: username
+      in: path
+      required: true
+      description: GitHub username
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9]([a-zA-Z0-9\-]){0,38}$'
+        example: "octocat"
 
   schemas:
+    # System Responses
     HealthResponse:
       type: object
       properties:
@@ -1286,7 +355,7 @@ components:
           format: date-time
         uptime:
           type: number
-          example: 3600
+          description: Server uptime in seconds
         environment:
           type: string
           example: "development"
@@ -1301,6 +370,7 @@ components:
           type: string
           format: date-time
 
+    # Authentication
     LoginRequest:
       type: object
       required:
@@ -1310,15 +380,15 @@ components:
       properties:
         username:
           type: string
-          description: Nom d'utilisateur GitHub
+          description: GitHub username
           example: "octocat"
         fullName:
           type: string
-          description: Nom complet de l'utilisateur
+          description: User full name
           example: "The Octocat"
         githubToken:
           type: string
-          description: Token GitHub Classic avec permissions repo/user/read:org
+          description: GitHub Classic token with required scopes
           example: "ghp_xxxxxxxxxxxxxxxxxxxx"
 
     LoginResponse:
@@ -1326,15 +396,30 @@ components:
       properties:
         message:
           type: string
-          example: "Authentification réussie"
+          example: "Authentication successful"
         user:
-          $ref: '#/components/schemas/AuthenticatedUser'
+          type: object
+          properties:
+            id:
+              type: string
+              description: User identifier
+            username:
+              type: string
+              description: GitHub username
+            hasValidToken:
+              type: boolean
+            degradedMode:
+              type: boolean
+              description: True if authenticated in degraded mode
+            fallbackMode:
+              type: boolean
+              description: True if authenticated in fallback mode
         tokens:
           type: object
           properties:
             accessToken:
               type: string
-              description: Token JWT pour les requêtes API
+              description: JWT token for API requests
             tokenType:
               type: string
               example: "Bearer"
@@ -1350,29 +435,118 @@ components:
               type: boolean
             canReadUser:
               type: boolean
+        warning:
+          type: string
+          description: Warning message for degraded/fallback modes
         timestamp:
           type: string
           format: date-time
 
-    AuthenticatedUser:
-      type: object
-      properties:
-        id:
-          type: string
-        username:
-          type: string
-        hasValidToken:
-          type: boolean
-
-    CollectionResponse:
+    # User Operations
+    UserCollectionResponse:
       type: object
       properties:
         message:
           type: string
-          example: "Collecte des données utilisateur réussie"
+          example: "User profile collection successful"
         status:
           type: string
-          example: "completed"
+          enum: ["completed", "partial", "failed"]
+        userProfile:
+          type: object
+          properties:
+            login:
+              type: string
+            id:
+              type: integer
+            name:
+              type: string
+            public_repos:
+              type: integer
+            followers:
+              type: integer
+            following:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+        metadata:
+          type: object
+          properties:
+            collectedAt:
+              type: string
+              format: date-time
+            source:
+              type: string
+              example: "github_api"
+        timestamp:
+          type: string
+          format: date-time
+
+    UserProfileResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            name:
+              type: string
+            avatarUrl:
+              type: string
+            bio:
+              type: string
+              nullable: true
+            company:
+              type: string
+              nullable: true
+            location:
+              type: string
+              nullable: true
+            publicRepos:
+              type: integer
+            followers:
+              type: integer
+            following:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+        analysis:
+          type: object
+          properties:
+            hasStoredData:
+              type: boolean
+            lastAnalyzed:
+              type: string
+              format: date-time
+            hasAiInsights:
+              type: boolean
+            repositoriesStored:
+              type: integer
+            dataSource:
+              type: string
+              enum: ["database", "live", "cache"]
+        timestamp:
+          type: string
+          format: date-time
+
+    # Repository Operations
+    RepositoryCollectionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Repository collection successful"
+        status:
+          type: string
+          enum: ["completed", "partial", "failed"]
         summary:
           type: object
           properties:
@@ -1384,7 +558,9 @@ components:
               type: integer
             dataFreshness:
               type: string
-              example: "live"
+              enum: ["live", "recent", "stale"]
+        analytics:
+          $ref: '#/components/schemas/RepositoryAnalytics'
         metadata:
           type: object
           properties:
@@ -1398,96 +574,37 @@ components:
           type: string
           format: date-time
 
-    UserCompleteResponse:
-      type: object
-      properties:
-        userProfile:
-          $ref: '#/components/schemas/GitHubUserProfile'
-        metadata:
-          $ref: '#/components/schemas/DatasetMetadata'
-        repositories:
-          type: array
-          items:
-            $ref: '#/components/schemas/GitHubRepository'
-        timestamp:
-          type: string
-          format: date-time
-
-    RepositoriesCompleteResponse:
+    RepositoriesResponse:
       type: object
       properties:
         repositories:
           type: array
           items:
-            $ref: '#/components/schemas/GitHubRepository'
+            $ref: '#/components/schemas/Repository'
         analytics:
-          $ref: '#/components/schemas/RepositoriesAnalytics'
+          $ref: '#/components/schemas/RepositoryAnalytics'
         metadata:
-          $ref: '#/components/schemas/CollectionMetadata'
-        timestamp:
-          type: string
-          format: date-time
-
-    GitHubUserProfile:
-      type: object
-      properties:
-        login:
-          type: string
-        name:
-          type: string
-        email:
-          type: string
-        avatarUrl:
-          type: string
-        bio:
-          type: string
-        company:
-          type: string
-        location:
-          type: string
-        blog:
-          type: string
-        twitterUsername:
-          type: string
-        followers:
-          type: integer
-        following:
-          type: integer
-        publicRepos:
-          type: integer
-        publicGists:
-          type: integer
-        privateRepos:
-          type: integer
-        organizations:
           type: object
           properties:
-            totalCount:
+            username:
+              type: string
+            dataSource:
+              type: string
+              example: "database"
+            accessLevel:
+              type: string
+              enum: ["full", "public"]
+            repositoriesCount:
               type: integer
-            nodes:
-              type: array
-              items:
-                $ref: '#/components/schemas/GitHubOrganization'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
+            isEmpty:
+              type: boolean
+            message:
+              type: string
+        timestamp:
           type: string
           format: date-time
 
-    GitHubOrganization:
-      type: object
-      properties:
-        login:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        avatarUrl:
-          type: string
-
-    GitHubRepository:
+    Repository:
       type: object
       properties:
         nameWithOwner:
@@ -1496,6 +613,7 @@ components:
           type: string
         description:
           type: string
+          nullable: true
         isPrivate:
           type: boolean
         isArchived:
@@ -1512,8 +630,21 @@ components:
           type: integer
         primaryLanguage:
           type: string
+          nullable: true
         languages:
-          $ref: '#/components/schemas/LanguageStats'
+          type: object
+          properties:
+            totalSize:
+              type: integer
+            nodes:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
         topics:
           type: array
           items:
@@ -1521,507 +652,162 @@ components:
         pushedAt:
           type: string
           format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
         createdAt:
           type: string
           format: date-time
         homepageUrl:
           type: string
+          nullable: true
         size:
           type: integer
         defaultBranchRef:
           type: string
-        license:
-          $ref: '#/components/schemas/License'
+          nullable: true
         hasIssuesEnabled:
           type: boolean
         hasWikiEnabled:
           type: boolean
         hasPages:
           type: boolean
+          nullable: true
+        readmeEnabled:
+          type: boolean
+          nullable: true
         commits:
-          $ref: '#/components/schemas/CommitStats'
-        releases:
-          $ref: '#/components/schemas/ReleaseStats'
-        issues:
-          $ref: '#/components/schemas/IssueStats'
-        pullRequests:
-          $ref: '#/components/schemas/PullRequestStats'
-        githubActions:
-          $ref: '#/components/schemas/GitHubActions'
-        security:
-          $ref: '#/components/schemas/SecurityData'
-        packages:
-          $ref: '#/components/schemas/PackageData'
-        branchProtection:
-          $ref: '#/components/schemas/BranchProtectionData'
-        community:
-          $ref: '#/components/schemas/CommunityData'
-        traffic:
-          $ref: '#/components/schemas/TrafficData'
-        owner:
-          $ref: '#/components/schemas/RepositoryOwner'
-
-    LanguageStats:
-      type: object
-      properties:
-        totalSize:
-          type: integer
-        nodes:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              size:
-                type: integer
-              percentage:
-                type: number
-
-    License:
-      type: object
-      properties:
-        name:
-          type: string
-        spdxId:
-          type: string
-        url:
-          type: string
-
-    CommitStats:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        recent:
-          type: array
-          items:
-            $ref: '#/components/schemas/Commit'
-
-    Commit:
-      type: object
-      properties:
-        oid:
-          type: string
-        message:
-          type: string
-        committedDate:
-          type: string
-          format: date-time
-        author:
-          $ref: '#/components/schemas/CommitAuthor'
-        additions:
-          type: integer
-        deletions:
-          type: integer
-        changedFiles:
-          type: integer
-
-    CommitAuthor:
-      type: object
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-        login:
-          type: string
-
-    ReleaseStats:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        latestRelease:
-          $ref: '#/components/schemas/Release'
-
-    Release:
-      type: object
-      properties:
-        name:
-          type: string
-        tagName:
-          type: string
-        publishedAt:
-          type: string
-          format: date-time
-        isLatest:
-          type: boolean
-
-    IssueStats:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        openCount:
-          type: integer
-        closedCount:
-          type: integer
-
-    PullRequestStats:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        openCount:
-          type: integer
-        closedCount:
-          type: integer
-        mergedCount:
-          type: integer
-
-    GitHubActions:
-      type: object
-      properties:
-        workflowsCount:
-          type: integer
-        lastRunStatus:
-          type: string
-        workflows:
-          type: array
-          items:
-            $ref: '#/components/schemas/Workflow'
-        runs:
-          $ref: '#/components/schemas/WorkflowRuns'
-
-    Workflow:
-      type: object
-      properties:
-        name:
-          type: string
-        path:
-          type: string
-        state:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    WorkflowRuns:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        successful:
-          type: integer
-        failed:
-          type: integer
-        successRate:
-          type: number
-
-    SecurityData:
-      type: object
-      properties:
-        dependabotAlerts:
-          $ref: '#/components/schemas/AlertStats'
-        secretScanning:
-          $ref: '#/components/schemas/AlertStats'
-        codeScanning:
-          $ref: '#/components/schemas/AlertStats'
-        hasSecurityPolicy:
-          type: boolean
-        hasVulnerabilityAlertsEnabled:
-          type: boolean
-
-    AlertStats:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        open:
-          type: integer
-        fixed:
-          type: integer
-        dismissed:
-          type: integer
-
-    PackageData:
-      type: object
-      properties:
-        totalCount:
-          type: integer
-        types:
-          type: array
-          items:
-            type: string
-
-    BranchProtectionData:
-      type: object
-      properties:
-        rules:
-          type: array
-          items:
-            $ref: '#/components/schemas/BranchProtectionRule'
-
-    BranchProtectionRule:
-      type: object
-      properties:
-        pattern:
-          type: string
-        requiresStatusChecks:
-          type: boolean
-        requiresCodeOwnerReviews:
-          type: boolean
-        dismissStaleReviews:
-          type: boolean
-        restrictsPushes:
-          type: boolean
-        requiredStatusChecks:
-          type: array
-          items:
-            type: string
-
-    CommunityData:
-      type: object
-      properties:
-        healthPercentage:
-          type: integer
-        hasReadme:
-          type: boolean
-        hasLicense:
-          type: boolean
-        hasContributing:
-          type: boolean
-        hasCodeOfConduct:
-          type: boolean
-        hasIssueTemplate:
-          type: boolean
-        hasPullRequestTemplate:
-          type: boolean
-
-    TrafficData:
-      type: object
-      properties:
-        views:
-          $ref: '#/components/schemas/TrafficStats'
-        clones:
-          $ref: '#/components/schemas/TrafficStats'
-        popularPaths:
-          type: array
-          items:
-            $ref: '#/components/schemas/PopularPath'
-
-    TrafficStats:
-      type: object
-      properties:
-        count:
-          type: integer
-        uniques:
-          type: integer
-
-    PopularPath:
-      type: object
-      properties:
-        path:
-          type: string
-        title:
-          type: string
-        count:
-          type: integer
-        uniques:
-          type: integer
-
-    RepositoryOwner:
-      type: object
-      properties:
-        login:
-          type: string
-        avatarUrl:
-          type: string
-
-    DatasetMetadata:
-      type: object
-      properties:
-        generatedAt:
-          type: string
-          format: date-time
-        totalRepositories:
-          type: integer
-        organizations:
-          type: array
-          items:
-            type: string
-        dataCollectionScope:
-          type: array
-          items:
-            type: string
-        breakdown:
-          $ref: '#/components/schemas/RepositoryBreakdown'
-        statistics:
-          $ref: '#/components/schemas/GlobalStatistics'
-
-    RepositoryBreakdown:
-      type: object
-      properties:
-        userRepositories:
-          type: integer
-        organizationRepositories:
           type: object
-          additionalProperties:
-            type: integer
-        privateRepositories:
-          type: integer
-        publicRepositories:
-          type: integer
-        forkedRepositories:
-          type: integer
-        archivedRepositories:
-          type: integer
-        templateRepositories:
-          type: integer
+          properties:
+            totalCount:
+              type: integer
+        issues:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        pullRequests:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        releases:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        deployments:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        owner:
+          type: object
+          properties:
+            login:
+              type: string
+            type:
+              type: string
 
-    GlobalStatistics:
-      type: object
-      properties:
-        totalStars:
-          type: integer
-        totalForks:
-          type: integer
-        totalWatchers:
-          type: integer
-        totalIssues:
-          type: integer
-        totalPullRequests:
-          type: integer
-        totalReleases:
-          type: integer
-        totalCommits:
-          type: integer
-        totalDeployments:
-          type: integer
-        totalEnvironments:
-          type: integer
-        totalLanguages:
-          type: integer
-        averageRepoSize:
-          type: integer
-        mostUsedLanguages:
-          type: array
-          items:
-            $ref: '#/components/schemas/LanguageStat'
-        topTopics:
-          type: array
-          items:
-            $ref: '#/components/schemas/TopicStat'
-
-    LanguageStat:
-      type: object
-      properties:
-        name:
-          type: string
-        totalSize:
-          type: integer
-        repoCount:
-          type: integer
-        percentage:
-          type: number
-
-    TopicStat:
-      type: object
-      properties:
-        name:
-          type: string
-        count:
-          type: integer
-
-    RepositoriesAnalytics:
+    RepositoryAnalytics:
       type: object
       properties:
         totalStats:
-          $ref: '#/components/schemas/TotalStats'
+          type: object
+          properties:
+            totalRepositories:
+              type: integer
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            totalWatchers:
+              type: integer
+            totalIssues:
+              type: integer
+            totalPullRequests:
+              type: integer
+            totalCommits:
+              type: integer
+            totalReleases:
+              type: integer
+            totalDeployments:
+              type: integer
+            repositoriesWithActions:
+              type: integer
+            repositoriesWithSecurity:
+              type: integer
+            repositoriesWithPackages:
+              type: integer
+            repositoriesWithProtection:
+              type: integer
+            averageCommunityHealth:
+              type: integer
         languageAnalytics:
-          $ref: '#/components/schemas/LanguageAnalytics'
+          type: object
+          properties:
+            totalLanguages:
+              type: integer
+            totalSize:
+              type: integer
+            languages:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  totalSize:
+                    type: integer
+                  repoCount:
+                    type: integer
+                  percentage:
+                    type: number
+            topLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  totalSize:
+                    type: integer
+                  repoCount:
+                    type: integer
+                  percentage:
+                    type: number
         topicsAnalytics:
-          $ref: '#/components/schemas/TopicsAnalytics'
+          type: object
+          properties:
+            totalTopics:
+              type: integer
+            repositoriesWithTopics:
+              type: integer
+            topics:
+              type: object
+              additionalProperties:
+                type: integer
+            topTopics:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  count:
+                    type: integer
         devOpsMaturity:
-          $ref: '#/components/schemas/DevOpsMaturity'
-
-    TotalStats:
-      type: object
-      properties:
-        totalRepositories:
-          type: integer
-        totalStars:
-          type: integer
-        totalForks:
-          type: integer
-        totalWatchers:
-          type: integer
-        totalIssues:
-          type: integer
-        totalPullRequests:
-          type: integer
-        totalCommits:
-          type: integer
-        totalReleases:
-          type: integer
-        totalDeployments:
-          type: integer
-        repositoriesWithActions:
-          type: integer
-        repositoriesWithSecurity:
-          type: integer
-        repositoriesWithPackages:
-          type: integer
-        repositoriesWithProtection:
-          type: integer
-        averageCommunityHealth:
-          type: integer
-
-    LanguageAnalytics:
-      type: object
-      properties:
-        totalLanguages:
-          type: integer
-        totalSize:
-          type: integer
-        languages:
           type: object
-          additionalProperties:
-            $ref: '#/components/schemas/LanguageStat'
-        topLanguages:
-          type: array
-          items:
-            $ref: '#/components/schemas/LanguageStat'
+          properties:
+            cicdAdoption:
+              type: number
+            securityMaturity:
+              type: number
+            branchProtectionRate:
+              type: number
+            averageCommunityHealth:
+              type: number
 
-    TopicsAnalytics:
-      type: object
-      properties:
-        totalTopics:
-          type: integer
-        repositoriesWithTopics:
-          type: integer
-        topics:
-          type: object
-          additionalProperties:
-            type: integer
-        topTopics:
-          type: array
-          items:
-            $ref: '#/components/schemas/TopicStat'
-
-    CollectionMetadata:
-      type: object
-      properties:
-        username:
-          type: string
-        organizations:
-          type: array
-          items:
-            type: string
-        dataSource:
-          type: string
-        enrichedWithDevOps:
-          type: boolean
-        includesAnalytics:
-          type: boolean
-        generatedAt:
-          type: string
-          format: date-time
-
+    # Analytics Summary
     DeveloperSummaryResponse:
       type: object
       properties:
@@ -2032,14 +818,15 @@ components:
           format: date-time
         computationTime:
           type: number
-          description: Temps de calcul en millisecondes
+          description: Computation time in milliseconds
         repositoriesAnalyzed:
           type: integer
-          description: Nombre de repositories analysés
         accessLevel:
           type: string
           enum: ["public", "complete"]
-          description: Niveau d'accès aux données
+        dataSource:
+          type: string
+          enum: ["realtime", "database", "cache"]
         timestamp:
           type: string
           format: date-time
@@ -2048,444 +835,229 @@ components:
       type: object
       properties:
         profile:
-          $ref: '#/components/schemas/EnrichedProfile'
+          type: object
+          properties:
+            login:
+              type: string
+            name:
+              type: string
+            bio:
+              type: string
+            location:
+              type: string
+            company:
+              type: string
+            blog:
+              type: string
+            email:
+              type: string
+            avatarUrl:
+              type: string
+            reputationScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            influenceLevel:
+              type: string
+              enum: ["Emerging", "Growing", "Expert"]
+            expertiseAreas:
+              type: array
+              items:
+                type: string
+            totalContributions:
+              type: integer
+            activeYears:
+              type: integer
+            consistencyScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            totalWatchers:
+              type: integer
+            careerLevel:
+              type: string
+            specializations:
+              type: array
+              items:
+                type: object
+                properties:
+                  area:
+                    type: string
+                  level:
+                    type: number
+                  yearsOfExperience:
+                    type: integer
+                  confidence:
+                    type: number
         portfolioOverview:
-          $ref: '#/components/schemas/PortfolioOverview'
-        technologyExpertise:
-          $ref: '#/components/schemas/TechnologyExpertise'
-        devOpsMaturity:
-          $ref: '#/components/schemas/DevOpsMaturity'
-        communityImpact:
-          $ref: '#/components/schemas/CommunityImpact'
-        growthInsights:
-          $ref: '#/components/schemas/GrowthInsights'
-        recommendations:
-          $ref: '#/components/schemas/PersonalizedRecommendations'
-        industryBenchmarks:
-          $ref: '#/components/schemas/IndustryBenchmarks'
-        interfaceMetrics:
-          $ref: '#/components/schemas/InterfaceMetrics'
-        metadata:
-          $ref: '#/components/schemas/SummaryMetadata'
-
-    EnrichedProfile:
-      type: object
-      properties:
-        login:
-          type: string
-        name:
-          type: string
-        bio:
-          type: string
-        location:
-          type: string
-        company:
-          type: string
-        blog:
-          type: string
-        email:
-          type: string
-        avatarUrl:
-          type: string
-        reputationScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        influenceLevel:
-          type: string
-          enum: ["Emerging", "Growing", "Influential", "Leader", "Visionary"]
-        expertiseAreas:
-          type: array
-          items:
-            type: string
-        totalContributions:
-          type: integer
-        activeYears:
-          type: integer
-        consistencyScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        totalStars:
-          type: integer
-        totalForks:
-          type: integer
-        totalWatchers:
-          type: integer
-        careerLevel:
-          type: string
-          enum: ["Junior", "Mid-Level", "Senior", "Lead", "Principal", "Staff", "Distinguished"]
-        specializations:
-          type: array
-          items:
-            $ref: '#/components/schemas/Specialization'
-
-    PortfolioOverview:
-      type: object
-      properties:
-        totalRepositories:
-          type: integer
-        publicRepositories:
-          type: integer
-        privateRepositories:
-          type: integer
-        contributedRepositories:
-          type: integer
-        portfolioQualityScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        averageStarsPerRepo:
-          type: number
-        projectDiversityScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        totalLanguages:
-          type: integer
-        
-        # NOUVELLES MÉTRIQUES POUR L'INTERFACE
-        totalLinesOfCode:
-          type: integer
-          description: "Total des lignes de code dans tous les repositories"
-        organizationBreakdown:
-          type: object
-          description: "Classification des repositories par type d'organisation"
-          properties:
-            personal:
-              type: integer
-              description: "Repositories personnels"
-            organization:
-              type: integer
-              description: "Repositories d'entreprise"
-            school:
-              type: integer
-              description: "Repositories d'établissements scolaires"
-        technologyLevels:
-          type: object
-          description: "Répartition des technologies par niveau de maîtrise"
-          properties:
-            expert:
-              type: integer
-              description: "Technologies avec niveau expert (≥80%)"
-            advanced:
-              type: integer
-              description: "Technologies avec niveau avancé (60-79%)"
-            operational:
-              type: integer
-              description: "Technologies avec niveau opérationnel (40-59%)"
-        
-        primaryLanguages:
-          type: array
-          items:
-            $ref: '#/components/schemas/LanguageUsage'
-
-    TechnologyExpertise:
-      type: object
-      properties:
-        overallExpertiseScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        expertLevel:
-          type: array
-          items:
-            $ref: '#/components/schemas/TechnologyMastery'
-        advancedLevel:
-          type: array
-          items:
-            $ref: '#/components/schemas/TechnologyMastery'
-        intermediateLevel:
-          type: array
-          items:
-            $ref: '#/components/schemas/TechnologyMastery'
-        beginnerLevel:
-          type: array
-          items:
-            $ref: '#/components/schemas/TechnologyMastery'
-
-    DevOpsMaturity:
-      type: object
-      properties:
-        devOpsScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        maturityLevel:
-          type: string
-          enum: ["Initial", "Developing", "Defined", "Managed", "Optimizing"]
-        cicdAdoption:
-          type: number
-          minimum: 0
-          maximum: 100
-        securityMaturity:
-          type: number
-          minimum: 0
-          maximum: 100
-        automationScore:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    CommunityImpact:
-      type: object
-      properties:
-        impactScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        influenceRadius:
-          type: integer
-        openSourceContributions:
-          type: integer
-        maintainedProjects:
-          type: integer
-        featuredProjects:
-          type: array
-          items:
-            $ref: '#/components/schemas/FeaturedProject'
-        achievements:
-          type: array
-          items:
-            $ref: '#/components/schemas/Achievement'
-
-    GrowthInsights:
-      type: object
-      properties:
-        futureGrowthPotential:
-          type: number
-          minimum: 0
-          maximum: 100
-        recommendedFocusAreas:
-          type: array
-          items:
-            type: string
-
-    PersonalizedRecommendations:
-      type: object
-      properties:
-        careerRecommendations:
-          type: array
-          items:
-            $ref: '#/components/schemas/CareerRecommendation'
-        technologyRecommendations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TechnologyRecommendation'
-
-    IndustryBenchmarks:
-      type: object
-      properties:
-        overallPercentile:
-          type: number
-          minimum: 0
-          maximum: 100
-        marketPosition:
-          $ref: '#/components/schemas/MarketPosition'
-
-    SummaryMetadata:
-      type: object
-      properties:
-        generatedAt:
-          type: string
-          format: date-time
-        computationTime:
-          type: number
-        dataCompleteness:
-          type: number
-          minimum: 0
-          maximum: 100
-        confidenceScore:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    Specialization:
-      type: object
-      properties:
-        area:
-          type: string
-        level:
-          type: number
-          minimum: 0
-          maximum: 100
-        yearsOfExperience:
-          type: integer
-        confidence:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    LanguageUsage:
-      type: object
-      properties:
-        name:
-          type: string
-        proficiencyLevel:
-          type: number
-          minimum: 0
-          maximum: 100
-        totalBytes:
-          type: integer
-        repositoryCount:
-          type: integer
-        recentUsage:
-          type: boolean
-        trend:
-          type: string
-          enum: ["growing", "stable", "declining"]
-
-    TechnologyMastery:
-      type: object
-      properties:
-        technology:
-          type: string
-        masteryLevel:
-          type: number
-          minimum: 0
-          maximum: 100
-        yearsOfExperience:
-          type: integer
-        projectCount:
-          type: integer
-        marketDemand:
-          type: string
-          enum: ["Low", "Medium", "High", "Very High"]
-
-    FeaturedProject:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        stars:
-          type: integer
-        significance:
-          type: string
-        technologies:
-          type: array
-          items:
-            type: string
-        impactScore:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    Achievement:
-      type: object
-      properties:
-        title:
-          type: string
-        description:
-          type: string
-        category:
-          type: string
-        rarity:
-          type: string
-          enum: ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
-        unlockedAt:
-          type: string
-          format: date-time
-
-    CareerRecommendation:
-      type: object
-      properties:
-        type:
-          type: string
-          enum: ["Role", "Industry", "Skill", "Experience"]
-        title:
-          type: string
-        description:
-          type: string
-        priority:
-          type: string
-          enum: ["Low", "Medium", "High", "Critical"]
-        effort:
-          type: string
-          enum: ["Low", "Medium", "High"]
-        timeline:
-          type: string
-        potentialImpact:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    TechnologyRecommendation:
-      type: object
-      properties:
-        technology:
-          type: string
-        rationale:
-          type: string
-        currentRelevance:
-          type: number
-          minimum: 0
-          maximum: 100
-        futureRelevance:
-          type: number
-          minimum: 0
-          maximum: 100
-        learningDifficulty:
-          type: string
-          enum: ["Easy", "Medium", "Hard", "Expert"]
-        marketDemand:
-          type: string
-          enum: ["Low", "Medium", "High", "Very High"]
-
-    MarketPosition:
-      type: object
-      properties:
-        overallRank:
-          type: string
-        strengths:
-          type: array
-          items:
-            type: string
-        differentiators:
-          type: array
-          items:
-            type: string
-        marketValue:
-          type: string
-          enum: ["Entry", "Junior", "Mid", "Senior", "Lead", "Principal", "Staff"]
-
-    ErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        error:
           type: object
           properties:
-            type:
-              type: string
-              example: "VALIDATION_ERROR"
-            message:
-              type: string
-              example: "Données d'entrée invalides"
-            details:
+            totalRepositories:
+              type: integer
+            publicRepositories:
+              type: integer
+            privateRepositories:
+              type: integer
+            contributedRepositories:
+              type: integer
+            portfolioQualityScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            averageStarsPerRepo:
+              type: number
+            projectDiversityScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            totalLinesOfCode:
+              type: integer
+            organizationBreakdown:
               type: object
-            timestamp:
-              type: string
-              format: date-time
+              properties:
+                personal:
+                  type: integer
+                organization:
+                  type: integer
+                school:
+                  type: integer
+            technologyLevels:
+              type: object
+              properties:
+                expert:
+                  type: integer
+                advanced:
+                  type: integer
+                operational:
+                  type: integer
+            totalLanguages:
+              type: integer
+            primaryLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  proficiencyLevel:
+                    type: number
+                  totalBytes:
+                    type: integer
+                  repositoryCount:
+                    type: integer
+                  recentUsage:
+                    type: boolean
+                  trend:
+                    type: string
+                    enum: ["growing", "stable", "declining"]
+        interfaceMetrics:
+          type: object
+          properties:
+            projects:
+              type: integer
+            commits:
+              type: integer
+            technologies:
+              type: integer
+            activeProjects:
+              type: integer
+            projectsAnalyzed:
+              type: integer
+            totalLinesOfCode:
+              type: integer
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            organizationBreakdown:
+              type: object
+              properties:
+                personal:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    percentage:
+                      type: integer
+                organization:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    percentage:
+                      type: integer
+                school:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    percentage:
+                      type: integer
+            technologyLevels:
+              type: object
+              properties:
+                expert:
+                  type: integer
+                advanced:
+                  type: integer
+                operational:
+                  type: integer
+            averageScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            topRepositories:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  category:
+                    type: string
+                    enum: ["Personal", "Organization", "School"]
+                  stars:
+                    type: integer
+                  forks:
+                    type: integer
+                  languages:
+                    type: array
+                    items:
+                      type: string
+                  lastUpdate:
+                    type: string
+                    format: date-time
+                  source:
+                    type: string
 
+    # AI Analysis
     AIAnalysisResponse:
       type: object
       properties:
         message:
           type: string
-          example: "Analyse IA lancée avec succès"
+          example: "AI analysis completed successfully"
         status:
           type: string
-          example: "processing"
-        analysisId:
-          type: string
-          example: "abc123"
-        estimatedCompletionTime:
-          type: string
-          format: date-time
+          example: "completed"
+        analysis:
+          $ref: '#/components/schemas/AIAnalysisResult'
+        performance:
+          type: object
+          properties:
+            processingTime:
+              type: string
+              example: "1234ms"
+            model:
+              type: string
+            confidenceScore:
+              type: number
         timestamp:
           type: string
           format: date-time
@@ -2493,15 +1065,72 @@ components:
     AIAnalysisResultResponse:
       type: object
       properties:
-        message:
-          type: string
-          example: "Analyse IA récupérée avec succès"
         analysis:
           $ref: '#/components/schemas/AIAnalysisResult'
-        insights:
-          $ref: '#/components/schemas/AIInsights'
+        metadata:
+          type: object
+          properties:
+            dataSource:
+              type: string
+              example: "ai_analysis"
+            analysisAge:
+              type: number
+              description: Analysis age in hours
+            isStale:
+              type: boolean
+            accessLevel:
+              type: string
+              enum: ["public", "complete"]
+            lastAnalyzed:
+              type: string
+              format: date-time
+            model:
+              type: string
+            recommendation:
+              type: string
         interfaceMetrics:
-          $ref: '#/components/schemas/AIInterfaceMetrics'
+          type: object
+          properties:
+            qualityAverage:
+              type: string
+              example: "87.5%"
+            vulnerabilities:
+              type: integer
+              nullable: true
+            bugsDetected:
+              type: integer
+              nullable: true
+            buildTime:
+              type: string
+              nullable: true
+              example: "120s"
+            testCoverage:
+              type: string
+              nullable: true
+              example: "78.5%"
+            healthScore:
+              type: string
+              example: "8.5"
+            organizationQualityScores:
+              type: object
+              properties:
+                personal:
+                  type: string
+                organization:
+                  type: string
+                school:
+                  type: string
+            topRepositoryScores:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  qualityScore:
+                    type: string
+                  recommendation:
+                    type: string
         timestamp:
           type: string
           format: date-time
@@ -2537,44 +1166,67 @@ components:
           type: integer
         estimatedTestCoverage:
           type: number
-          minimum: 0
-          maximum: 100
-
-    AIInsights:
-      type: object
-      properties:
-        summary:
-          type: string
-        strengths:
+        qualityByOrganization:
+          type: object
+          properties:
+            personal:
+              type: number
+            organization:
+              type: number
+            school:
+              type: number
+        repositoryScores:
           type: array
           items:
-            type: string
-        recommendations:
-          type: array
-          items:
-            type: string
-        careerAdvice:
-          type: array
-          items:
-            type: string
-
-    AIInterfaceMetrics:
-      type: object
-      properties:
-        qualityAverage:
-          type: string
-        vulnerabilities:
-          type: integer
-        bugsDetected:
-          type: integer
-        buildTime:
-          type: string
-        testCoverage:
-          type: number
-          minimum: 0
-          maximum: 100
-        healthScore:
-          type: string
+            type: object
+            properties:
+              name:
+                type: string
+              qualityScore:
+                type: number
+              recommendation:
+                type: string
+              strengths:
+                type: array
+                items:
+                  type: string
+              improvementAreas:
+                type: array
+                items:
+                  type: string
+        insights:
+          type: object
+          properties:
+            summary:
+              type: string
+            strengths:
+              type: array
+              items:
+                type: string
+            weaknesses:
+              type: array
+              items:
+                type: string
+            recommendations:
+              type: array
+              items:
+                type: string
+            careerAdvice:
+              type: array
+              items:
+                type: string
+        metadata:
+          type: object
+          properties:
+            analysisDate:
+              type: string
+              format: date-time
+            model:
+              type: string
+            confidenceScore:
+              type: number
+            analysisVersion:
+              type: string
 
     AIServiceStatusResponse:
       type: object
@@ -2584,23 +1236,16 @@ components:
           example: "AI Analysis Service"
         status:
           type: string
-          example: "available"
+          enum: ["available", "unavailable"]
         configuration:
           type: object
           properties:
             model:
               type: string
-              example: "gpt-4o-mini"
             maxTokens:
               type: integer
-              example: 4096
             temperature:
               type: number
-              example: 0.3
-          required:
-            - model
-            - maxTokens
-            - temperature
         capabilities:
           type: object
           properties:
@@ -2614,12 +1259,6 @@ components:
               type: boolean
             careerInsights:
               type: boolean
-          required:
-            - qualityAnalysis
-            - securityAnalysis
-            - performanceAnalysis
-            - repositoryScoring
-            - careerInsights
         limitations:
           type: array
           items:
@@ -2631,159 +1270,57 @@ components:
               type: boolean
             description:
               type: string
-          required:
-            - enabled
-            - description
+        timestamp:
+          type: string
+          format: date-time
 
-    InterfaceMetrics:
+    # Error Response
+    ErrorResponse:
       type: object
-      description: "Métriques formatées pour l'interface utilisateur - Compatible avec tous les éléments de l'interface demandée"
       properties:
-        # Données dashboard principal
-        projects:
-          type: integer
-          description: "Nombre total de projets/repositories"
-          example: 133
-        commits:
-          type: integer
-          description: "Nombre total de commits"
-          example: 1764
-        technologies:
-          type: integer
-          description: "Nombre de technologies détectées"
-          example: 32
-        activeProjects:
-          type: integer
-          description: "Projets actifs (activité < 30 jours)"
-          example: 8
-        projectsAnalyzed:
-          type: integer
-          description: "Projets avec métriques complètes"
-          example: 133
-        
-        # Métriques de code
-        totalLinesOfCode:
-          type: integer
-          description: "Total des lignes de code analysées"
-          example: 1919842
-        totalStars:
-          type: integer
-          description: "Total des stars reçues"
-          example: 11
-        totalForks:
-          type: integer
-          description: "Total des forks"
-          example: 45
-        
-        # Classification par organisation
-        organizationBreakdown:
+        success:
+          type: boolean
+          example: false
+        error:
           type: object
-          description: "Répartition des projets par type d'organisation"
           properties:
-            personal:
+            type:
+              type: string
+              enum:
+                - "VALIDATION_ERROR"
+                - "AUTHENTICATION_ERROR"
+                - "AUTHORIZATION_ERROR"
+                - "NOT_FOUND_ERROR"
+                - "EXTERNAL_SERVICE_ERROR"
+                - "RATE_LIMIT_ERROR"
+                - "INTERNAL_SERVER_ERROR"
+            message:
+              type: string
+            details:
               type: object
-              properties:
-                count:
-                  type: integer
-                  example: 53
-                percentage:
-                  type: integer
-                  example: 26
-            organization:
-              type: object
-              properties:
-                count:
-                  type: integer
-                  example: 1
-                percentage:
-                  type: integer
-                  example: 16
-            school:
-              type: object
-              properties:
-                count:
-                  type: integer
-                  example: 79
-                percentage:
-                  type: integer
-                  example: 31
-        
-        # Niveaux de technologies
-        technologyLevels:
-          type: object
-          description: "Répartition des compétences par niveau"
-          properties:
-            expert:
-              type: integer
-              description: "Technologies maîtrisées (niveau expert)"
-              example: 8
-            advanced:
-              type: integer
-              description: "Technologies confirmées (niveau avancé)"
-              example: 2
-            operational:
-              type: integer
-              description: "Technologies opérationnelles (usage régulier)"
-              example: 14
-        
-        # Score moyen calculé
-        averageScore:
-          type: number
-          minimum: 0
-          maximum: 100
-          description: "Score moyen calculé par IA"
-          example: 65.7
-        
-        # Données repositories individuelles pour l'interface
-        topRepositories:
-          type: array
-          description: "Top repositories avec métadonnées pour l'interface"
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-                example: "portfolio-v2"
-              description:
-                type: string
-                example: "scale with powered red"
-              category:
-                type: string
-                enum: ["Personal", "Organization", "School"]
-                example: "Personal"
-              stars:
-                type: integer
-                example: 0
-              forks:
-                type: integer
-                example: 0
-              languages:
-                type: array
-                items:
-                  type: string
-                example: ["TypeScript", "JavaScript", "CSS"]
-              lastUpdate:
-                type: string
-                format: date-time
-                example: "2025-07-16T00:00:00Z"
-              source:
-                type: string
-                example: "GitHub"
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+            path:
+              type: string
+            requestId:
+              type: string
 
 tags:
   - name: System
-    description: Endpoints système (santé, connectivité)
+    description: Health and connectivity endpoints
   - name: Authentication
-    description: Authentification et gestion des sessions
+    description: GitHub token authentication
   - name: Users
-    description: Gestion des utilisateurs et profils GitHub complets
+    description: User profile management
   - name: Repositories
-    description: Gestion des repositories avec analyses DevOps complètes
-  - name: Summary
-    description: Analytics ultra-complets pour portfolios, CV et intégrations professionnelles
+    description: Repository data and analytics
+  - name: Analytics
+    description: Comprehensive developer analytics
   - name: AI Analysis
-    description: Analyse avancée et intelligence artificielle
+    description: AI-powered code analysis
 
 externalDocs:
-  description: Documentation complète de l'API
-  url: https://docs.gh-insight-engine.com 
+  description: API Documentation
+  url: https://docs.gh-insight-engine.com
