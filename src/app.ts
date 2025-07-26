@@ -5,6 +5,7 @@ import { setupAllMiddlewares } from '@/middleware';
 import { setupErrorHandling } from '@/middleware';
 import { setupRoutes } from '@/routes';
 import { setupDocumentation } from '@/middleware/documentation';
+import schedulingService from '@/services/SchedulingService';
 
 /**
  * Création et configuration de l'application Express
@@ -24,10 +25,15 @@ export const createApp = async (): Promise<express.Application> => {
     await databaseConfig.initialize();
     logger.info('Base de données connectée avec succès');
 
-    // 2. Configuration des middlewares de base
+    // 2. Démarrage du service de scheduling automatique
+    logger.info('Initialisation du service de scheduling...');
+    schedulingService.start();
+    logger.info('Service de scheduling initialisé');
+
+    // 3. Configuration des middlewares de base
     setupAllMiddlewares(app);
 
-    // 3. Middleware de sécurité : bloquer l'accès navigateur aux APIs
+    // 4. Middleware de sécurité : bloquer l'accès navigateur aux APIs
     app.use((req, res, next) => {
       const userAgent = req.get('User-Agent') ?? '';
       const accept = req.get('Accept') ?? '';
@@ -55,13 +61,13 @@ export const createApp = async (): Promise<express.Application> => {
       next();
     });
 
-    // 4. Configuration de la documentation OpenAPI
+    // 5. Configuration de la documentation OpenAPI
     setupDocumentation(app);
 
-    // 5. Configuration des routes API
+    // 6. Configuration des routes API
     setupRoutes(app);
 
-    // 6. Redirection sécurisée - toutes les routes non-API vers GitHub
+    // 7. Redirection sécurisée - toutes les routes non-API vers GitHub
     app.get('/', (_req, res) => {
       res.redirect(301, 'https://github.com/usernamap/gh-insight-engine');
     });
@@ -79,10 +85,10 @@ export const createApp = async (): Promise<express.Application> => {
       res.redirect(301, 'https://github.com/usernamap/gh-insight-engine');
     });
 
-    // 6. Configuration de la gestion d'erreurs (doit être après toutes les routes)
+    // 8. Configuration de la gestion d'erreurs (doit être après toutes les routes)
     setupErrorHandling(app);
 
-    // 7. Configuration des variables d'environnement dans l'app
+    // 9. Configuration des variables d'environnement dans l'app
     app.set('env', process.env.NODE_ENV ?? 'development');
 
     logger.info('Application Express configurée avec succès');
@@ -106,6 +112,11 @@ export const gracefulShutdown = async (): Promise<void> => {
   logger.info("Arrêt gracieux de l'application en cours...");
 
   try {
+    // Arrêt du service de scheduling
+    logger.info('Arrêt du service de scheduling...');
+    schedulingService.stop();
+    logger.info('Service de scheduling arrêté');
+
     // Fermeture de la base de données
     // Supprimer toute référence à DatabaseConfig dans ce fichier
     logger.info('Base de données déconnectée');

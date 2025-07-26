@@ -4,6 +4,7 @@ import repositoryRoutes from './repositories';
 import userRoutes from './users';
 import summaryRoutes from './summary';
 import aiRoutes from './ai';
+import refreshRoutes from './refresh';
 import logger from '@/utils/logger';
 
 /**
@@ -46,6 +47,9 @@ export const setupRoutes = (app: Express): void => {
   // Routes AI - Analyses avancées avec Intelligence Artificielle
   apiRouter.use('/ai', aiRoutes);
 
+  // Routes refresh - Mise à jour complète des données utilisateur
+  apiRouter.use('/refresh', refreshRoutes);
+
   // Montage du router API sous le préfixe /api
   app.use('/api', apiRouter);
 
@@ -59,8 +63,9 @@ export const setupRoutes = (app: Express): void => {
       '/api/repositories/{username} - Repositories avec analyses DevOps',
       '/api/summary/{username} - Analytics ultra-complets pour portfolio/CV',
       '/api/ai/{username} - Analyses IA: qualité, sécurité, performances',
+      '/api/refresh/{username} - Mise à jour complète des données utilisateur',
     ],
-    totalRoutes: 7,
+    totalRoutes: 8,
   });
 };
 
@@ -70,4 +75,5 @@ export {
   userRoutes,
   repositoryRoutes,
   summaryRoutes,
+  refreshRoutes,
 };
