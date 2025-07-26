@@ -7,10 +7,11 @@ info:
     REST API for GitHub data collection, analysis, and insights generation.
     
     **Authentication**: JWT tokens obtained via `/auth/login`
+    **User Context**: After successful authentication, the response includes user context
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
     **Automatic Scheduling**: Built-in scheduling service with automatic token management
-  version: 0.1.28
+  version: 0.1.30
   contact:
     name: API Support
     url: https://github.com/org/gh-insight-engine
@@ -26,6 +27,7 @@ servers:
 
 security:
   - BearerAuth: []
+  - UserAuth: []
   - {}
 
 paths:
@@ -75,6 +77,8 @@ paths:
         
         **Used by scheduling service**: This endpoint is automatically called by the
         scheduling service to obtain authentication tokens for automated operations.
+        
+
       operationId: login
       tags:
         - Authentication
@@ -113,6 +117,7 @@ paths:
       tags:
         - Users
       security:
+        - UserAuth: []
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/UsernameParam'
@@ -143,6 +148,7 @@ paths:
       tags:
         - Users
       security:
+        - UserAuth: []
         - BearerAuth: []
         - {}
       parameters:
@@ -169,6 +175,7 @@ paths:
       tags:
         - Repositories
       security:
+        - UserAuth: []
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/UsernameParam'
@@ -199,6 +206,7 @@ paths:
       tags:
         - Repositories
       security:
+        - UserAuth: []
         - BearerAuth: []
         - {}
       parameters:
@@ -225,6 +233,7 @@ paths:
       tags:
         - Analytics
       security:
+        - UserAuth: []
         - BearerAuth: []
         - {}
       parameters:
@@ -267,6 +276,7 @@ paths:
       tags:
         - AI Analysis
       security:
+        - UserAuth: []
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/UsernameParam'
@@ -303,6 +313,7 @@ paths:
       tags:
         - AI Analysis
       security:
+        - UserAuth: []
         - BearerAuth: []
         - {}
       parameters:
@@ -341,6 +352,7 @@ paths:
       tags:
         - Refresh
       security:
+        - UserAuth: []
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/UsernameParam'
@@ -385,6 +397,12 @@ components:
       description: |
         JWT token obtained from /auth/login (24h validity).
         Used by both manual API calls and the automatic scheduling service.
+    
+    UserAuth:
+      type: apiKey
+      in: header
+      name: X-User-Context
+      description: User context header with username and JWT token
 
   parameters:
     UsernameParam:
