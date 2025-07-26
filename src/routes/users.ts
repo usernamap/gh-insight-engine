@@ -1,68 +1,33 @@
 import { Router } from 'express';
 import { UserController } from '@/controllers';
-import { authenticateJWT } from '@/middleware';
-import { optionalJWT } from '@/middleware';
-import { requireOwnership } from '@/middleware';
+import { optionalJWT, authenticateJWT, requireOwnership } from '@/middleware';
 import { validateUserParams } from '@/middleware';
-import { validateUserWithPagination } from '@/middleware';
 
 const router = Router();
 
 /**
- * @route   GET /api/users/stats
- * @desc    Statistiques globales des utilisateurs
- * @access  Public
+ * @route   POST /api/users/:username
+ * @desc    Collecte et stockage des données GitHub d'un utilisateur (déclenche la récupération depuis l'API GitHub)
+ * @access  Private (authentification requise - utilisateur ne peut collecter que ses propres données)
  */
-router.get('/stats', optionalJWT, UserController.getUsersStats);
+router.post(
+  '/:username',
+  authenticateJWT,
+  requireOwnership('username'),
+  validateUserParams,
+  UserController.collectUserData,
+);
 
 /**
  * @route   GET /api/users/:username
- * @desc    Récupération du profil d'un utilisateur
- * @access  Public
+ * @desc    Récupération des données utilisateur depuis la base de données (consultation des données stockées)
+ * @access  Public (authentification optionnelle - données complètes si propriétaire, publiques sinon)
  */
 router.get(
   '/:username',
   optionalJWT,
   validateUserParams,
   UserController.getUserProfile,
-);
-
-/**
- * @route   GET /api/users/:username/repositories
- * @desc    Récupération des repositories d'un utilisateur
- * @access  Public
- * @query   { page?: number, limit?: number, sortBy?: string, sortOrder?: 'asc'|'desc' }
- */
-router.get(
-  '/:username/repositories',
-  optionalJWT,
-  validateUserWithPagination,
-  UserController.getUserRepositories,
-);
-
-/**
- * @route   GET /api/users/:username/status
- * @desc    Statut de l'analyse d'un utilisateur
- * @access  Public
- */
-router.get(
-  '/:username/status',
-  optionalJWT,
-  validateUserParams,
-  UserController.getUserAnalysisStatus,
-);
-
-/**
- * @route   DELETE /api/users/:username
- * @desc    Suppression des données utilisateur (GDPR)
- * @access  Private (JWT requis + ownership)
- */
-router.delete(
-  '/:username',
-  authenticateJWT,
-  validateUserParams,
-  requireOwnership,
-  UserController.deleteUserData,
 );
 
 export default router;

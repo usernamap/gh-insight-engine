@@ -633,4 +633,91 @@ export class DatasetModel {
       throw _error as Error;
     }
   }
+
+  /**
+   * MÉTHODE SUPPRIMÉE: upsert()
+   *
+   * Cette méthode était incompatible avec le schéma Prisma car elle tentait
+   * d'insérer des objets JSON complets dans le champ 'repositories' qui attend
+   * des ObjectIds référençant la collection repositories.
+   *
+   * Utiliser à la place: DatabaseService.saveCompleteUserDataset()
+   * qui suit l'architecture correcte:
+   * 1. Sauvegarder les repositories individuellement
+   * 2. Récupérer leurs IDs
+   * 3. Créer le dataset avec les références
+   */
+
+  /**
+   * Trouve le dataset le plus récent d'un utilisateur par username
+   */
+  static async findByUsername(username: string): Promise<{
+    userProfile: unknown;
+    repositories: unknown[];
+    metadata: unknown;
+    generatedAt: Date;
+  } | null> {
+    const prisma = databaseConfig.getPrismaClient();
+    if (prisma == null) {
+      throw new Error('Base de données non initialisée');
+    }
+
+    try {
+      // D'abord trouver l'utilisateur par username
+      const user = await prisma.user.findUnique({
+        where: { login: username },
+      });
+
+      if (!user) {
+        logger.debug('Utilisateur non trouvé pour dataset', { username });
+        return null;
+      }
+
+      // Ensuite chercher le dataset le plus récent pour cet utilisateur
+      const dataset = await prisma.dataset.findFirst({
+        where: { userProfileId: user.id },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (!dataset) {
+        logger.debug('Aucun dataset trouvé pour l\'utilisateur', {
+          username,
+          userId: user.id,
+        });
+        return null;
+      }
+
+      // Reconstituer les repositories depuis les strings JSON
+      const repositories = dataset.repositories.map(repoStr => {
+        try {
+          return JSON.parse(repoStr);
+        } catch {
+          logger.warn('Erreur parsing repository JSON', {
+            datasetId: dataset.id,
+            repoStr: repoStr.substring(0, 100),
+          });
+          return {};
+        }
+      });
+
+      logger.debug('Dataset trouvé par username', {
+        username,
+        datasetId: dataset.id,
+        repositoriesCount: repositories.length,
+      });
+
+      return {
+        userProfile: dataset.metadata,
+        repositories,
+        metadata: dataset.metadata,
+        generatedAt: dataset.updatedAt,
+      };
+    } catch (_error: unknown) {
+      logger.error('Erreur lors de la recherche dataset par username', {
+        username,
+        _error: (_error as Error).message,
+      });
+      throw _error as Error;
+    }
+  }
 }

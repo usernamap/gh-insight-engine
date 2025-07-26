@@ -35,21 +35,45 @@ export class GitHubConfig {
       auth: githubToken,
       userAgent: 'github-insight-engine/1.0.0',
       request: {
-        timeout: 30000, // 30 secondes
-        retries: 3,
+        timeout: 120000, // 120 secondes au lieu de 60
+        retries: 8, // Plus d'essais (au lieu de 5)
+        retryAfter: 3, // Délai plus long entre les essais
       },
     });
 
-    // Validation initiale du token
-    const validation = await this.validateToken();
-    if (!validation.valid) {
-      throw new Error(`Token GitHub invalide: ${validation.error}`);
-    }
+    // Validation initiale du token avec gestion d'erreur robuste
+    try {
+      const validation = await this.validateToken();
+      if (!validation.valid) {
+        // Ne pas échouer complètement si c'est juste un timeout
+        if (validation.error != null && (validation.error.includes('timeout') || validation.error.includes('ECONNRESET'))) {
+          logger.warn('Timeout lors de la validation du token, mais configuration initialisée en mode dégradé', {
+            error: validation.error,
+          });
+          return;
+        }
+        throw new Error(`Token GitHub invalide: ${validation.error ?? 'Erreur inconnue'}`);
+      }
 
-    logger.info('Configuration GitHub initialisée avec succès', {
-      username: validation.username,
-      scopes: validation.scopes,
-    });
+      logger.info('Configuration GitHub initialisée avec succès', {
+        username: validation.username,
+        scopes: validation.scopes,
+      });
+    } catch (error) {
+      // En cas d'erreur de réseau, continuer avec une configuration dégradée
+      if (error instanceof Error && (
+        error.message.includes('timeout') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('ENOTFOUND') ||
+        error.message.includes('Connect Timeout Error')
+      )) {
+        logger.warn('Problème de connectivité avec GitHub API, initialisation en mode dégradé', {
+          error: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -68,9 +92,15 @@ export class GitHubConfig {
     }
 
     try {
-      const tempOctokit = new Octokit({ auth: authToken });
+      const tempOctokit = new Octokit({
+        auth: authToken,
+        request: {
+          timeout: 60000, // 60 secondes pour la validation (au lieu de 30)
+          retries: 5, // Plus de retries au lieu de 3
+        },
+      });
 
-      // Récupération des informations utilisateur et scopes
+      // Récupération des informations utilisateur et scopes avec timeout adapté
       const [userResponse, rateLimitResponse] = await Promise.all([
         tempOctokit.rest.users.getAuthenticated(),
         tempOctokit.rest.rateLimit.get(),
@@ -110,11 +140,25 @@ export class GitHubConfig {
         scopes,
       };
     } catch (_error: unknown) {
-      logger.error('Erreur validation token GitHub', { error: (_error as Error).message });
+      const error = _error as Error;
+      logger.error('Erreur validation token GitHub', { error: error.message });
+
+      // Gestion spécifique des erreurs de timeout/réseau
+      if (error.message.includes('timeout') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('ENOTFOUND') ||
+        error.message.includes('Connect Timeout Error') ||
+        error.message.includes('ECONNREFUSED')) {
+        return {
+          valid: false,
+          error: `Problème de connectivité GitHub: ${error.message}`,
+          isNetworkError: true,
+        };
+      }
 
       return {
         valid: false,
-        error: (_error as Error).message ?? 'Token invalide ou expiré',
+        error: error.message ?? 'Token invalide ou expiré',
       };
     }
   }
@@ -161,7 +205,7 @@ export class GitHubConfig {
   public async executeGraphQLQuery<T = Record<string, unknown>>(
     query: string,
     variables: Record<string, unknown> = {},
-    maxRetries = 2,
+    maxRetries = 5,
   ): Promise<T> {
     if (!this.octokit) {
       throw new Error('GitHub client non initialisé');
@@ -217,7 +261,7 @@ export class GitHubConfig {
   public async executeRestRequest<T = Record<string, unknown>>(
     endpoint: string,
     options: unknown = {},
-    maxRetries = 2,
+    maxRetries = 5,
   ): Promise<T> {
     if (!this.octokit) {
       throw new Error('GitHub client non initialisé');

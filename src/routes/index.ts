@@ -1,7 +1,5 @@
 import { Express, Request, Response, Router } from 'express';
-import analyticsRoutes from './analytics';
 import authRoutes from './auth';
-import insightsRoutes from './insights';
 import repositoryRoutes from './repositories';
 import userRoutes from './users';
 import logger from '@/utils/logger';
@@ -34,19 +32,11 @@ export const setupRoutes = (app: Express): void => {
   // Routes d'authentification
   apiRouter.use('/auth', authRoutes);
 
-  // Routes utilisateurs
+  // Routes utilisateurs - Endpoint unique pour toutes les données GitHub d'un utilisateur
   apiRouter.use('/users', userRoutes);
 
-  // Routes repositories
+  // Routes repositories - Endpoint unique pour tous les repositories d'un utilisateur avec analyses complètes
   apiRouter.use('/repositories', repositoryRoutes);
-
-  // Routes analytics (métriques quantitatives)
-  // Note: Les routes d'analyse utilisateur sont dans analytics
-  // car elles génèrent les données analytiques
-  apiRouter.use('/analytics', analyticsRoutes);
-
-  // Routes insights (analyses IA qualitatives)
-  apiRouter.use('/insights', insightsRoutes);
 
   // Montage du router API sous le préfixe /api
   app.use('/api', apiRouter);
@@ -56,13 +46,11 @@ export const setupRoutes = (app: Express): void => {
     routes: [
       '/api/health',
       '/api/ping',
-      '/api/auth/*',
-      '/api/users/*',
-      '/api/repositories/*',
-      '/api/analytics/*',
-      '/api/insights/*',
+      '/api/auth/login',
+      '/api/users/{username} - Données GitHub complètes',
+      '/api/repositories/{username} - Repositories avec analyses DevOps',
     ],
-    totalRoutes: 7,
+    totalRoutes: 5,
   });
 };
 
@@ -71,6 +59,4 @@ export {
   authRoutes,
   userRoutes,
   repositoryRoutes,
-  analyticsRoutes,
-  insightsRoutes,
 };

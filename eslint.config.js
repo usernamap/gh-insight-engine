@@ -72,7 +72,6 @@ export default [
       '*.config.js',
       'coverage/**',
       '.cursor/**',
-      'src/generated/**',
     ],
   },
 ];

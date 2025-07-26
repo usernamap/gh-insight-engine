@@ -185,18 +185,12 @@ export class GitHubService {
       const response: GraphQLResponse =
         await this.githubConfig.executeGraphQLQuery(query);
 
-      if (Array.isArray(response.errors) && response.errors.length > 0) {
-        throw new Error(
-          `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
-        );
-      }
+      // La méthode octokit.graphql lance automatiquement une erreur en cas de problème GraphQL
 
       const organizations =
-        (
-          response.data as {
-            viewer?: { organizations?: { nodes?: { login: string }[] } };
-          }
-        )?.viewer?.organizations?.nodes ?? [];
+        (response as {
+          viewer?: { organizations?: { nodes?: { login: string }[] } };
+        })?.viewer?.organizations?.nodes ?? [];
       const orgNames = organizations.map((org: { login: string }) => org.login);
 
       logger.info('Organisations récupérées', { count: orgNames.length });
@@ -276,15 +270,7 @@ export class GitHubService {
         this.githubConfig.executeGraphQLQuery(orgsQuery),
       ]);
 
-      // Vérification des erreurs
-      const responses = [basicResponse, countersResponse, orgsResponse];
-      for (const response of responses) {
-        if (Array.isArray(response.errors) && response.errors.length > 0) {
-          throw new Error(
-            `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
-          );
-        }
-      }
+      // Vérification des erreurs - supprimée car octokit.graphql lance automatiquement les erreurs
 
       const basic = (basicResponse as unknown as GitHubGraphQLUserBasicResponse)?.viewer ?? {} as GitHubGraphQLUserBasic;
       const counters = (countersResponse as unknown as GitHubGraphQLUserCountersResponse)?.viewer ?? {} as GitHubGraphQLUserCounters;
@@ -441,15 +427,11 @@ export class GitHubService {
         variables,
       );
 
-      if (Array.isArray(response.errors) && response.errors.length > 0) {
-        throw new Error(
-          `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
-        );
-      }
+      // La méthode octokit.graphql lance automatiquement une erreur en cas de problème GraphQL
 
       const repositories =
-        ((response.data as unknown) as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.nodes ?? [];
-      const pageInfo = ((response.data as unknown) as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.pageInfo;
+        (response as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.nodes ?? [];
+      const pageInfo = (response as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.pageInfo;
 
       const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => toGitHubRepo(node));
 
@@ -577,15 +559,11 @@ export class GitHubService {
         variables,
       );
 
-      if (Array.isArray(response.errors) && response.errors.length > 0) {
-        throw new Error(
-          `GraphQL errors: ${(response.errors as Array<{ message: string }> ?? []).map((e: { message: string }) => e.message).join(', ')}`,
-        );
-      }
+      // La méthode octokit.graphql lance automatiquement une erreur en cas de problème GraphQL
 
       const repositories =
-        ((response.data as unknown) as GitHubGraphQLOrganizationRepositoriesResponse)?.organization?.repositories?.nodes ?? [];
-      const pageInfo = ((response.data as unknown) as GitHubGraphQLOrganizationRepositoriesResponse)?.organization?.repositories
+        (response as GitHubGraphQLOrganizationRepositoriesResponse)?.organization?.repositories?.nodes ?? [];
+      const pageInfo = (response as GitHubGraphQLOrganizationRepositoriesResponse)?.organization?.repositories
         ?.pageInfo;
 
       const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => toGitHubRepo(node));
@@ -678,11 +656,23 @@ export class GitHubService {
 
       return actionsData;
     } catch (_error: unknown) {
-      // Les erreurs 404 sont courantes pour les repos sans Actions
-      if (typeof _error === 'object' && _error && 'status' in _error && (_error as { status: number }).status === 404) {
+      const error = _error as Error;
+
+      // Gestion spécifique des erreurs de timeout/connectivité
+      if (error.message.includes('timeout') ||
+          error.message.includes('Connect Timeout Error') ||
+          error.message.includes('ECONNRESET') ||
+          error.message.includes('ENOTFOUND')) {
+        logger.warn('Timeout lors de la récupération GitHub Actions, retour de données par défaut', {
+          owner,
+          repo,
+          error: error.message,
+        });
+
+        // Retourner des données par défaut au lieu d'échouer
         return {
           workflowsCount: 0,
-          lastRunStatus: 'none',
+          lastRunStatus: 'unknown',
           workflows: [],
           runs: {
             totalCount: 0,
@@ -696,11 +686,10 @@ export class GitHubService {
       logger.error('Erreur récupération GitHub Actions', {
         owner,
         repo,
-        error: (_error as Error).message,
+        error: error.message,
       });
-      throw new Error(
-        `Récupération GitHub Actions échouée: ${(_error as Error).message}`,
-      );
+
+      throw error;
     }
   }
 

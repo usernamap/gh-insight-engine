@@ -188,7 +188,7 @@ export const authenticateJWT = async (
       id: user.id,
       username: user.login,
       fullName: user.name ?? '',
-      githubToken: '', // Le token GitHub n'est pas stocké en base par sécurité
+      githubToken: decoded.githubToken, // Récupérer le token GitHub depuis le JWT
     };
 
     logWithContext.auth('authenticate_jwt', decoded.username, true, {
@@ -273,6 +273,7 @@ export const optionalJWT = async (
 export const generateJWT = (payload: {
   userId: string;
   username: string;
+  githubToken: string;
 }): string => {
   const jwtSecret = process.env.JWT_SECRET;
   if (jwtSecret == null || jwtSecret === '') {
@@ -282,6 +283,7 @@ export const generateJWT = (payload: {
   const jwtPayload: JWTPayload = {
     userId: payload.userId,
     username: payload.username,
+    githubToken: payload.githubToken,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 heures
   };
@@ -332,6 +334,19 @@ export const requireOwnership = (paramName = 'username') => {
     const requestedUsername = req.params[paramName];
     const authenticatedUsername = req.user.username;
 
+    // Debug logging pour comprendre le problème
+    logger.info('RequireOwnership Debug', {
+      requestedUsername,
+      authenticatedUsername,
+      requestedUsernameType: typeof requestedUsername,
+      authenticatedUsernameType: typeof authenticatedUsername,
+      requestedUsernameLength: requestedUsername?.length,
+      authenticatedUsernameLength: authenticatedUsername?.length,
+      areEqual: requestedUsername === authenticatedUsername,
+      paramName,
+      path: req.path,
+    });
+
     if (requestedUsername !== authenticatedUsername) {
       logWithContext.security('access_denied', 'high', {
         authenticatedUser: authenticatedUsername,
@@ -344,6 +359,11 @@ export const requireOwnership = (paramName = 'username') => {
       _res.status(403).json({
         error: 'Forbidden',
         message: "Vous ne pouvez accéder qu'à vos propres données",
+        debug: process.env.NODE_ENV === 'development' ? {
+          requestedUsername,
+          authenticatedUsername,
+          areEqual: requestedUsername === authenticatedUsername,
+        } : undefined,
       });
       return;
     }

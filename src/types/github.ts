@@ -319,6 +319,7 @@ export interface GitHubTokenValidationResult {
   username?: string;
   scopes?: string[];
   error?: string;
+  isNetworkError?: boolean;
 }
 
 export interface DatasetGenerationRequest {
@@ -372,6 +373,7 @@ export interface GitHubAuthPayload {
 export interface JWTPayload {
   userId: string;
   username: string;
+  githubToken: string;
   iat: number;
   exp: number;
 }

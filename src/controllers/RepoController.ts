@@ -1,603 +1,369 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { createError } from '@/middleware/errorHandler';
-import { databaseService } from '@/services/DatabaseService';
 import { logWithContext } from '@/utils/logger';
-import { RepositoryModel } from '@/models/Repository';
 import { AuthenticatedUser, GitHubRepo } from '@/types/github';
-
-/**
- * Interface pour les paramètres de recherche de repositories
- */
-interface RepoSearchQuery {
-  query?: string;
-  language?: string;
-  topic?: string;
-  minStars?: number;
-  minForks?: number;
-  isPrivate?: boolean;
-  isFork?: boolean;
-  isArchived?: boolean;
-  page: number;
-  limit: number;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-}
-
-
+import { UserModel } from '@/models/User';
+import { DatasetModel } from '@/models/Dataset';
+import { RepositoryModel } from '@/models/Repository';
+import { GitHubService } from '@/services/GitHubService';
 
 /**
  * Contrôleur des repositories
  */
 export class RepoController {
-  /**
-   * Récupération des détails d'un repository
-   * GET /api/repositories/:owner/:repo
-   */
-  static getRepository = asyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { owner, repo } = req.params;
-      const nameWithOwner = `${owner}/${repo}`;
-      const authenticatedUser = req.user as AuthenticatedUser;
-
-      logWithContext.api('get_repository', req.path, true, {
-        nameWithOwner,
-        requesterId: authenticatedUser?.id,
-      });
-
-      try {
-        // Récupération du repository depuis la base de données
-        const repositoryData =
-          await RepositoryModel.findByNameWithOwner(nameWithOwner);
-
-        if (!repositoryData) {
-          // Si le repository n'existe pas en base, essayer de le récupérer depuis GitHub
-          if (authenticatedUser?.githubToken) {
-            try {
-              throw createError.notFound('Repository');
-            } catch {
-              throw createError.notFound('Repository');
-            }
-          } else {
-            throw createError.notFound('Repository');
-          }
-        }
-
-        const responseData = {
-          repository: {
-            id: repositoryData.id,
-            nameWithOwner: repositoryData.nameWithOwner,
-            name: repositoryData.name,
-            description: repositoryData.description,
-            owner: repositoryData.owner,
-            isPrivate: repositoryData.isPrivate,
-            isArchived: repositoryData.isArchived,
-            isFork: repositoryData.isFork,
-            isTemplate: repositoryData.isTemplate,
-            stargazerCount: repositoryData.stargazerCount,
-            forkCount: repositoryData.forkCount,
-            watchersCount: repositoryData.watchersCount,
-            subscriberCount: repositoryData.subscriberCount,
-            networkCount: repositoryData.networkCount,
-            openIssuesCount: repositoryData.openIssuesCount,
-            size: repositoryData.size,
-            diskUsage: repositoryData.diskUsage,
-            primaryLanguage: repositoryData.primaryLanguage,
-            languages: repositoryData.languages,
-            topics: repositoryData.topics,
-            license: repositoryData.license,
-            homepageUrl: repositoryData.homepageUrl,
-            defaultBranchRef: repositoryData.defaultBranchRef,
-            hasIssuesEnabled: repositoryData.hasIssuesEnabled,
-            hasProjectsEnabled: repositoryData.hasProjectsEnabled,
-            hasWikiEnabled: repositoryData.hasWikiEnabled,
-            hasPages: repositoryData.hasPages,
-            hasDownloads: repositoryData.hasDownloads,
-            hasDiscussions: repositoryData.hasDiscussions,
-            vulnerabilityAlertsEnabled:
-              repositoryData.vulnerabilityAlertsEnabled,
-            securityPolicyEnabled: repositoryData.securityPolicyEnabled,
-            codeOfConductEnabled: repositoryData.codeOfConductEnabled,
-            contributingGuidelinesEnabled:
-              repositoryData.contributingGuidelinesEnabled,
-            readmeEnabled: repositoryData.readmeEnabled,
-            createdAt: repositoryData.createdAt,
-            updatedAt: repositoryData.updatedAt,
-            pushedAt: repositoryData.pushedAt,
-          },
-          statistics: {
-            commits: repositoryData.commits,
-            releases: repositoryData.releases,
-            issues: repositoryData.issues,
-            pullRequests: repositoryData.pullRequests,
-            deployments: repositoryData.deployments,
-            environments: repositoryData.environments,
-            collaborators: repositoryData.collaborators,
-            branchProtectionRules: repositoryData.branchProtectionRules,
-          },
-          devops:
-            (repositoryData.githubActions != null ||
-              repositoryData.security != null ||
-              repositoryData.packages != null ||
-              repositoryData.branchProtection != null)
-              ? {
-                githubActions: repositoryData.githubActions,
-                security: repositoryData.security,
-                packages: repositoryData.packages,
-                branchProtection: repositoryData.branchProtection,
-                community: repositoryData.community,
-                traffic: repositoryData.traffic,
-              }
-              : null,
-          timestamp: new Date().toISOString(),
-        };
-
-        logWithContext.api('get_repository', req.path, true, {
-          nameWithOwner,
-          hasDevOpsData: !!responseData.devops,
-        });
-
-        res.status(200).json(responseData);
-        return;
-      } catch (_error: unknown) {
-        logWithContext.api('get_repository', req.path, false, {
-          nameWithOwner,
-          error: String(_error),
-        });
-
-        throw _error;
-      }
-    },
-  );
 
   /**
-   * Recherche de repositories
-   * GET /api/repositories/search
+   * Collecte et stockage des repositories d'un utilisateur depuis l'API GitHub
+   * POST /api/repositories/:username
    */
-  static searchRepositories = asyncHandler(
+  static collectRepositoriesData = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const searchParams = req.query as unknown as RepoSearchQuery;
+      const { username } = req.params;
       const authenticatedUser = req.user as AuthenticatedUser;
 
-      logWithContext.api('search_repositories', req.path, true, {
-        searchQuery: searchParams.query,
-        requesterId: authenticatedUser?.id,
-        filters: {
-          language: searchParams.language,
-          topic: searchParams.topic,
-          minStars: searchParams.minStars,
-          minForks: searchParams.minForks,
-          isPrivate: searchParams.isPrivate,
-          isFork: searchParams.isFork,
-          isArchived: searchParams.isArchived,
-        },
-      });
-
-      try {
-        // Construction des filtres de recherche
-        const searchFilters: Record<string, unknown> = {};
-
-        if (searchParams.query != null && searchParams.query !== '') {
-          searchFilters.$or = [
-            { name: { $regex: searchParams.query, $options: 'i' } },
-            { nameWithOwner: { $regex: searchParams.query, $options: 'i' } },
-            { description: { $regex: searchParams.query, $options: 'i' } },
-            { topics: { $in: [new RegExp(searchParams.query, 'i')] } },
-          ];
-        }
-
-        if (searchParams.language != null && searchParams.language !== '') {
-          const orArray = Array.isArray(searchFilters.$or)
-            ? searchFilters.$or
-            : (typeof searchFilters.$or !== 'undefined' && searchFilters.$or != null)
-              ? [searchFilters.$or]
-              : [];
-          searchFilters.$or = [
-            ...orArray,
-            {
-              primaryLanguage: { $regex: searchParams.language, $options: 'i' },
-            },
-            {
-              'languages.nodes.name': {
-                $regex: searchParams.language,
-                $options: 'i',
-              },
-            },
-          ];
-        }
-
-        if (searchParams.topic != null && searchParams.topic !== '') {
-          searchFilters.topics = { $in: [new RegExp(searchParams.topic, 'i')] };
-        }
-
-        if (searchParams.minStars !== undefined) {
-          searchFilters.stargazerCount = { $gte: searchParams.minStars };
-        }
-
-        if (searchParams.isPrivate !== undefined) {
-          searchFilters.isPrivate = searchParams.isPrivate;
-        }
-
-        if (searchParams.isFork !== undefined) {
-          searchFilters.isFork = searchParams.isFork;
-        }
-
-        if (searchParams.isArchived !== undefined) {
-          searchFilters.isArchived = searchParams.isArchived;
-        }
-
-        // Exécution de la recherche avec pagination
-        const result = await RepositoryModel.search({
-          search: searchParams.query,
-          language: searchParams.language,
-          topics: searchParams.topic != null && searchParams.topic !== '' ? [searchParams.topic] : undefined,
-          minStars: searchParams.minStars,
-          isPrivate: searchParams.isPrivate,
-          limit: searchParams.limit,
-          offset: (searchParams.page - 1) * searchParams.limit,
-        });
-
-        logWithContext.api('search_repositories', req.path, true, {
-          resultsCount: result.repositories.length,
-          totalCount: result.total,
-          searchQuery: searchParams.query,
-        });
-
-        // Correction stricte du typage pour garantir la compatibilité avec GitHubRepo
-        const repositories: GitHubRepo[] = (result.repositories as unknown[])
-          .filter((repo): repo is GitHubRepo => {
-            const r = repo as Partial<GitHubRepo>;
-            return (
-              typeof r === 'object' && r != null &&
-              typeof r.nameWithOwner === 'string' &&
-              typeof r.name === 'string' &&
-              typeof r.description !== 'undefined' &&
-              typeof r.languages !== 'undefined' &&
-              r.languages != null &&
-              typeof r.languages.totalSize === 'number' &&
-              Array.isArray(r.languages.nodes)
-            );
-          })
-          .map((repo) => ({
-            ...repo,
-            description: repo.description ?? '',
-            languages: {
-              totalSize: repo.languages.totalSize,
-              nodes: repo.languages.nodes,
-            },
-          }));
-        const responseData = {
-          repositories: repositories.map((repo) => ({
-            _id: repo._id,
-            nameWithOwner: repo.nameWithOwner,
-            name: repo.name,
-            description: repo.description,
-            isPrivate: repo.isPrivate,
-            isArchived: repo.isArchived,
-            isFork: repo.isFork,
-            isTemplate: repo.isTemplate,
-            stargazerCount: repo.stargazerCount,
-            forkCount: repo.forkCount,
-            watchersCount: repo.watchersCount,
-            subscriberCount: repo.subscriberCount,
-            networkCount: repo.networkCount,
-            openIssuesCount: repo.openIssuesCount,
-            primaryLanguage: repo.primaryLanguage,
-            languages: repo.languages,
-            topics: repo.topics,
-            pushedAt: repo.pushedAt,
-            updatedAt: repo.updatedAt,
-            createdAt: repo.createdAt,
-            homepageUrl: repo.homepageUrl,
-            size: repo.size,
-            defaultBranchRef: repo.defaultBranchRef,
-            license: repo.license,
-            hasIssuesEnabled: repo.hasIssuesEnabled,
-            hasProjectsEnabled: repo.hasProjectsEnabled,
-            hasWikiEnabled: repo.hasWikiEnabled,
-            hasPages: repo.hasPages,
-            hasDownloads: repo.hasDownloads,
-            hasDiscussions: repo.hasDiscussions,
-            vulnerabilityAlertsEnabled: repo.vulnerabilityAlertsEnabled,
-            securityPolicyEnabled: repo.securityPolicyEnabled,
-            codeOfConductEnabled: repo.codeOfConductEnabled,
-            contributingGuidelinesEnabled: repo.contributingGuidelinesEnabled,
-            readmeEnabled: repo.readmeEnabled,
-            deployments: repo.deployments,
-            environments: repo.environments,
-            commits: repo.commits,
-            releases: repo.releases,
-            issues: repo.issues,
-            pullRequests: repo.pullRequests,
-            branchProtectionRules: repo.branchProtectionRules,
-            collaborators: repo.collaborators,
-            githubActions: repo.githubActions,
-            security: repo.security,
-            packages: repo.packages,
-            branchProtection: repo.branchProtection,
-            community: repo.community,
-            traffic: repo.traffic,
-            diskUsage: repo.diskUsage,
-            owner: repo.owner,
-            userId: repo.userId,
-          })),
-          pagination: {
-            page: searchParams.page,
-            limit: searchParams.limit,
-            totalCount: result.total,
-            totalPages: Math.ceil(result.total / searchParams.limit),
-            hasNextPage: searchParams.page * searchParams.limit < result.total,
-            hasPreviousPage: searchParams.page > 1,
-          },
-          filters: {
-            query: searchParams.query,
-            language: searchParams.language,
-            topic: searchParams.topic,
-            minStars: searchParams.minStars,
-            isPrivate: searchParams.isPrivate,
-            isFork: searchParams.isFork,
-          },
-          timestamp: new Date().toISOString(),
-        };
-        res.status(200).json(responseData);
-        return;
-      } catch (_error: unknown) {
-        logWithContext.api('search_repositories', req.path, false, {
-          error: String(_error),
-          searchQuery: searchParams.query,
-        });
-
-        throw _error;
-      }
-    },
-  );
-
-  /**
-   * Enrichissement DevOps d'un repository
-   * POST /api/repositories/:owner/:repo/enrich
-   */
-  static enrichRepository = asyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { owner, repo } = req.params;
-      const nameWithOwner = `${owner}/${repo}`;
-      const authenticatedUser = req.user as AuthenticatedUser;
-
-      if (!authenticatedUser?.githubToken) {
-        throw createError.authentication(
-          "Token GitHub requis pour l'enrichissement",
-        );
+      if (authenticatedUser == null) {
+        throw createError.authentication('Authentification requise pour collecter les repositories');
       }
 
-      logWithContext.api('enrich_repository', req.path, true, {
-        nameWithOwner,
+      if (authenticatedUser.username !== username) {
+        throw createError.authorization('Vous ne pouvez collecter que vos propres repositories');
+      }
+
+      logWithContext.api('collect_repositories_data', req.path, true, {
+        targetUsername: username,
         requesterId: authenticatedUser.id,
       });
 
       try {
-        // Vérifier que le repository existe en base
-        const existingRepo =
-          await RepositoryModel.findByNameWithOwner(nameWithOwner);
+        const githubService = await GitHubService.create(authenticatedUser.githubToken);
 
-        if (!existingRepo) {
-          throw createError.notFound(
-            'Repository non trouvé en base de données',
-          );
+        // Récupération des repositories utilisateur
+        let allRepositories = await githubService.getUserRepos();
+
+        // Récupération des organisations et de leurs repositories
+        const organizations = await githubService.getUserOrganizations();
+
+        for (const orgName of organizations) {
+          try {
+            const orgRepos = await githubService.getOrgRepos(orgName);
+            // Filtrer pour ne garder que les repos où l'utilisateur est contributeur
+            const userOrgRepos = orgRepos.filter(repo => {
+              // Vérifier si l'utilisateur a des commits dans le repository
+              const hasCommits = repo.commits.recent.some(commit =>
+                commit.author.login === username,
+              );
+              return hasCommits || repo.owner.login === username;
+            });
+            allRepositories = [...allRepositories, ...userOrgRepos];
+          } catch (error: unknown) {
+            logWithContext.api('get_org_repos_error', req.path, false, {
+              orgName,
+              error: String(error),
+            });
+            // Continuer même si une organisation échoue
+          }
         }
 
-        // Enrichissement avec les données DevOps
-        const enrichedData = await RepositoryModel.enrichWithDevOpsData(
-          existingRepo.id,
-          {
-            githubActions: existingRepo.githubActions as unknown as import('@/types/github').GitHubActions | undefined,
-            security: existingRepo.security as unknown as import('@/types/github').GitHubSecurity | undefined,
-            packages: existingRepo.packages as unknown as import('@/types/github').GitHubPackages | undefined,
-            branchProtection: existingRepo.branchProtection as unknown as import('@/types/github').GitHubBranchProtection | undefined,
-            community: existingRepo.community as unknown as import('@/types/github').GitHubCommunity | undefined,
-            traffic: existingRepo.traffic as unknown as import('@/types/github').GitHubTraffic | undefined,
-          },
-        );
-
-        if (enrichedData == null) {
-          throw createError.externalService(
-            'GitHub API',
-            new Error("Impossible d'enrichir le repository"),
-          );
-        }
-
-        // Mise à jour en base de données
-        await RepositoryModel.enrichWithDevOpsData(nameWithOwner, {
-          githubActions: enrichedData.githubActions as unknown as import('@/types/github').GitHubActions | undefined,
-          security: enrichedData.security as unknown as import('@/types/github').GitHubSecurity | undefined,
-          packages: enrichedData.packages as unknown as import('@/types/github').GitHubPackages | undefined,
-          branchProtection: enrichedData.branchProtection as unknown as import('@/types/github').GitHubBranchProtection | undefined,
-          community: enrichedData.community as unknown as import('@/types/github').GitHubCommunity | undefined,
-          traffic: enrichedData.traffic as unknown as import('@/types/github').GitHubTraffic | undefined,
-        });
-
-        logWithContext.api('enrich_repository', req.path, true, {
-          nameWithOwner,
-          enrichedFields: Object.keys(enrichedData).filter(
-            (key) => enrichedData[key as keyof typeof enrichedData] != null,
-          ),
-        });
-
-        res.status(200).json({
-          message: 'Repository enrichi avec succès',
-          repository: {
-            nameWithOwner,
-            enrichedAt: new Date().toISOString(),
-          },
-          devops: {
-            githubActions: enrichedData.githubActions,
-            security: enrichedData.security,
-            packages: enrichedData.packages,
-            branchProtection: enrichedData.branchProtection,
-            community: enrichedData.community,
-            traffic: enrichedData.traffic,
-          },
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      } catch (_error: unknown) {
-        logWithContext.api('enrich_repository', req.path, false, {
-          nameWithOwner,
-          error: String(_error),
-        });
-
-        throw _error;
-      }
-    },
-  );
-
-  /**
-   * Statistiques des langages de programmation
-   * GET /api/repositories/languages/stats
-   */
-  static getLanguagesStats = asyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const authenticatedUser = req.user as AuthenticatedUser;
-
-      logWithContext.api('get_languages_stats', req.path, true, {
-        requesterId: authenticatedUser?.id,
-      });
-
-      try {
-        const stats = await databaseService.getPlatformStats();
-
-        // Traitement des statistiques de langages
-        const languageStats = stats.repositories.topLanguages.map(
-          (lang: { language: string; count: number }) => ({
-            language: lang.language,
-            count: lang.count,
-            percentage: ((lang.count / stats.repositories.total) * 100).toFixed(
-              2,
-            ),
+        // Enrichir tous les repositories avec des données DevOps complètes
+        const enrichedRepositories = await Promise.all(
+          allRepositories.map(async (repo) => {
+            try {
+              return await githubService.enrichWithDevOpsData(repo);
+            } catch (error: unknown) {
+              logWithContext.api('enrich_repo_error', req.path, false, {
+                repo: repo.nameWithOwner,
+                error: String(error),
+              });
+              return repo;
+            }
           }),
         );
 
-        res.status(200).json({
-          languages: languageStats,
+        // Calcul des statistiques globales
+        const totalStats = {
+          totalRepositories: enrichedRepositories.length,
+          totalStars: enrichedRepositories.reduce((sum, r) => sum + r.stargazerCount, 0),
+          totalForks: enrichedRepositories.reduce((sum, r) => sum + r.forkCount, 0),
+          totalWatchers: enrichedRepositories.reduce((sum, r) => sum + r.watchersCount, 0),
+          totalIssues: enrichedRepositories.reduce((sum, r) => sum + r.issues.totalCount, 0),
+          totalPullRequests: enrichedRepositories.reduce((sum, r) => sum + r.pullRequests.totalCount, 0),
+          totalCommits: enrichedRepositories.reduce((sum, r) => sum + r.commits.totalCount, 0),
+          totalReleases: enrichedRepositories.reduce((sum, r) => sum + r.releases.totalCount, 0),
+          totalDeployments: enrichedRepositories.reduce((sum, r) => sum + r.deployments.totalCount, 0),
+          repositoriesWithActions: enrichedRepositories.filter(r => (r.githubActions?.workflowsCount ?? 0) > 0).length,
+          repositoriesWithSecurity: enrichedRepositories.filter(r => (r.security?.dependabotAlerts.totalCount ?? 0) > 0).length,
+          repositoriesWithPackages: enrichedRepositories.filter(r => (r.packages?.totalCount ?? 0) > 0).length,
+          repositoriesWithProtection: enrichedRepositories.filter(r => (r.branchProtection?.rules.length ?? 0) > 0).length,
+          averageCommunityHealth: Math.round(enrichedRepositories.reduce((sum, r) => sum + (r.community?.healthPercentage ?? 0), 0) / enrichedRepositories.length) || 0,
+        };
+
+        // Analyse des langages
+        const languageStats = this.calculateLanguageAnalytics(enrichedRepositories);
+
+        // Analyse des topics
+        const topicStats = this.calculateTopicsAnalytics(enrichedRepositories);
+
+        // Calcul DevOps maturity
+        const devOpsMaturity = {
+          cicdAdoption: totalStats.repositoriesWithActions / totalStats.totalRepositories * 100,
+          securityMaturity: totalStats.repositoriesWithSecurity / totalStats.totalRepositories * 100,
+          branchProtectionRate: totalStats.repositoriesWithProtection / totalStats.totalRepositories * 100,
+          averageCommunityHealth: totalStats.averageCommunityHealth,
+        };
+
+        const analytics = {
+          totalStats,
+          languageAnalytics: languageStats,
+          topicsAnalytics: topicStats,
+          devOpsMaturity,
+        };
+
+        // Stocker les données enrichies avec l'architecture correcte
+        // Note: RepoController enrichit seulement les repositories existants,
+        // il ne crée pas de nouveau dataset complet
+
+        // Sauvegarder/mettre à jour les repositories enrichis individuellement
+        for (const repo of enrichedRepositories) {
+          await RepositoryModel.upsert(repo, authenticatedUser.id);
+        }
+
+        logWithContext.api('repositories_enriched_success', req.path, true, {
+          repositoriesCount: enrichedRepositories.length,
+          username,
+        });
+
+        logWithContext.api('collect_repositories_success', req.path, true, {
+          targetUsername: username,
+          repositoriesCount: enrichedRepositories.length,
+          organizationsCount: organizations.length,
+        });
+
+        res.status(201).json({
+          message: 'Collecte des repositories réussie',
+          status: 'completed',
           summary: {
-            totalRepositories: stats.repositories.total,
-            uniqueLanguages: languageStats.length,
-            topLanguage: languageStats[0]?.language ?? null,
+            username,
+            repositoriesCollected: enrichedRepositories.length,
+            organizationsScanned: organizations.length,
+            dataFreshness: 'live',
+          },
+          analytics,
+          metadata: {
+            collectedAt: new Date().toISOString(),
+            nextCollectionRecommended: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h plus tard
           },
           timestamp: new Date().toISOString(),
         });
-        return;
-      } catch (_error: unknown) {
-        logWithContext.api('get_languages_stats', req.path, false, {
-          error: String(_error),
+      } catch (error) {
+        logWithContext.api('collect_repositories_error', req.path, false, {
+          targetUsername: username,
+          error: String(error),
         });
 
-        throw _error;
+        throw createError.externalService('GitHub API', error as Error);
       }
     },
   );
 
   /**
-   * Tendances des repositories (plus populaires, récents, etc.)
-   * GET /api/repositories/trending
+   * Récupération des repositories depuis la base de données
+   * GET /api/repositories/:username
    */
-  static getTrendingRepositories = asyncHandler(
+  static getUserRepositories = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { period = '7d', limit = 10, language } = req.query;
+      const { username } = req.params;
       const authenticatedUser = req.user as AuthenticatedUser;
 
-      logWithContext.api('get_trending_repositories', req.path, true, {
+      logWithContext.api('get_user_repositories', req.path, true, {
+        targetUsername: username,
         requesterId: authenticatedUser?.id,
-        period,
-        language,
+        isAuthenticated: authenticatedUser != null,
       });
 
       try {
-        // Calcul de la date limite selon la période
-        const now = new Date();
-        const sinceDate = new Date();
+        // Récupération depuis la base de données uniquement
+        const userData = await UserModel.findByLogin(username);
 
-        switch (period) {
-        case '1d':
-          sinceDate.setDate(now.getDate() - 1);
-          break;
-        case '7d':
-          sinceDate.setDate(now.getDate() - 7);
-          break;
-        case '30d':
-          sinceDate.setDate(now.getDate() - 30);
-          break;
-        default:
-          sinceDate.setDate(now.getDate() - 7);
+        if (userData == null) {
+          throw createError.notFound('Aucune donnée trouvée pour cet utilisateur. Utilisez POST /repositories/{username} pour collecter les repositories.');
         }
 
-        // Filtres pour les repositories tendance
-        const trendingFilters: Record<string, unknown> = {
-          updatedAt: { $gte: sinceDate },
-          isArchived: false,
-          stargazerCount: { $gte: 1 }, // Au moins 1 star
-        };
+        // Récupération du dataset le plus récent
+        const dataset = await DatasetModel.findByUsername(username);
 
-        if (language != null && language !== '') {
-          trendingFilters.primaryLanguage = language;
+        if (!dataset?.repositories || dataset.repositories.length === 0) {
+          const responseData = {
+            repositories: [],
+            metadata: {
+              username,
+              dataSource: 'database',
+              isEmpty: true,
+              message: 'Aucun repository trouvé. Utilisez POST /repositories/{username} pour collecter les repositories.',
+            },
+            timestamp: new Date().toISOString(),
+          };
+
+          res.status(200).json(responseData);
+          return;
         }
 
-        // Recherche des repositories tendance
-        const trendingRepos = await RepositoryModel.search({
-          limit: Number(limit),
-        });
+        // Vérifier la fraîcheur des données
+        const dataAge = Date.now() - new Date(dataset.generatedAt).getTime();
+        const isStale = dataAge > 24 * 60 * 60 * 1000; // Plus de 24h
 
-        // Recherche des repositories récents
-        const recentRepos = await RepositoryModel.search({
-          limit: Number(limit),
-        });
+        let repositories = dataset.repositories;
 
-        res.status(200).json({
-          trending: {
-            period,
-            repositories: trendingRepos.repositories.map((repo) => ({
-              nameWithOwner: repo.nameWithOwner,
-              name: repo.name,
-              description: repo.description,
-              owner: repo.owner,
-              stargazerCount: repo.stargazerCount,
-              forkCount: repo.forkCount,
-              primaryLanguage: repo.primaryLanguage,
-              topics: repo.topics,
-              updatedAt: repo.updatedAt,
-            })),
-            totalCount: trendingRepos.total,
-          },
-          recent: {
-            repositories: recentRepos.repositories
-              .slice(0, Number(limit))
-              .map((repo) => ({
-                nameWithOwner: repo.nameWithOwner,
-                name: repo.name,
-                description: repo.description,
-                owner: repo.owner,
-                stargazerCount: repo.stargazerCount,
-                primaryLanguage: repo.primaryLanguage,
-                createdAt: repo.createdAt,
-              })),
-          },
-          filters: {
-            period,
-            language,
-            since: sinceDate.toISOString(),
+        // Si l'utilisateur demande ses propres données et est authentifié, retourner tous les repositories
+        // Sinon, filtrer les repositories privés
+        if (authenticatedUser?.username !== username) {
+          // Filtrer les repositories privés pour les autres utilisateurs
+          repositories = (dataset.repositories as GitHubRepo[]).filter((repo: GitHubRepo) => !repo.isPrivate);
+        }
+
+        // Calculer les analytics depuis les données stockées
+        const analytics = this.calculateAnalyticsFromStoredData(repositories as GitHubRepo[]);
+
+        const responseData = {
+          repositories,
+          analytics,
+          metadata: {
+            username,
+            dataSource: 'database',
+            dataAge: Math.round(dataAge / (60 * 60 * 1000)), // Age en heures
+            isStale,
+            accessLevel: authenticatedUser?.username === username ? 'full' : 'public',
+            repositoriesCount: repositories.length,
+            recommendation: isStale
+              ? 'Les données ont plus de 24h. Considérez une nouvelle collecte avec POST /repositories/{username}.'
+              : 'Données récentes',
           },
           timestamp: new Date().toISOString(),
-        });
-        return;
-      } catch (_error: unknown) {
-        logWithContext.api('get_trending_repositories', req.path, false, {
-          error: String(_error),
-          period,
-          language,
+        };
+
+        logWithContext.api('get_user_repositories_success', req.path, true, {
+          targetUsername: username,
+          dataAge: Math.round(dataAge / (60 * 60 * 1000)),
+          hasFullAccess: authenticatedUser?.username === username,
+          repositoriesCount: repositories.length,
         });
 
-        throw _error;
+        res.status(200).json(responseData);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('Aucune donnée trouvée')) {
+          throw error; // Re-throw les erreurs 404 explicites
+        }
+
+        logWithContext.api('get_user_repositories_error', req.path, false, {
+          targetUsername: username,
+          error: String(error),
+        });
+
+        throw createError.externalService('Database', error as Error);
       }
     },
   );
+
+  /**
+   * Calcul des statistiques de langages
+   */
+  private static calculateLanguageAnalytics(repositories: GitHubRepo[]): Record<string, unknown> {
+    const languageStats: Record<string, { totalSize: number; repoCount: number; percentage: number }> = {};
+    let totalSize = 0;
+
+    repositories.forEach(repo => {
+      repo.languages.nodes.forEach(lang => {
+        languageStats[lang.name] ??= { totalSize: 0, repoCount: 0, percentage: 0 };
+        languageStats[lang.name].totalSize += lang.size;
+        languageStats[lang.name].repoCount += 1;
+        totalSize += lang.size;
+      });
+    });
+
+    // Calculer les pourcentages
+    Object.keys(languageStats).forEach(lang => {
+      languageStats[lang].percentage = Math.round((languageStats[lang].totalSize / totalSize) * 100 * 100) / 100;
+    });
+
+    // Trier par taille
+    const sortedLanguages = Object.entries(languageStats)
+      .sort(([, a], [, b]) => b.totalSize - a.totalSize)
+      .slice(0, 10); // Top 10
+
+    return {
+      totalLanguages: Object.keys(languageStats).length,
+      totalSize,
+      languages: Object.fromEntries(sortedLanguages),
+      topLanguages: sortedLanguages.slice(0, 5).map(([name, stats]) => ({ name, ...stats })),
+    };
+  }
+
+  /**
+   * Calcul des statistiques de topics
+   */
+  private static calculateTopicsAnalytics(repositories: GitHubRepo[]): Record<string, unknown> {
+    const topicStats: Record<string, number> = {};
+
+    repositories.forEach(repo => {
+      repo.topics.forEach(topic => {
+        topicStats[topic] = (topicStats[topic] || 0) + 1;
+      });
+    });
+
+    const sortedTopics = Object.entries(topicStats)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 15); // Top 15
+
+    return {
+      totalTopics: Object.keys(topicStats).length,
+      repositoriesWithTopics: repositories.filter(r => r.topics.length > 0).length,
+      topics: Object.fromEntries(sortedTopics),
+      topTopics: sortedTopics.slice(0, 10).map(([name, count]) => ({ name, count })),
+    };
+  }
+
+  /**
+   * Calcul des statistiques globales à partir des données stockées
+   */
+  private static calculateAnalyticsFromStoredData(repositories: GitHubRepo[]): Record<string, unknown> {
+    const totalStats = {
+      totalRepositories: repositories.length,
+      totalStars: repositories.reduce((sum, r) => sum + r.stargazerCount, 0),
+      totalForks: repositories.reduce((sum, r) => sum + r.forkCount, 0),
+      totalWatchers: repositories.reduce((sum, r) => sum + r.watchersCount, 0),
+      totalIssues: repositories.reduce((sum, r) => sum + r.issues.totalCount, 0),
+      totalPullRequests: repositories.reduce((sum, r) => sum + r.pullRequests.totalCount, 0),
+      totalCommits: repositories.reduce((sum, r) => sum + r.commits.totalCount, 0),
+      totalReleases: repositories.reduce((sum, r) => sum + r.releases.totalCount, 0),
+      totalDeployments: repositories.reduce((sum, r) => sum + r.deployments.totalCount, 0),
+      repositoriesWithActions: repositories.filter(r => (r.githubActions?.workflowsCount ?? 0) > 0).length,
+      repositoriesWithSecurity: repositories.filter(r => (r.security?.dependabotAlerts.totalCount ?? 0) > 0).length,
+      repositoriesWithPackages: repositories.filter(r => (r.packages?.totalCount ?? 0) > 0).length,
+      repositoriesWithProtection: repositories.filter(r => (r.branchProtection?.rules.length ?? 0) > 0).length,
+      averageCommunityHealth: Math.round(repositories.reduce((sum, r) => sum + (r.community?.healthPercentage ?? 0), 0) / repositories.length) || 0,
+    };
+
+    // Analyse des langages
+    const languageStats = this.calculateLanguageAnalytics(repositories);
+
+    // Analyse des topics
+    const topicStats = this.calculateTopicsAnalytics(repositories);
+
+    // Calcul DevOps maturity
+    const devOpsMaturity = {
+      cicdAdoption: totalStats.repositoriesWithActions / totalStats.totalRepositories * 100,
+      securityMaturity: totalStats.repositoriesWithSecurity / totalStats.totalRepositories * 100,
+      branchProtectionRate: totalStats.repositoriesWithProtection / totalStats.totalRepositories * 100,
+      averageCommunityHealth: totalStats.averageCommunityHealth,
+    };
+
+    return {
+      totalStats,
+      languageAnalytics: languageStats,
+      topicsAnalytics: topicStats,
+      devOpsMaturity,
+    };
+  }
 }
 
 export default RepoController;

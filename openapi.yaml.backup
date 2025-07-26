@@ -1,24 +1,20 @@
-# GitHub Insight Engine API Specification
-# Description: API REST pour l'analyse en profondeur des données GitHub avec insights IA.
+# GitHub Insight Engine API Specification - Version Simplifiée
+# Description: API REST simplifiée pour l'analyse des données GitHub avec 3 endpoints cruciaux.
 openapi: 3.0.3
 info:
-  title: GitHub Insight Engine API
+  title: GitHub Insight Engine API - Simplified
   description: |
-    API REST pour l'analyse en profondeur des données GitHub avec insights IA.
+    API REST simplifiée pour l'analyse en profondeur des données GitHub.
     
-    Cette API permet d'analyser les profils GitHub, repositories et de générer des insights 
-    quantitatifs et qualitatifs grâce à l'intelligence artificielle.
+    Cette API permet d'analyser les profils GitHub et repositories avec une approche tout-en-un.
     
-    ## 🔐 Authentification et Contexte Persistant
+    ## 🔐 Authentification
     
-    L'API utilise l'authentification JWT Bearer Token. **Le contexte d'authentification est automatiquement persisté** 
-    lors des tests de documentation pour une expérience utilisateur optimale.
+    L'API utilise l'authentification JWT Bearer Token.
     
     ### Workflow d'authentification :
     1. **Connexion initiale** : Utilisez l'endpoint `POST /auth/login` avec votre token GitHub Classic
-    2. **Contexte automatique** : Le token JWT retourné est automatiquement utilisé pour tous les endpoints suivants
-    3. **Persistance de session** : Votre authentification reste active pendant toute la session de test
-    4. **Endpoints protégés** : Testez directement les endpoints privés sans re-saisir le token
+    2. **Endpoints protégés** : Utilisez le token JWT pour accéder aux données complètes
     
     ### Configuration du token GitHub Classic :
     Votre token doit avoir les permissions suivantes :
@@ -26,27 +22,35 @@ info:
     - `user` (lecture du profil utilisateur)  
     - `read:org` (lecture des organisations)
     
-    ### Test de la documentation :
-    1. 🚀 **Commencez par `/auth/login`** avec vos identifiants
-    2. 📋 **Copiez le token** depuis `tokens.accessToken` dans la réponse
-    3. 🔐 **Cliquez sur "Authorize"** en haut de cette page
-    4. 📝 **Collez le token JWT** (sans "Bearer ") et validez
-    5. ✅ **Tous les endpoints protégés** utilisent maintenant votre token automatiquement
-    6. 📊 **Explorez l'API complète** avec votre contexte utilisateur authentifié
+    ## 🚀 Endpoints Optimisés (Collecte vs Consultation)
+    
+    **Architecture en deux phases :**
+    
+    ### 📥 Phase 1 : Collecte (POST)
+    - **`POST /users/{username}`** - Collecte des données utilisateur depuis GitHub API
+    - **`POST /repositories/{username}`** - Collecte des repositories avec analyses DevOps
+    
+    ### 📊 Phase 2 : Consultation (GET)  
+    - **`GET /users/{username}`** - Consultation des données utilisateur stockées
+    - **`GET /repositories/{username}`** - Consultation des repositories stockés
+    - **`POST /auth/login`** - Authentification
+    
+    ## ⚡ Avantages de cette approche
+    - **Performance** : Consultation ultra-rapide depuis la base de données
+    - **Contrôle** : Collecte à la demande pour des données fraîches
+    - **Flexibilité** : Données publiques accessibles sans authentification
+    - **Efficacité** : Évite les appels répétés à l'API GitHub
     
     ## Rate Limiting
     - Global: 100 requêtes par 15 minutes par IP
     - Authentification: 5 tentatives par 15 minutes par IP  
-    - Analyses: 10 analyses par heure par IP
     
-    ## Workflow d'analyse recommandé
+    ## 🔄 Workflow recommandé
     1. **Authentification** → `POST /auth/login`
-    2. **Vérification** → `GET /auth/validate` 
-    3. **Profil utilisateur** → `GET /users/{username}`
-    4. **Analyse complète** → `POST /analytics/{username}/analyze`
-    5. **Insights IA** → `POST /insights/{username}/generate`
-    6. **Consultation des résultats** → Endpoints GET correspondants
-  version: 0.1.9
+    2. **Collecte des données** → `POST /users/{username}` puis `POST /repositories/{username}`
+    3. **Consultation rapide** → `GET /users/{username}` et `GET /repositories/{username}`
+    4. **Mise à jour** → Re-collecte avec POST si les données sont anciennes
+  version: 1.0.0
   contact:
     name: GitHub Insight Engine Support
     url: https://github.com/org/gh-insight-engine
@@ -101,262 +105,123 @@ paths:
     post:
       summary: Authentification avec token GitHub
       description: |
-        Authentification avec token GitHub Classic et génération d'un JWT.
-        Le token GitHub doit avoir les permissions appropriées pour accéder aux données privées.
+        Authentifie un utilisateur avec son token GitHub Classic et retourne un token JWT.
+        
+        **Permissions GitHub requises :**
+        - `repo` : Accès aux repositories privés
+        - `user` : Lecture du profil utilisateur  
+        - `read:org` : Lecture des organisations
+        
+        **Workflow :**
+        1. Générez un token GitHub Classic sur https://github.com/settings/tokens
+        2. Cochez les permissions requises
+        3. Utilisez ce token dans le champ `githubToken`
+        4. Récupérez le JWT dans la réponse pour les appels suivants
       operationId: login
       tags:
         - Authentication
       security: []
       requestBody:
+        description: Identifiants de connexion
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: "octocat"
+              fullName: "The Octocat"
+              githubToken: "ghp_xxxxxxxxxxxxxxxxxxxx"
       responses:
         '200':
-          description: |
-            ✅ **Authentification réussie !**
-            
-            **🔐 ÉTAPES OBLIGATOIRES pour configurer l'autorisation :**
-            1. **Copiez** la valeur de `tokens.accessToken` depuis cette réponse
-            2. **Cliquez** sur le bouton "🔒 Authorize" en haut de cette documentation
-            3. **Collez** le token JWT dans le champ "Value" (⚠️ SANS le préfixe "Bearer ")
-            4. **Cliquez** sur "Authorize" puis "Close"
-            5. **Testez** maintenant les endpoints protégés - ils utiliseront automatiquement votre token
-            
-            **🔄 Prochaines étapes recommandées :**
-            1. Vérifiez votre autorisation : `GET /auth/validate`
-            2. Explorez votre profil : `GET /users/{username}`
-            3. Lancez une analyse : `POST /analytics/{username}/analyze`
-            
-            **⏰ Le token expire dans 24h**
+          description: Authentification réussie
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
-              examples:
-                success_with_context:
-                  summary: "✅ Authentification réussie - Configurez maintenant l'autorisation"
-                  description: "IMPORTANT: Copiez le token accessToken et utilisez le bouton Authorize en haut de la page"
-                  value:
-                    message: "Authentification réussie"
-                    user:
-                      id: "507f1f77bcf86cd799439011"
-                      username: "octocat"
-                      name: "John Doe"
-                      fullName: "John Doe"
-                      email: "john@example.com"
-                      avatarUrl: "https://github.com/images/error/octocat_happy.gif"
-                      bio: "Developer passionate about open source"
-                      company: "GitHub"
-                      location: "San Francisco"
-                      publicRepos: 42
-                      followers: 1000
-                      following: 100
-                      createdAt: "2023-01-15T10:30:00.000Z"
-                      hasValidToken: true
-                      tokenScopes: ["repo", "user", "read:org"]
-                    tokens:
-                      accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJ1c2VybmFtZSI6Im9jdG9jYXQiLCJpYXQiOjE2NzM3ODQwMDAsImV4cCI6MTY3Mzg3MDQwMH0.example_signature"
-                      tokenType: "Bearer"
-                      expiresIn: "24h"
-                    permissions:
-                      canAccessPrivateRepos: true
-                      canReadOrgs: true
-                      canReadUser: true
-                    timestamp: "2023-01-15T10:30:00.000Z"
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Données d'entrée invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Token GitHub invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-
-
-  /auth/refresh:
-    post:
-      summary: Rafraîchissement du token JWT
-      description: Génère un nouveau token JWT à partir d'un token valide
-      operationId: refreshToken
-      tags:
-        - Authentication
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refresh_token
-              properties:
-                refresh_token:
-                  type: string
-                  description: Token de rafraîchissement
-      responses:
-        '200':
-          description: Token rafraîchi avec succès
+          description: Trop de tentatives de connexion
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - message
-                  - tokens
-                  - timestamp
-                properties:
-                  message:
-                    type: string
-                    example: "Token rafraîchi avec succès"
-                  tokens:
-                    type: object
-                    required:
-                      - accessToken
-                      - tokenType
-                      - expiresIn
-                    properties:
-                      accessToken:
-                        type: string
-                        description: Nouveau token JWT
-                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                      tokenType:
-                        type: string
-                        example: "Bearer"
-                      expiresIn:
-                        type: string
-                        description: Durée de validité
-                        example: "24h"
-                  timestamp:
-                    type: string
-                    format: date-time
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/validate:
-    get:
-      summary: Validation du token JWT
-      description: |
-        Vérifie la validité du token JWT courant.
-        
-        **🔒 Endpoint protégé** - Nécessite une autorisation Bearer Token.
-        
-        **Si vous obtenez une erreur 401 :**
-        1. Assurez-vous d'avoir cliqué sur "🔒 Authorize" en haut de la page
-        2. Vérifiez que vous avez collé le token JWT (sans "Bearer ")
-        3. Le token doit provenir de la réponse de `/auth/login`
-        
-        **✅ Si configuré correctement, cet endpoint confirmera votre authentification.**
-      operationId: validateToken
-      tags:
-        - Authentication
-      responses:
-        '200':
-          description: Token valide
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - valid
-                  - user
-                  - github
-                  - permissions
-                  - timestamp
-                properties:
-                  valid:
-                    type: boolean
-                    example: true
-                  user:
-                    type: object
-                    required:
-                      - id
-                      - username
-                    properties:
-                      id:
-                        type: string
-                        example: "507f1f77bcf86cd799439011"
-                      username:
-                        type: string
-                        example: "octocat"
-                  github:
-                    type: object
-                    required:
-                      - tokenValid
-                      - scopes
-                    properties:
-                      tokenValid:
-                        type: boolean
-                        example: true
-                      scopes:
-                        type: array
-                        items:
-                          type: string
-                        example: ["repo", "user", "read:org"]
-                  permissions:
-                    type: object
-                    required:
-                      - canAccessPrivateRepos
-                      - canReadOrgs
-                      - canReadUser
-                    properties:
-                      canAccessPrivateRepos:
-                        type: boolean
-                        example: true
-                      canReadOrgs:
-                        type: boolean
-                        example: true
-                      canReadUser:
-                        type: boolean
-                        example: true
-                  timestamp:
-                    type: string
-                    format: date-time
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/logout:
-    delete:
-      summary: Déconnexion
-      description: Invalide le token JWT courant
-      operationId: logout
-      tags:
-        - Authentication
-      responses:
-        '200':
-          description: Déconnexion réussie
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LogoutResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-
-
-  /auth/me:
-    get:
-      summary: Information sur l'utilisateur connecté
-      description: Retourne les informations du profil de l'utilisateur authentifié
-      operationId: getCurrentUser
-      tags:
-        - Authentication
-      responses:
-        '200':
-          description: Informations utilisateur
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CurrentUserResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: '#/components/schemas/ErrorResponse'
 
   /users/{username}:
-    get:
-      summary: Récupération du profil d'un utilisateur
+    post:
+      summary: Collecte des données GitHub d'un utilisateur
       description: |
-        Récupère le profil complet d'un utilisateur GitHub.
-        Inclut les informations publiques et privées si l'utilisateur authentifié en a les droits.
+        **Déclenche la collecte et le stockage** des données GitHub d'un utilisateur depuis l'API GitHub.
+        
+        **🔐 Authentification requise** - L'utilisateur ne peut collecter que ses propres données.
+        
+        **Processus de collecte :**
+        - Récupération du profil utilisateur complet
+        - Collecte de tous les repositories (utilisateur + organisations)
+        - Enrichissement avec données DevOps complètes
+        - Calcul des métriques et statistiques
+        - Stockage en base de données
+        
+        **Après la collecte**, utilisez `GET /users/{username}` pour consulter les données stockées.
+      operationId: collectUserData
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Nom d'utilisateur GitHub (doit correspondre à l'utilisateur authentifié)
+          schema:
+            type: string
+            example: "octocat"
+      responses:
+        '201':
+          description: Collecte des données réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '401':
+          description: Authentification requise ou token invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Accès refusé - vous ne pouvez collecter que vos propres données
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Consultation des données utilisateur stockées
+      description: |
+        **Récupère les données utilisateur** depuis la base de données (données précédemment collectées).
+        
+        **🔓 Authentification optionnelle** :
+        - **Sans authentification** : Données publiques uniquement
+        - **Avec authentification (propriétaire)** : Toutes les données
+        
+        **Sources de données :**
+        - Base de données locale (rapide)
+        - Informations sur la fraîcheur des données
+        - Recommandations de mise à jour
+        
+        **Pour collecter de nouvelles données**, utilisez `POST /users/{username}`.
       operationId: getUserProfile
       tags:
         - Users
@@ -370,126 +235,101 @@ paths:
           description: Nom d'utilisateur GitHub
           schema:
             type: string
-            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
             example: "octocat"
       responses:
         '200':
-          description: Profil utilisateur
+          description: Données utilisateur récupérées avec succès
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfileResponse'
+                $ref: '#/components/schemas/UserCompleteResponse'
         '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      summary: Suppression des données utilisateur (GDPR)
+          description: Utilisateur introuvable ou données non collectées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /repositories/{username}:
+    post:
+      summary: Collecte des repositories d'un utilisateur
       description: |
-        Supprime toutes les données associées à un utilisateur pour conformité GDPR.
-        Seul le propriétaire du compte peut supprimer ses propres données.
-      operationId: deleteUserData
+        **Déclenche la collecte et le stockage** des repositories d'un utilisateur depuis l'API GitHub.
+        
+        **🔐 Authentification requise** - L'utilisateur ne peut collecter que ses propres repositories.
+        
+        **Processus de collecte :**
+        - Récupération de tous les repositories (utilisateur + organisations)
+        - Filtrage intelligent (contributeur actif)
+        - Enrichissement avec données DevOps complètes
+        - Calcul des métriques et analyses
+        - Stockage en base de données
+        
+        **Données collectées :**
+        - ✅ Données DevOps (GitHub Actions, sécurité, packages, protection branches)
+        - ✅ Métriques de performance et qualité
+        - ✅ Statistiques de langages et topics
+        - ✅ Scores de maturité DevOps
+        - ✅ Santé communautaire
+        - ✅ Données de trafic
+        
+        **Après la collecte**, utilisez `GET /repositories/{username}` pour consulter les données stockées.
+      operationId: collectRepositoriesData
       tags:
-        - Users
+        - Repositories
+      security:
+        - BearerAuth: []
       parameters:
         - name: username
           in: path
           required: true
-          description: Nom d'utilisateur GitHub
+          description: Nom d'utilisateur GitHub (doit correspondre à l'utilisateur authentifié)
           schema:
             type: string
-            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
+            example: "octocat"
       responses:
-        '200':
-          description: Données supprimées avec succès
+        '201':
+          description: Collecte des repositories réussie
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - message
-                  - deleted
-                  - compliance
-                  - timestamp
-                properties:
-                  message:
-                    type: string
-                    example: "Données utilisateur supprimées avec succès"
-                  deleted:
-                    type: object
-                    properties:
-                      user:
-                        type: integer
-                      repositories:
-                        type: integer
-                      datasets:
-                        type: integer
-                  compliance:
-                    type: string
-                    example: "GDPR"
-                  timestamp:
-                    type: string
-                    format: date-time
+                $ref: '#/components/schemas/CollectionResponse'
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: Authentification requise ou token invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/{username}/status:
-    get:
-      summary: Statut de l'analyse d'un utilisateur
-      description: Récupère le statut de progression d'une analyse utilisateur
-      operationId: getUserAnalysisStatus
-      tags:
-        - Users
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: username
-          in: path
-          required: true
-          description: Nom d'utilisateur GitHub
-          schema:
-            type: string
-            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
-      responses:
-        '200':
-          description: Statut de l'analyse
+          description: Accès refusé - vous ne pouvez collecter que vos propres repositories
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalysisStatusResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /users/stats:
     get:
-      summary: Statistiques globales des utilisateurs
-      description: Récupère les statistiques globales de la plateforme
-      operationId: getUsersStats
-      tags:
-        - Users
-      security:
-        - BearerAuth: []
-        - {}
-      responses:
-        '200':
-          description: Statistiques globales
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PlatformStats'
-
-  /users/{username}/repositories:
-    get:
-      summary: Liste des repositories d'un utilisateur
+      summary: Consultation des repositories stockés
       description: |
-        Récupère la liste des repositories d'un utilisateur avec données DevOps enrichies.
-        Inclut les repositories privés si l'utilisateur authentifié en a les droits.
+        **Récupère les repositories** depuis la base de données (données précédemment collectées).
+        
+        **🔓 Authentification optionnelle** :
+        - **Sans authentification** : Repositories publics uniquement
+        - **Avec authentification (propriétaire)** : Tous les repositories
+        
+        **Sources de données :**
+        - Base de données locale (rapide)
+        - Analyses et métriques pré-calculées
+        - Informations sur la fraîcheur des données
+        
+        **Réponse structurée :**
+        - `repositories[]` : Liste des repositories avec analyses
+        - `analytics` : Métriques globales pré-calculées
+        - `metadata` : Informations sur la collecte
+        
+        **Pour collecter de nouvelles données**, utilisez `POST /repositories/{username}`.
       operationId: getUserRepositories
       tags:
-        - Users
+        - Repositories
       security:
         - BearerAuth: []
         - {}
@@ -500,617 +340,20 @@ paths:
           description: Nom d'utilisateur GitHub
           schema:
             type: string
-            pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
-        - name: includePrivate
-          in: query
-          description: Inclure les repositories privés (nécessite authentification)
-          schema:
-            type: boolean
-            default: false
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+            example: "octocat"
       responses:
         '200':
-          description: Liste des repositories
+          description: Repositories récupérés avec succès
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RepositoryListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: '#/components/schemas/RepositoriesCompleteResponse'
         '404':
-          $ref: '#/components/responses/NotFound'
-
-  /repositories/search:
-    get:
-      summary: Recherche de repositories avec filtres avancés
-      description: |
-        Recherche de repositories GitHub avec filtres avancés.
-        Permet de filtrer par langage, sujet, nombre d'étoiles, etc.
-      operationId: searchRepositories
-      tags:
-        - Repositories
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: query
-          in: query
-          description: Terme de recherche dans le nom ou description
-          schema:
-            type: string
-        - name: language
-          in: query
-          description: Langage de programmation principal
-          schema:
-            type: string
-        - name: topic
-          in: query
-          description: Sujet/tag du repository
-          schema:
-            type: string
-        - name: minStars
-          in: query
-          description: Nombre minimum d'étoiles
-          schema:
-            type: integer
-            minimum: 0
-        - name: minForks
-          in: query
-          description: Nombre minimum de forks
-          schema:
-            type: integer
-            minimum: 0
-        - name: isPrivate
-          in: query
-          description: Repository privé (nécessite authentification)
-          schema:
-            type: boolean
-        - name: isFork
-          in: query
-          description: Est un fork
-          schema:
-            type: boolean
-        - name: isArchived
-          in: query
-          description: Est archivé
-          schema:
-            type: boolean
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: sortBy
-          in: query
-          schema:
-            type: string
-            enum: [stars, forks, updated, created]
-            default: stars
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-      responses:
-        '200':
-          description: Liste des repositories trouvés
+          description: Utilisateur introuvable ou repositories non collectés
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RepositorySearchResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /repositories/languages/stats:
-    get:
-      summary: Statistiques des langages de programmation
-      description: |
-        Récupère les statistiques globales des langages de programmation
-        utilisés dans tous les repositories de la plateforme.
-      operationId: getLanguagesStats
-      tags:
-        - Repositories
-      security:
-        - BearerAuth: []
-        - {}
-      responses:
-        '200':
-          description: Statistiques des langages
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LanguagesStats'
-
-  /repositories/trending:
-    get:
-      summary: Repositories tendance
-      description: |
-        Récupère les repositories tendance par période et langage.
-        Permet de découvrir les projets populaires récemment.
-      operationId: getTrendingRepositories
-      tags:
-        - Repositories
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: period
-          in: query
-          description: Période de tendance
-          schema:
-            type: string
-            enum: ['1d', '7d', '30d']
-            default: '7d'
-        - name: language
-          in: query
-          description: Langage de programmation
-          schema:
-            type: string
-        - name: limit
-          in: query
-          description: Nombre de repositories à retourner
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-      responses:
-        '200':
-          description: Liste des repositories tendance
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrendingRepositoriesResponse'
-
-  /repositories/{owner}/{repo}:
-    get:
-      summary: Récupération des détails d'un repository
-      description: |
-        Récupère les détails complets d'un repository avec données DevOps.
-        Inclut les informations privées si l'utilisateur authentifié en a les droits.
-      operationId: getRepository
-      tags:
-        - Repositories
-      security:
-        - BearerAuth: []
-        - {}
-      parameters:
-        - name: owner
-          in: path
-          required: true
-          description: Propriétaire du repository
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          description: Nom du repository
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Détails du repository
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Repository'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /repositories/{owner}/{repo}/enrich:
-    post:
-      summary: Enrichissement DevOps d'un repository
-      description: |
-        Lance l'enrichissement DevOps d'un repository avec données avancées.
-        Nécessite une authentification pour accéder aux données privées.
-      operationId: enrichRepository
-      tags:
-        - Repositories
-      parameters:
-        - name: owner
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: repo
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Repository enrichi avec succès
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Repository'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/{username}/analyze:
-    post:
-      summary: Lance une analyse complète d'un utilisateur
-      description: |
-        Lance une analyse complète d'un utilisateur (GitHub + Analytics).
-        Cette opération peut prendre plusieurs minutes et est limitée en fréquence.
-      operationId: analyzeUser
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AnalyzeUserRequest'
-      responses:
-        '202':
-          description: Analyse lancée avec succès
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AnalysisStatusResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /analytics/{username}/overview:
-    get:
-      summary: Vue d'ensemble des métriques
-      description: Récupère une vue d'ensemble des métriques analytiques d'un utilisateur
-      operationId: getAnalyticsOverview
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Vue d'ensemble des métriques
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AnalyticsOverview'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/{username}/performance:
-    get:
-      summary: Scores de performance
-      description: Récupère les scores de performance calculés pour un utilisateur
-      operationId: getPerformanceScores
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Scores de performance
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PerformanceScores'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/{username}/languages:
-    get:
-      summary: Analyse des langages
-      description: Récupère l'analyse détaillée des langages de programmation utilisés
-      operationId: getLanguageAnalysis
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Analyse des langages
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LanguageAnalysis'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/{username}/activity:
-    get:
-      summary: Analyse d'activité
-      description: Récupère l'analyse d'activité et des patterns de développement
-      operationId: getActivityAnalysis
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Analyse d'activité
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActivityAnalysis'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/{username}/productivity:
-    get:
-      summary: Score de productivité
-      description: Récupère le score de productivité et métriques associées
-      operationId: getProductivityScore
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Score de productivité
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductivityScore'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/{username}/devops:
-    get:
-      summary: Maturité DevOps
-      description: Récupère l'évaluation de maturité DevOps et pratiques de développement
-      operationId: getDevOpsMaturity
-      tags:
-        - Analytics
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Maturité DevOps
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DevOpsMaturity'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/generate:
-    post:
-      summary: Génération d'insights IA pour un utilisateur
-      description: |
-        Lance la génération d'insights IA pour un utilisateur.
-        Cette opération utilise OpenAI et est très coûteuse, donc limitée en fréquence.
-      operationId: generateInsights
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '202':
-          description: Génération d'insights lancée
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsightGenerationResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /insights/{username}/summary:
-    get:
-      summary: Résumé IA du profil
-      description: Récupère le résumé IA du profil développeur
-      operationId: getInsightsSummary
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Résumé IA du profil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsightsSummary'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/recommendations:
-    get:
-      summary: Recommandations IA
-      description: Récupère les recommandations IA basées sur l'analyse du profil
-      operationId: getInsightsRecommendations
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Recommandations IA
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsightsRecommendations'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/strengths:
-    get:
-      summary: Forces identifiées
-      description: Récupère les forces identifiées par l'IA
-      operationId: getInsightsStrengths
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Forces identifiées
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsightsStrengths'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/growth:
-    get:
-      summary: Axes d'amélioration
-      description: Récupère les axes d'amélioration suggérés par l'IA
-      operationId: getInsightsGrowth
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Axes d'amélioration
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsightsGrowth'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/personality:
-    get:
-      summary: Personnalité de développeur
-      description: Récupère l'analyse de personnalité de développeur par l'IA
-      operationId: getDeveloperPersonality
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Personnalité de développeur
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeveloperPersonality'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/career:
-    get:
-      summary: Insights de carrière
-      description: Récupère les insights de carrière par l'IA
-      operationId: getCareerInsights
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Insights de carrière
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CareerInsights'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /insights/{username}/skills:
-    get:
-      summary: Évaluation des compétences
-      description: Récupère l'évaluation des compétences par l'IA
-      operationId: getSkillAssessment
-      tags:
-        - Insights
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Évaluation des compétences
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SkillAssessment'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
@@ -1119,60 +362,37 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        Token JWT obtenu via l'endpoint /auth/login.
-        Format: `Authorization: Bearer <token>`
+        Token JWT obtenu via l'endpoint `/auth/login`.
         
-        **🔄 Configuration automatique :**
-        1. Connectez-vous via POST /auth/login
-        2. Copiez le token depuis la réponse (champ tokens.accessToken)
-        3. Cliquez sur "Authorize" en haut de cette documentation
-        4. Collez le token dans le champ "Value" (sans "Bearer ")
-        5. Tous les endpoints protégés utiliseront automatiquement ce token
+        **Format :** `Bearer <votre_token_jwt>`
         
-        **⚠️ Instructions importantes :**
-        - N'incluez PAS le mot "Bearer" dans le champ d'autorisation
-        - Utilisez uniquement la valeur du token JWT
-        - Le token expire après 24h
+        **Durée de vie :** 24 heures
 
   schemas:
-    # System Schemas
     HealthResponse:
       type: object
-      required:
-        - status
-        - service
-        - version
-        - timestamp
-        - uptime
-        - environment
       properties:
         status:
           type: string
-          enum: [healthy, unhealthy]
           example: "healthy"
         service:
           type: string
           example: "GitHub Insight Engine API"
         version:
           type: string
-          example: "0.1.0"
+          example: "1.0.0"
         timestamp:
           type: string
           format: date-time
         uptime:
           type: number
-          description: Temps de fonctionnement en secondes
-          example: 3600.5
+          example: 3600
         environment:
           type: string
-          enum: [development, staging, production]
           example: "development"
 
     PingResponse:
       type: object
-      required:
-        - message
-        - timestamp
       properties:
         message:
           type: string
@@ -1181,7 +401,6 @@ components:
           type: string
           format: date-time
 
-    # Authentication Schemas
     LoginRequest:
       type: object
       required:
@@ -1192,369 +411,154 @@ components:
         username:
           type: string
           description: Nom d'utilisateur GitHub
-          pattern: '^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$'
           example: "octocat"
         fullName:
           type: string
           description: Nom complet de l'utilisateur
-          minLength: 1
-          maxLength: 100
-          example: "John Doe"
+          example: "The Octocat"
         githubToken:
           type: string
-          description: Token GitHub Classic avec permissions appropriées
-          format: password
-          pattern: '^gh[ps]_[A-Za-z0-9]{36}$|^[a-f0-9]{40}$'
-          example: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          description: Token GitHub Classic avec permissions repo/user/read:org
+          example: "ghp_xxxxxxxxxxxxxxxxxxxx"
 
     LoginResponse:
       type: object
-      required:
-        - message
-        - user
-        - tokens
-        - permissions
-        - timestamp
       properties:
         message:
           type: string
           example: "Authentification réussie"
         user:
-          type: object
-          required:
-            - id
-            - username
-            - name
-            - fullName
-            - email
-            - avatarUrl
-            - bio
-            - company
-            - location
-            - publicRepos
-            - followers
-            - following
-            - createdAt
-            - hasValidToken
-            - tokenScopes
-          properties:
-            id:
-              type: string
-              example: "507f1f77bcf86cd799439011"
-            username:
-              type: string
-              example: "octocat"
-            name:
-              type: string
-              example: "John Doe"
-            fullName:
-              type: string
-              example: "John Doe"
-            email:
-              type: string
-              format: email
-              example: "john@example.com"
-            avatarUrl:
-              type: string
-              format: uri
-              example: "https://github.com/images/error/octocat_happy.gif"
-            bio:
-              type: string
-              example: "There once was..."
-            company:
-              type: string
-              example: "GitHub"
-            location:
-              type: string
-              example: "San Francisco"
-            publicRepos:
-              type: integer
-              minimum: 0
-              example: 42
-            followers:
-              type: integer
-              minimum: 0
-              example: 1000
-            following:
-              type: integer
-              minimum: 0
-              example: 100
-            createdAt:
-              type: string
-              format: date-time
-            hasValidToken:
-              type: boolean
-              example: true
-            tokenScopes:
-              type: array
-              items:
-                type: string
-              example: ["repo", "user", "read:org"]
+          $ref: '#/components/schemas/AuthenticatedUser'
         tokens:
           type: object
-          required:
-            - accessToken
-            - tokenType
-            - expiresIn
           properties:
             accessToken:
               type: string
-              description: Token JWT pour l'authentification
-              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              description: Token JWT pour les requêtes API
             tokenType:
               type: string
               example: "Bearer"
             expiresIn:
               type: string
-              description: Durée de validité du token
               example: "24h"
         permissions:
           type: object
-          required:
-            - canAccessPrivateRepos
-            - canReadOrgs
-            - canReadUser
           properties:
             canAccessPrivateRepos:
               type: boolean
-              example: true
             canReadOrgs:
               type: boolean
-              example: true
             canReadUser:
               type: boolean
-              example: true
         timestamp:
           type: string
           format: date-time
 
-
-
-
-
-    LogoutResponse:
+    AuthenticatedUser:
       type: object
-      required:
-        - message
-        - instruction
-        - timestamp
-      properties:
-        message:
-          type: string
-          example: "Déconnexion réussie"
-        instruction:
-          type: string
-          example: "Supprimez le token JWT côté client"
-        timestamp:
-          type: string
-          format: date-time
-
-
-
-    CurrentUserResponse:
-      type: object
-      required:
-        - user
-        - status
-        - timestamp
-      properties:
-        user:
-          type: object
-          required:
-            - id
-            - username
-            - name
-            - email
-            - avatarUrl
-            - bio
-            - company
-            - location
-            - blog
-            - twitterUsername
-            - publicRepos
-            - privateRepos
-            - followers
-            - following
-            - createdAt
-            - updatedAt
-            - organizations
-          properties:
-            id:
-              type: string
-              example: "507f1f77bcf86cd799439011"
-            username:
-              type: string
-              example: "octocat"
-            name:
-              type: string
-              example: "John Doe"
-            email:
-              type: string
-              format: email
-              example: "john@example.com"
-            avatarUrl:
-              type: string
-              format: uri
-              example: "https://github.com/images/error/octocat_happy.gif"
-            bio:
-              type: string
-              nullable: true
-              example: "There once was..."
-            company:
-              type: string
-              nullable: true
-              example: "GitHub"
-            location:
-              type: string
-              nullable: true
-              example: "San Francisco"
-            blog:
-              type: string
-              nullable: true
-              example: "https://johndoe.com"
-            twitterUsername:
-              type: string
-              nullable: true
-              example: "johndoe"
-            publicRepos:
-              type: integer
-              minimum: 0
-              example: 42
-            privateRepos:
-              type: integer
-              minimum: 0
-              example: 5
-            followers:
-              type: integer
-              minimum: 0
-              example: 1000
-            following:
-              type: integer
-              minimum: 0
-              example: 100
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
-            organizations:
-              type: object
-              properties:
-                totalCount:
-                  type: integer
-                nodes:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/Organization'
-        status:
-          type: object
-          required:
-            - tokenStatus
-            - lastLogin
-          properties:
-            tokenStatus:
-              type: string
-              enum: [valid, invalid, error, unknown]
-              example: "valid"
-            lastLogin:
-              type: string
-              format: date-time
-        timestamp:
-          type: string
-          format: date-time
-
-    # User Schemas
-    UserProfile:
-      type: object
-      required:
-        - id
-        - username
-        - name
-        - email
-        - avatarUrl
-        - followers
-        - following
-        - publicRepos
-        - publicGists
-        - createdAt
-        - updatedAt
-        - type
-        - siteAdmin
       properties:
         id:
           type: string
-          example: "507f1f77bcf86cd799439011"
         username:
           type: string
-          example: "octocat"
+        hasValidToken:
+          type: boolean
+
+    CollectionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Collecte des données utilisateur réussie"
+        status:
+          type: string
+          example: "completed"
+        summary:
+          type: object
+          properties:
+            username:
+              type: string
+            repositoriesCollected:
+              type: integer
+            organizationsScanned:
+              type: integer
+            dataFreshness:
+              type: string
+              example: "live"
+        metadata:
+          type: object
+          properties:
+            collectedAt:
+              type: string
+              format: date-time
+            nextCollectionRecommended:
+              type: string
+              format: date-time
+        timestamp:
+          type: string
+          format: date-time
+
+    UserCompleteResponse:
+      type: object
+      properties:
+        userProfile:
+          $ref: '#/components/schemas/GitHubUserProfile'
+        metadata:
+          $ref: '#/components/schemas/DatasetMetadata'
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitHubRepository'
+        timestamp:
+          type: string
+          format: date-time
+
+    RepositoriesCompleteResponse:
+      type: object
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitHubRepository'
+        analytics:
+          $ref: '#/components/schemas/RepositoriesAnalytics'
+        metadata:
+          $ref: '#/components/schemas/CollectionMetadata'
+        timestamp:
+          type: string
+          format: date-time
+
+    GitHubUserProfile:
+      type: object
+      properties:
+        login:
+          type: string
         name:
           type: string
-          example: "John Doe"
         email:
           type: string
-          format: email
         avatarUrl:
           type: string
-          format: uri
         bio:
           type: string
-          nullable: true
         company:
           type: string
-          nullable: true
         location:
           type: string
-          nullable: true
         blog:
           type: string
-          format: uri
-          nullable: true
         twitterUsername:
           type: string
-          nullable: true
         followers:
           type: integer
-          minimum: 0
         following:
           type: integer
-          minimum: 0
         publicRepos:
           type: integer
-          minimum: 0
         publicGists:
           type: integer
-          minimum: 0
         privateRepos:
           type: integer
-          minimum: 0
-          nullable: true
-        ownedPrivateRepos:
-          type: integer
-          minimum: 0
-          nullable: true
-        totalPrivateRepos:
-          type: integer
-          minimum: 0
-          nullable: true
-        collaborators:
-          type: integer
-          minimum: 0
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        type:
-          type: string
-          enum: [User, Organization]
-        siteAdmin:
-          type: boolean
-        hireable:
-          type: boolean
-          nullable: true
         organizations:
           type: object
           properties:
@@ -1563,14 +567,16 @@ components:
             nodes:
               type: array
               items:
-                $ref: '#/components/schemas/Organization'
+                $ref: '#/components/schemas/GitHubOrganization'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
-    Organization:
+    GitHubOrganization:
       type: object
-      required:
-        - login
-        - name
-        - avatarUrl
       properties:
         login:
           type: string
@@ -1578,46 +584,18 @@ components:
           type: string
         description:
           type: string
-          nullable: true
         avatarUrl:
           type: string
-          format: uri
 
-
-
-    # Repository Schemas
-    Repository:
+    GitHubRepository:
       type: object
-      required:
-        - id
-        - nameWithOwner
-        - name
-        - isPrivate
-        - isArchived
-        - isFork
-        - isTemplate
-        - stargazerCount
-        - forkCount
-        - watchersCount
-        - openIssuesCount
-        - pushedAt
-        - updatedAt
-        - createdAt
-        - hasIssuesEnabled
-        - hasProjectsEnabled
-        - hasWikiEnabled
       properties:
-        id:
-          type: string
         nameWithOwner:
           type: string
-          example: "octocat/Hello-World"
         name:
           type: string
-          example: "Hello-World"
         description:
           type: string
-          nullable: true
         isPrivate:
           type: boolean
         isArchived:
@@ -1628,37 +606,14 @@ components:
           type: boolean
         stargazerCount:
           type: integer
-          minimum: 0
         forkCount:
           type: integer
-          minimum: 0
         watchersCount:
           type: integer
-          minimum: 0
-        subscriberCount:
-          type: integer
-          minimum: 0
-          nullable: true
-        networkCount:
-          type: integer
-          minimum: 0
-          nullable: true
-        openIssuesCount:
-          type: integer
-          minimum: 0
         primaryLanguage:
           type: string
-          nullable: true
-          example: "JavaScript"
         languages:
-          type: object
-          properties:
-            totalSize:
-              type: integer
-            nodes:
-              type: array
-              items:
-                $ref: '#/components/schemas/Language'
+          $ref: '#/components/schemas/LanguageStats'
         topics:
           type: array
           items:
@@ -1666,194 +621,122 @@ components:
         pushedAt:
           type: string
           format: date-time
-          nullable: true
-        updatedAt:
-          type: string
-          format: date-time
         createdAt:
           type: string
           format: date-time
         homepageUrl:
           type: string
-          format: uri
-          nullable: true
         size:
           type: integer
-          minimum: 0
         defaultBranchRef:
           type: string
-          nullable: true
-          example: "main"
         license:
           $ref: '#/components/schemas/License'
         hasIssuesEnabled:
-          type: boolean
-        hasProjectsEnabled:
           type: boolean
         hasWikiEnabled:
           type: boolean
         hasPages:
           type: boolean
-          nullable: true
-        hasDownloads:
-          type: boolean
-          nullable: true
-        hasDiscussions:
-          type: boolean
-          nullable: true
-        vulnerabilityAlertsEnabled:
-          type: boolean
-          nullable: true
-        securityPolicyEnabled:
-          type: boolean
-          nullable: true
-        codeOfConductEnabled:
-          type: boolean
-          nullable: true
-        contributingGuidelinesEnabled:
-          type: boolean
-          nullable: true
-        readmeEnabled:
-          type: boolean
-          nullable: true
-        deployments:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-        environments:
-          type: object
-          properties:
-            totalCount:
-              type: integer
         commits:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-            recent:
-              type: array
-              items:
-                $ref: '#/components/schemas/Commit'
+          $ref: '#/components/schemas/CommitStats'
         releases:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-            latestRelease:
-              $ref: '#/components/schemas/Release'
+          $ref: '#/components/schemas/ReleaseStats'
         issues:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-            openCount:
-              type: integer
-            closedCount:
-              type: integer
+          $ref: '#/components/schemas/IssueStats'
         pullRequests:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-            openCount:
-              type: integer
-            closedCount:
-              type: integer
-            mergedCount:
-              type: integer
-        branchProtectionRules:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-        collaborators:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-        # DevOps enrichment fields
+          $ref: '#/components/schemas/PullRequestStats'
         githubActions:
           $ref: '#/components/schemas/GitHubActions'
         security:
-          $ref: '#/components/schemas/GitHubSecurity'
+          $ref: '#/components/schemas/SecurityData'
         packages:
-          $ref: '#/components/schemas/GitHubPackages'
+          $ref: '#/components/schemas/PackageData'
         branchProtection:
-          $ref: '#/components/schemas/GitHubBranchProtection'
+          $ref: '#/components/schemas/BranchProtectionData'
+        community:
+          $ref: '#/components/schemas/CommunityData'
+        traffic:
+          $ref: '#/components/schemas/TrafficData'
+        owner:
+          $ref: '#/components/schemas/RepositoryOwner'
 
-    Language:
+    LanguageStats:
       type: object
-      required:
-        - name
-        - size
-        - percentage
       properties:
-        name:
-          type: string
-          example: "JavaScript"
-        size:
+        totalSize:
           type: integer
-          minimum: 0
-        percentage:
-          type: number
-          minimum: 0
-          maximum: 100
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              size:
+                type: integer
+              percentage:
+                type: number
 
     License:
       type: object
-      nullable: true
       properties:
         name:
           type: string
-          example: "MIT License"
         spdxId:
           type: string
-          example: "MIT"
         url:
           type: string
-          format: uri
+
+    CommitStats:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/Commit'
 
     Commit:
       type: object
-      required:
-        - oid
-        - message
-        - committedDate
-        - author
-        - additions
-        - deletions
-        - changedFiles
       properties:
         oid:
           type: string
-          example: "6dcb09b5b57875f334f61aebed695e2e4193db5e"
         message:
           type: string
         committedDate:
           type: string
           format: date-time
         author:
-          type: object
-          properties:
-            name:
-              type: string
-            email:
-              type: string
-              format: email
+          $ref: '#/components/schemas/CommitAuthor'
         additions:
           type: integer
-          minimum: 0
         deletions:
           type: integer
-          minimum: 0
         changedFiles:
           type: integer
-          minimum: 0
+
+    CommitAuthor:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        login:
+          type: string
+
+    ReleaseStats:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        latestRelease:
+          $ref: '#/components/schemas/Release'
 
     Release:
       type: object
-      nullable: true
       properties:
         name:
           type: string
@@ -1865,16 +748,41 @@ components:
         isLatest:
           type: boolean
 
+    IssueStats:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        openCount:
+          type: integer
+        closedCount:
+          type: integer
+
+    PullRequestStats:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        openCount:
+          type: integer
+        closedCount:
+          type: integer
+        mergedCount:
+          type: integer
+
     GitHubActions:
       type: object
-      nullable: true
       properties:
-        enabled:
-          type: boolean
+        workflowsCount:
+          type: integer
+        lastRunStatus:
+          type: string
         workflows:
           type: array
           items:
             $ref: '#/components/schemas/Workflow'
+        runs:
+          $ref: '#/components/schemas/WorkflowRuns'
 
     Workflow:
       type: object
@@ -1885,49 +793,64 @@ components:
           type: string
         state:
           type: string
-          enum: [active, disabled]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
-    GitHubSecurity:
+    WorkflowRuns:
       type: object
-      nullable: true
-      properties:
-        vulnerabilityAlertsEnabled:
-          type: boolean
-        securityAndAnalysisEnabled:
-          type: boolean
-        dependabotEnabled:
-          type: boolean
-        codeQLEnabled:
-          type: boolean
-
-    GitHubPackages:
-      type: object
-      nullable: true
       properties:
         totalCount:
           type: integer
-        packages:
+        successful:
+          type: integer
+        failed:
+          type: integer
+        successRate:
+          type: number
+
+    SecurityData:
+      type: object
+      properties:
+        dependabotAlerts:
+          $ref: '#/components/schemas/AlertStats'
+        secretScanning:
+          $ref: '#/components/schemas/AlertStats'
+        codeScanning:
+          $ref: '#/components/schemas/AlertStats'
+        hasSecurityPolicy:
+          type: boolean
+        hasVulnerabilityAlertsEnabled:
+          type: boolean
+
+    AlertStats:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        open:
+          type: integer
+        fixed:
+          type: integer
+        dismissed:
+          type: integer
+
+    PackageData:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        types:
           type: array
           items:
-            $ref: '#/components/schemas/Package'
+            type: string
 
-    Package:
+    BranchProtectionData:
       type: object
       properties:
-        name:
-          type: string
-        packageType:
-          type: string
-        visibility:
-          type: string
-          enum: [public, private]
-
-    GitHubBranchProtection:
-      type: object
-      nullable: true
-      properties:
-        enabled:
-          type: boolean
         rules:
           type: array
           items:
@@ -1938,1698 +861,85 @@ components:
       properties:
         pattern:
           type: string
-        requiresApprovingReviews:
-          type: boolean
-        requiredApprovingReviewCount:
-          type: integer
         requiresStatusChecks:
           type: boolean
-        requiresStrictStatusChecks:
+        requiresCodeOwnerReviews:
           type: boolean
-
-    RepositoryListResponse:
-      type: object
-      required:
-        - repositories
-        - user
-        - pagination
-        - timestamp
-      properties:
-        repositories:
-          type: array
-          items:
-            type: object
-            required:
-              - id
-              - nameWithOwner
-              - name
-              - description
-              - isPrivate
-              - isArchived
-              - isFork
-              - isTemplate
-              - stargazerCount
-              - forkCount
-              - watchersCount
-              - openIssuesCount
-              - primaryLanguage
-              - languages
-              - topics
-              - license
-              - homepageUrl
-              - pushedAt
-              - createdAt
-              - updatedAt
-              - hasIssuesEnabled
-              - hasProjectsEnabled
-              - hasWikiEnabled
-            properties:
-              id:
-                type: string
-              nameWithOwner:
-                type: string
-              name:
-                type: string
-              description:
-                type: string
-                nullable: true
-              isPrivate:
-                type: boolean
-              isArchived:
-                type: boolean
-              isFork:
-                type: boolean
-              isTemplate:
-                type: boolean
-              stargazerCount:
-                type: integer
-                minimum: 0
-              forkCount:
-                type: integer
-                minimum: 0
-              watchersCount:
-                type: integer
-                minimum: 0
-              openIssuesCount:
-                type: integer
-                minimum: 0
-              primaryLanguage:
-                type: string
-                nullable: true
-              languages:
-                type: object
-              topics:
-                type: array
-                items:
-                  type: string
-              license:
-                type: object
-                nullable: true
-              homepageUrl:
-                type: string
-                nullable: true
-              pushedAt:
-                type: string
-                format: date-time
-                nullable: true
-              createdAt:
-                type: string
-                format: date-time
-              updatedAt:
-                type: string
-                format: date-time
-              hasIssuesEnabled:
-                type: boolean
-              hasProjectsEnabled:
-                type: boolean
-              hasWikiEnabled:
-                type: boolean
-        user:
-          type: object
-          required:
-            - id
-            - username
-            - name
-            - avatarUrl
-          properties:
-            id:
-              type: string
-            username:
-              type: string
-            name:
-              type: string
-            avatarUrl:
-              type: string
-              format: uri
-        pagination:
-          type: object
-          required:
-            - page
-            - limit
-            - totalCount
-            - totalPages
-            - hasNextPage
-            - hasPreviousPage
-          properties:
-            page:
-              type: integer
-              minimum: 1
-            limit:
-              type: integer
-              minimum: 1
-            totalCount:
-              type: integer
-              minimum: 0
-            totalPages:
-              type: integer
-              minimum: 0
-            hasNextPage:
-              type: boolean
-            hasPreviousPage:
-              type: boolean
-        timestamp:
-          type: string
-          format: date-time
-
-    RepositorySearchResponse:
-      type: object
-      required:
-        - repositories
-        - pagination
-        - totalCount
-      properties:
-        repositories:
-          type: array
-          items:
-            $ref: '#/components/schemas/Repository'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-        totalCount:
-          type: integer
-          minimum: 0
-
-    # Analytics Schemas
-    AnalyzeUserRequest:
-      type: object
-      properties:
-        includePrivate:
+        dismissStaleReviews:
           type: boolean
-          default: false
-          description: Inclure les repositories privés dans l'analyse
-        forceRefresh:
+        restrictsPushes:
           type: boolean
-          default: false
-          description: Forcer le rafraîchissement des données
-        maxAge:
-          type: integer
-          minimum: 0
-          default: 3600
-          description: Âge maximum des données en cache (secondes)
-
-    AnalysisStatusResponse:
-      type: object
-      required:
-        - message
-        - analysis
-        - dataset
-        - timestamp
-      properties:
-        message:
-          type: string
-          example: "Analyse terminée avec succès"
-        analysis:
-          type: object
-          required:
-            - completed
-            - duration
-            - fresh
-          properties:
-            completed:
-              type: boolean
-              example: true
-            duration:
-              type: number
-              description: Durée de l'analyse en millisecondes
-              example: 45000
-            fresh:
-              type: boolean
-              example: true
-            cached:
-              type: boolean
-              description: Présent si l'analyse était en cache
-            ageHours:
-              type: number
-              nullable: true
-              description: Âge de l'analyse en cache en heures
-            lastAnalyzed:
-              type: string
-              format: date-time
-              nullable: true
-        dataset:
-          type: object
-          required:
-            - id
-            - hasAnalytics
-            - repositoriesCount
-          properties:
-            id:
-              type: string
-              example: "507f1f77bcf86cd799439011"
-            createdAt:
-              type: string
-              format: date-time
-            repositoriesCount:
-              type: integer
-              minimum: 0
-              example: 25
-            hasAnalytics:
-              type: boolean
-              example: true
-            hasAiInsights:
-              type: boolean
-              example: false
-        _analytics:
-          description: Données analytiques complètes (optionnel, présent seulement si analyse fraîche)
-          nullable: true
-        timestamp:
-          type: string
-          format: date-time
-
-
-
-    AnalyticsOverview:
-      type: object
-      required:
-        - username
-        - lastUpdated
-        - summary
-      properties:
-        username:
-          type: string
-        lastUpdated:
-          type: string
-          format: date-time
-        summary:
-          type: object
-          required:
-            - totalRepositories
-            - totalStars
-            - totalForks
-            - totalCommits
-            - primaryLanguages
-            - activityScore
-          properties:
-            totalRepositories:
-              type: integer
-              minimum: 0
-            totalStars:
-              type: integer
-              minimum: 0
-            totalForks:
-              type: integer
-              minimum: 0
-            totalCommits:
-              type: integer
-              minimum: 0
-            primaryLanguages:
-              type: array
-              items:
-                type: string
-            activityScore:
-              type: number
-              minimum: 0
-              maximum: 100
-
-    PerformanceScores:
-      type: object
-      required:
-        - username
-        - lastUpdated
-        - scores
-      properties:
-        username:
-          type: string
-        lastUpdated:
-          type: string
-          format: date-time
-        scores:
-          type: object
-          required:
-            - overall
-            - productivity
-            - quality
-            - collaboration
-            - innovation
-          properties:
-            overall:
-              $ref: '#/components/schemas/Score'
-            productivity:
-              $ref: '#/components/schemas/Score'
-            quality:
-              $ref: '#/components/schemas/Score'
-            collaboration:
-              $ref: '#/components/schemas/Score'
-            innovation:
-              $ref: '#/components/schemas/Score'
-
-    Score:
-      type: object
-      required:
-        - value
-        - category
-      properties:
-        value:
-          type: number
-          minimum: 0
-          maximum: 100
-        category:
-          type: string
-          enum: [excellent, good, average, below_average, poor]
-        details:
-          type: string
-        factors:
+        requiredStatusChecks:
           type: array
           items:
             type: string
 
-    LanguageAnalysis:
+    CommunityData:
       type: object
-      required:
-        - username
-        - lastUpdated
-        - languages
       properties:
-        username:
-          type: string
-        lastUpdated:
-          type: string
-          format: date-time
-        languages:
-          type: array
-          items:
-            $ref: '#/components/schemas/LanguageStats'
-        diversity:
-          $ref: '#/components/schemas/Score'
-        expertise:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/Score'
-
-    LanguageStats:
-      type: object
-      required:
-        - name
-        - totalBytes
-        - percentage
-        - repositoryCount
-      properties:
-        name:
-          type: string
-        totalBytes:
+        healthPercentage:
           type: integer
-          minimum: 0
-        percentage:
-          type: number
-          minimum: 0
-          maximum: 100
-        repositoryCount:
-          type: integer
-          minimum: 0
-        averageCommitsPerRepo:
-          type: number
-          minimum: 0
-        lastUsed:
-          type: string
-          format: date-time
-
-    ActivityAnalysis:
-      type: object
-      required:
-        - username
-        - lastUpdated
-        - patterns
-      properties:
-        username:
-          type: string
-        lastUpdated:
-          type: string
-          format: date-time
-        patterns:
-          type: object
-          required:
-            - commitFrequency
-            - workingHours
-            - weeklyActivity
-          properties:
-            commitFrequency:
-              $ref: '#/components/schemas/CommitFrequency'
-            workingHours:
-              $ref: '#/components/schemas/WorkingHours'
-            weeklyActivity:
-              $ref: '#/components/schemas/WeeklyActivity'
-        trends:
-          type: object
-          properties:
-            productivity:
-              $ref: '#/components/schemas/ProductivityTrend'
-            consistency:
-              $ref: '#/components/schemas/Score'
-
-    CommitFrequency:
-      type: object
-      required:
-        - daily
-        - weekly
-        - monthly
-      properties:
-        daily:
-          type: number
-          minimum: 0
-        weekly:
-          type: number
-          minimum: 0
-        monthly:
-          type: number
-          minimum: 0
-        peakDays:
-          type: array
-          items:
-            type: string
-
-    WorkingHours:
-      type: object
-      properties:
-        peakHours:
-          type: array
-          items:
-            type: integer
-            minimum: 0
-            maximum: 23
-        timezone:
-          type: string
-        pattern:
-          type: string
-          enum: [morning, afternoon, evening, night, distributed]
-
-    WeeklyActivity:
-      type: object
-      properties:
-        mostActiveDay:
-          type: string
-          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
-        leastActiveDay:
-          type: string
-          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
-        weekendActivity:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    ProductivityTrend:
-      type: object
-      properties:
-        direction:
-          type: string
-          enum: [increasing, decreasing, stable]
-        changePercentage:
-          type: number
-        period:
-          type: string
-          enum: [week, month, quarter, year]
-
-    # Insights Schemas
-    InsightGenerationResponse:
-      type: object
-      required:
-        - message
-        - insights
-        - summary
-        - metadata
-        - timestamp
-      properties:
-        message:
-          type: string
-          example: "Insights IA générés avec succès"
-        insights:
-          type: object
-          required:
-            - generated
-            - fresh
-          properties:
-            generated:
-              type: boolean
-              example: true
-            fresh:
-              type: boolean
-              example: true
-            cached:
-              type: boolean
-              description: Présent si les insights étaient en cache
-        summary:
-          type: object
-          required:
-            - developerPersonality
-            - mainStrengths
-            - keyRecommendations
-            - overallAssessment
-          properties:
-            developerPersonality:
-              type: object
-              properties:
-                archetype:
-                  type: string
-                  enum: [innovator, builder, optimizer, maintainer, explorer, teacher]
-                description:
-                  type: string
-                strengths:
-                  type: array
-                  items:
-                    type: string
-                workingStyle:
-                  type: object
-                  properties:
-                    preferredProjectSize:
-                      type: string
-                      enum: [small, medium, large, mixed]
-                    collaborationStyle:
-                      type: string
-                      enum: [solo, pair, team_lead, contributor]
-                    learningApproach:
-                      type: string
-                      enum: [experimenter, methodical, research_driven, hands_on]
-                    problemSolving:
-                      type: string
-                      enum: [analytical, creative, systematic, intuitive]
-                motivations:
-                  type: array
-                  items:
-                    type: string
-                potentialChallenges:
-                  type: array
-                  items:
-                    type: string
-            mainStrengths:
-              type: array
-              items:
-                type: object
-                properties:
-                  strength:
-                    type: string
-                  manifestation:
-                    type: array
-                    items:
-                      type: string
-                  evidence:
-                    type: array
-                    items:
-                      type: string
-                  leverageOpportunities:
-                    type: array
-                    items:
-                      type: string
-            keyRecommendations:
-              type: array
-              items:
-                type: object
-                properties:
-                  category:
-                    type: string
-                    enum: [skill, tool, practice, project]
-                  recommendation:
-                    type: string
-                  reasoning:
-                    type: string
-                  expectedImpact:
-                    type: string
-                    enum: [minor, moderate, significant, transformative]
-                  effort:
-                    type: string
-                    enum: [low, medium, high]
-                  resources:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        title:
-                          type: string
-                        type:
-                          type: string
-                          enum: [course, book, project, certification, community]
-                        url:
-                          type: string
-                          nullable: true
-                        priority:
-                          type: integer
-            overallAssessment:
-              type: object
-              properties:
-                keyHighlights:
-                  type: array
-                  items:
-                    type: string
-                majorStrengths:
-                  type: array
-                  items:
-                    type: string
-                primaryRecommendations:
-                  type: array
-                  items:
-                    type: string
-                careerOutlook:
-                  type: string
-        metadata:
-          type: object
-          required:
-            - datasetId
-            - generatedAt
-            - repositoriesAnalyzed
-          properties:
-            datasetId:
-              type: string
-              example: "507f1f77bcf86cd799439011"
-            generatedAt:
-              type: string
-              format: date-time
-            repositoriesAnalyzed:
-              type: integer
-              minimum: 0
-              example: 25
-        timestamp:
-          type: string
-          format: date-time
-
-    InsightsSummary:
-      type: object
-      required:
-        - user
-        - summary
-        - highlights
-        - metadata
-        - timestamp
-      properties:
-        user:
-          type: object
-          required:
-            - username
-            - name
-            - avatarUrl
-          properties:
-            username:
-              type: string
-              example: "octocat"
-            name:
-              type: string
-              example: "John Doe"
-            avatarUrl:
-              type: string
-              format: uri
-        summary:
-          type: object
-          required:
-            - overall
-            - personality
-            - keyStrengths
-            - topSkills
-            - careerLevel
-            - experience
-          properties:
-            overall:
-              type: object
-              properties:
-                keyHighlights:
-                  type: array
-                  items:
-                    type: string
-                majorStrengths:
-                  type: array
-                  items:
-                    type: string
-                primaryRecommendations:
-                  type: array
-                  items:
-                    type: string
-                careerOutlook:
-                  type: string
-            personality:
-              type: object
-              properties:
-                archetype:
-                  type: string
-                  enum: [innovator, builder, optimizer, maintainer, explorer, teacher]
-                description:
-                  type: string
-                strengths:
-                  type: array
-                  items:
-                    type: string
-                workingStyle:
-                  type: object
-                  properties:
-                    preferredProjectSize:
-                      type: string
-                      enum: [small, medium, large, mixed]
-                    collaborationStyle:
-                      type: string
-                      enum: [solo, pair, team_lead, contributor]
-                    learningApproach:
-                      type: string
-                      enum: [experimenter, methodical, research_driven, hands_on]
-                    problemSolving:
-                      type: string
-                      enum: [analytical, creative, systematic, intuitive]
-                motivations:
-                  type: array
-                  items:
-                    type: string
-                potentialChallenges:
-                  type: array
-                  items:
-                    type: string
-            keyStrengths:
-              type: array
-              items:
-                type: object
-                properties:
-                  strength:
-                    type: string
-                  manifestation:
-                    type: array
-                    items:
-                      type: string
-                  evidence:
-                    type: array
-                    items:
-                      type: string
-                  leverageOpportunities:
-                    type: array
-                    items:
-                      type: string
-            topSkills:
-              type: array
-              items:
-                type: object
-                properties:
-                  skill:
-                    type: string
-                  proficiency:
-                    type: string
-                    enum: [novice, advanced_beginner, competent, proficient, expert]
-                  confidence:
-                    type: number
-                    minimum: 0
-                    maximum: 100
-                  evidenceStrength:
-                    type: string
-                    enum: [weak, moderate, strong, very_strong]
-                  evidence:
-                    type: array
-                    items:
-                      type: string
-                  growthPotential:
-                    type: string
-                    enum: [limited, moderate, high, exceptional]
-                  marketDemand:
-                    type: string
-                    enum: [low, moderate, high, very_high]
-            careerLevel:
-              type: string
-              enum: [junior, mid_level, senior, staff, principal, distinguished]
-            experience:
-              type: object
-              properties:
-                direction:
-                  type: string
-                  enum: [ascending, stable, transitioning, exploring]
-                velocity:
-                  type: string
-                  enum: [slow, steady, rapid, exponential]
-                confidence:
-                  type: number
-                  minimum: 0
-                  maximum: 100
-        highlights:
-          type: object
-          required:
-            - bestQualities
-            - topRecommendations
-            - growthAreas
-          properties:
-            bestQualities:
-              type: array
-              items:
-                type: string
-            topRecommendations:
-              type: array
-              items:
-                type: object
-                properties:
-                  category:
-                    type: string
-                    enum: [skill, tool, practice, project]
-                  recommendation:
-                    type: string
-                  reasoning:
-                    type: string
-                  expectedImpact:
-                    type: string
-                    enum: [minor, moderate, significant, transformative]
-                  effort:
-                    type: string
-                    enum: [low, medium, high]
-                  resources:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        title:
-                          type: string
-                        type:
-                          type: string
-                          enum: [course, book, project, certification, community]
-                        url:
-                          type: string
-                          nullable: true
-                        priority:
-                          type: integer
-            growthAreas:
-              type: array
-              items:
-                type: object
-                properties:
-                  skill:
-                    type: string
-                  currentGap:
-                    type: string
-                    enum: [minor, moderate, significant, critical]
-                  importance:
-                    type: string
-                    enum: [nice_to_have, beneficial, important, essential]
-                  learningPath:
-                    type: array
-                    items:
-                      type: string
-                  timeToCompetency:
-                    type: string
-                  careerImpact:
-                    type: string
-        metadata:
-          type: object
-          required:
-            - generatedAt
-            - confidence
-            - repositoriesAnalyzed
-          properties:
-            generatedAt:
-              type: string
-              format: date-time
-            confidence:
-              type: number
-              minimum: 0
-              maximum: 1
-              example: 0.8
-            repositoriesAnalyzed:
-              type: integer
-              minimum: 0
-              example: 25
-        timestamp:
-          type: string
-          format: date-time
-
-    InsightsRecommendations:
-      type: object
-      required:
-        - username
-        - generatedAt
-        - recommendations
-      properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        recommendations:
-          type: array
-          items:
-            $ref: '#/components/schemas/Recommendation'
-
-    Recommendation:
-      type: object
-      required:
-        - category
-        - title
-        - description
-        - priority
-      properties:
-        category:
-          type: string
-          enum: [skills, productivity, collaboration, projects, career]
-        title:
-          type: string
-        description:
-          type: string
-        priority:
-          type: string
-          enum: [high, medium, low]
-        actionItems:
-          type: array
-          items:
-            type: string
-        resources:
-          type: array
-          items:
-            $ref: '#/components/schemas/Resource'
-
-    Resource:
-      type: object
-      required:
-        - title
-        - url
-        - type
-      properties:
-        title:
-          type: string
-        url:
-          type: string
-          format: uri
-        type:
-          type: string
-          enum: [documentation, tutorial, course, book, tool]
-        description:
-          type: string
-
-    InsightsStrengths:
-      type: object
-      required:
-        - username
-        - generatedAt
-        - strengths
-      properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        strengths:
-          type: array
-          items:
-            $ref: '#/components/schemas/Strength'
-
-    Strength:
-      type: object
-      required:
-        - area
-        - description
-        - evidence
-        - score
-      properties:
-        area:
-          type: string
-          enum: [technical, leadership, collaboration, innovation, productivity]
-        description:
-          type: string
-        evidence:
-          type: array
-          items:
-            type: string
-        score:
-          type: number
-          minimum: 0
-          maximum: 100
-
-    InsightsGrowth:
-      type: object
-      required:
-        - username
-        - generatedAt
-        - growthAreas
-      properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        growthAreas:
-          type: array
-          items:
-            $ref: '#/components/schemas/GrowthArea'
-
-    GrowthArea:
-      type: object
-      required:
-        - area
-        - description
-        - impact
-        - difficulty
-      properties:
-        area:
-          type: string
-        description:
-          type: string
-        impact:
-          type: string
-          enum: [high, medium, low]
-        difficulty:
-          type: string
-          enum: [easy, moderate, challenging]
-        timeline:
-          type: string
-          enum: [short_term, medium_term, long_term]
-        steps:
-          type: array
-          items:
-            type: string
-
-    # New Schemas for missing endpoints
-    PlatformStats:
-      type: object
-      required:
-        - users
-        - activity
-        - timestamp
-      properties:
-        users:
-          type: object
-          required:
-            - total
-            - withDatasets
-            - averageFollowers
-            - topLanguages
-          properties:
-            total:
-              type: integer
-              minimum: 0
-            withDatasets:
-              type: integer
-              minimum: 0
-            averageFollowers:
-              type: number
-              minimum: 0
-            topLanguages:
-              type: array
-              items:
-                type: string
-        activity:
-          type: object
-          required:
-            - recentAnalyses
-            - totalAnalyses
-          properties:
-            recentAnalyses:
-              type: integer
-              minimum: 0
-            totalAnalyses:
-              type: integer
-              minimum: 0
-        timestamp:
-          type: string
-          format: date-time
-
-    TrendingRepositoriesResponse:
-      type: object
-      required:
-        - repositories
-        - period
-        - totalCount
-      properties:
-        repositories:
-          type: array
-          items:
-            $ref: '#/components/schemas/Repository'
-        period:
-          type: string
-          enum: ['1d', '7d', '30d']
-        totalCount:
-          type: integer
-          minimum: 0
-        timestamp:
-          type: string
-          format: date-time
-
-    ProductivityScore:
-      type: object
-      required:
-        - username
-        - lastUpdated
-        - score
-      properties:
-        username:
-          type: string
-        lastUpdated:
-          type: string
-          format: date-time
-        score:
-          $ref: '#/components/schemas/Score'
-        metrics:
-          type: object
-          properties:
-            commitsPerDay:
-              type: number
-              minimum: 0
-            linesOfCodePerCommit:
-              type: number
-              minimum: 0
-            issuesClosedPerWeek:
-              type: number
-              minimum: 0
-
-    DevOpsMaturity:
-      type: object
-      required:
-        - username
-        - lastUpdated
-        - maturityLevel
-      properties:
-        username:
-          type: string
-        lastUpdated:
-          type: string
-          format: date-time
-        maturityLevel:
-          type: string
-          enum: [beginner, intermediate, advanced, expert]
-        practices:
-          type: object
-          properties:
-            cicd:
-              $ref: '#/components/schemas/Score'
-            testing:
-              $ref: '#/components/schemas/Score'
-            monitoring:
-              $ref: '#/components/schemas/Score'
-            security:
-              $ref: '#/components/schemas/Score'
-
-    SkillAssessment:
-      type: object
-      required:
-        - username
-        - generatedAt
-        - skills
-      properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        skills:
-          type: array
-          items:
-            type: object
-            required:
-              - name
-              - level
-              - confidence
-            properties:
-              name:
-                type: string
-              level:
-                type: string
-                enum: [beginner, intermediate, advanced, expert]
-              confidence:
-                type: number
-                minimum: 0
-                maximum: 100
-              evidence:
-                type: array
-                items:
-                  type: string
-
-    DeveloperPersonality:
-      type: object
-      required:
-        - username
-        - generatedAt
-        - personality
-      properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        personality:
-          type: object
-          required:
-            - type
-            - traits
-            - workStyle
-          properties:
-            type:
-              type: string
-              description: Type de personnalité développeur
-              example: "Innovator"
-            traits:
-              type: array
-              items:
-                type: string
-              example: ["Creative", "Analytical", "Problem-solver"]
-            workStyle:
-              type: string
-              example: "Collaborative and detail-oriented"
-            strengths:
-              type: array
-              items:
-                type: string
-            challenges:
-              type: array
-              items:
-                type: string
-
-    CareerInsights:
-      type: object
-      required:
-        - username
-        - generatedAt
-        - insights
-      properties:
-        username:
-          type: string
-        generatedAt:
-          type: string
-          format: date-time
-        insights:
-          type: object
-          required:
-            - currentLevel
-            - nextSteps
-            - recommendations
-          properties:
-            currentLevel:
-              type: string
-              enum: [junior, mid, senior, lead, principal]
-            nextSteps:
-              type: array
-              items:
-                type: string
-            recommendations:
-              type: array
-              items:
-                type: object
-                properties:
-                  category:
-                    type: string
-                  suggestion:
-                    type: string
-                  priority:
-                    type: string
-                    enum: [high, medium, low]
-
-    LanguagesStats:
-      type: object
-      required:
-        - totalRepositories
-        - languages
-        - timestamp
-      properties:
-        totalRepositories:
-          type: integer
-          minimum: 0
-        languages:
-          type: array
-          items:
-            type: object
-            required:
-              - name
-              - repositoryCount
-              - percentage
-            properties:
-              name:
-                type: string
-              repositoryCount:
-                type: integer
-                minimum: 0
-              percentage:
-                type: number
-                minimum: 0
-                maximum: 100
-              totalBytes:
-                type: integer
-                minimum: 0
-        timestamp:
-          type: string
-          format: date-time
-
-    # Common Schemas
-    Pagination:
-      type: object
-      required:
-        - page
-        - limit
-        - totalPages
-        - hasNext
-        - hasPrevious
-      properties:
-        page:
-          type: integer
-          minimum: 1
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-        totalPages:
-          type: integer
-          minimum: 0
-        hasNext:
+        hasReadme:
           type: boolean
-        hasPrevious:
+        hasLicense:
           type: boolean
-        nextPage:
-          type: integer
-          nullable: true
-        previousPage:
-          type: integer
-          nullable: true
+        hasContributing:
+          type: boolean
+        hasCodeOfConduct:
+          type: boolean
+        hasIssueTemplate:
+          type: boolean
+        hasPullRequestTemplate:
+          type: boolean
 
-    Error:
+    TrafficData:
       type: object
-      required:
-        - error
-        - message
-        - timestamp
       properties:
-        error:
-          type: string
-          description: Code d'erreur
-        message:
-          type: string
-          description: Message d'erreur lisible
-        details:
-          type: object
-          description: Détails supplémentaires sur l'erreur
-        timestamp:
-          type: string
-          format: date-time
+        views:
+          $ref: '#/components/schemas/TrafficStats'
+        clones:
+          $ref: '#/components/schemas/TrafficStats'
+        popularPaths:
+          type: array
+          items:
+            $ref: '#/components/schemas/PopularPath'
+
+    TrafficStats:
+      type: object
+      properties:
+        count:
+          type: integer
+        uniques:
+          type: integer
+
+    PopularPath:
+      type: object
+      properties:
         path:
           type: string
-          description: Chemin de la requête qui a causé l'erreur
-        requestId:
+        title:
           type: string
-          description: Identifiant unique de la requête
+        count:
+          type: integer
+        uniques:
+          type: integer
 
-    ValidationError:
+    RepositoryOwner:
       type: object
-      required:
-        - error
-        - message
-        - timestamp
-        - details
-      properties:
-        error:
-          type: string
-          example: "VALIDATION_ERROR"
-        message:
-          type: string
-          example: "Erreur de validation des données"
-        timestamp:
-          type: string
-          format: date-time
-        path:
-          type: string
-          description: Chemin de l'endpoint
-        method:
-          type: string
-          description: Méthode HTTP
-        details:
-          type: array
-          items:
-            type: object
-            required:
-              - field
-              - message
-              - code
-            properties:
-              field:
-                type: string
-                description: Champ en erreur
-              message:
-                type: string
-                description: Message d'erreur pour ce champ
-              code:
-                type: string
-                description: Code d'erreur spécifique
-              received:
-                description: Valeur reçue (si applicable)
-
-    UserProfileResponse:
-      type: object
-      description: "Réponse du profil utilisateur - format différent selon le contexte (utilisateur authentifié vs autre utilisateur)"
-      oneOf:
-        - # Format pour utilisateur authentifié (données GitHub complètes)
-          type: object
-          required:
-            - userProfile
-            - metadata
-            - repositories
-          properties:
-            userProfile:
-              $ref: '#/components/schemas/GitHubUserProfile'
-            metadata:
-              $ref: '#/components/schemas/DatasetMetadata'
-            repositories:
-              type: array
-              items:
-                $ref: '#/components/schemas/EnrichedRepository'
-        - # Format pour autres utilisateurs (données en base)
-          type: object
-          required:
-            - user
-            - timestamp
-          properties:
-            user:
-              $ref: '#/components/schemas/UserProfile'
-            dataset:
-              type: object
-              nullable: true
-              properties:
-                id:
-                  type: string
-                  example: "507f1f77bcf86cd799439011"
-                createdAt:
-                  type: string
-                  format: date-time
-                updatedAt:
-                  type: string
-                  format: date-time
-                metadata:
-                  $ref: '#/components/schemas/DatasetMetadata'
-                repositoriesCount:
-                  type: integer
-                  minimum: 0
-                  example: 25
-                hasAnalytics:
-                  type: boolean
-                  example: true
-                hasAiInsights:
-                  type: boolean
-                  example: false
-            timestamp:
-              type: string
-              format: date-time
-
-    GitHubUserProfile:
-      type: object
-      description: "Profil utilisateur GitHub complet récupéré en temps réel"
-      required:
-        - login
-        - name
-        - email
-        - avatarUrl
-        - followers
-        - following
-        - publicRepos
-        - publicGists
-        - createdAt
-        - updatedAt
-        - type
-        - siteAdmin
-        - hireable
-        - organizations
       properties:
         login:
           type: string
-          example: "octocat"
-        name:
-          type: string
-          example: "John Doe"
-        email:
-          type: string
-          example: "john@example.com"
         avatarUrl:
           type: string
-          format: uri
-        bio:
-          type: string
-          nullable: true
-        company:
-          type: string
-          nullable: true
-        location:
-          type: string
-          nullable: true
-        blog:
-          type: string
-          nullable: true
-        twitterUsername:
-          type: string
-          nullable: true
-        followers:
-          type: integer
-          minimum: 0
-        following:
-          type: integer
-          minimum: 0
-        publicRepos:
-          type: integer
-          minimum: 0
-        publicGists:
-          type: integer
-          minimum: 0
-        privateRepos:
-          type: integer
-          minimum: 0
-        ownedPrivateRepos:
-          type: integer
-          minimum: 0
-        totalPrivateRepos:
-          type: integer
-          minimum: 0
-        collaborators:
-          type: integer
-          minimum: 0
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        type:
-          type: string
-          example: "User"
-        siteAdmin:
-          type: boolean
-        hireable:
-          type: boolean
-          nullable: true
-        organizations:
-          type: object
-          properties:
-            totalCount:
-              type: integer
-              minimum: 0
-            nodes:
-              type: array
-              items:
-                type: object
-                properties:
-                  login:
-                    type: string
-                  name:
-                    type: string
-                  description:
-                    type: string
-                  avatarUrl:
-                    type: string
-                    format: uri
-
-    EnrichedRepository:
-      type: object
-      description: "Repository enrichi avec données DevOps complètes"
-      allOf:
-        - $ref: '#/components/schemas/Repository'
-        - type: object
-          properties:
-            githubActions:
-              type: object
-              nullable: true
-              properties:
-                workflowsCount:
-                  type: integer
-                lastRunStatus:
-                  type: string
-                workflows:
-                  type: array
-                  items:
-                    type: object
-                runs:
-                  type: object
-                  properties:
-                    totalCount:
-                      type: integer
-                    successful:
-                      type: integer
-                    failed:
-                      type: integer
-                    successRate:
-                      type: integer
-            security:
-              type: object
-              nullable: true
-              properties:
-                dependabotAlerts:
-                  type: object
-                  properties:
-                    totalCount:
-                      type: integer
-                    open:
-                      type: integer
-                    fixed:
-                      type: integer
-                    dismissed:
-                      type: integer
-                secretScanning:
-                  type: object
-                  properties:
-                    totalCount:
-                      type: integer
-                    resolved:
-                      type: integer
-                codeScanning:
-                  type: object
-                  properties:
-                    totalCount:
-                      type: integer
-                    open:
-                      type: integer
-                    fixed:
-                      type: integer
-            packages:
-              type: object
-              nullable: true
-              properties:
-                totalCount:
-                  type: integer
-                types:
-                  type: array
-                  items:
-                    type: string
-            community:
-              type: object
-              nullable: true
-              properties:
-                healthPercentage:
-                  type: integer
-                hasReadme:
-                  type: boolean
-                hasLicense:
-                  type: boolean
-                hasContributing:
-                  type: boolean
-                hasCodeOfConduct:
-                  type: boolean
-            traffic:
-              type: object
-              nullable: true
-              properties:
-                views:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    uniques:
-                      type: integer
-                clones:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    uniques:
-                      type: integer
 
     DatasetMetadata:
       type: object
-      required:
-        - generatedAt
-        - totalRepositories
-        - organizations
-        - dataCollectionScope
-        - breakdown
-        - statistics
       properties:
         generatedAt:
           type: string
           format: date-time
         totalRepositories:
           type: integer
-          minimum: 0
         organizations:
           type: array
           items:
@@ -3639,168 +949,225 @@ components:
           items:
             type: string
         breakdown:
-          type: object
-          properties:
-            userRepositories:
-              type: integer
-            organizationRepositories:
-              type: object
-              additionalProperties:
-                type: integer
-            privateRepositories:
-              type: integer
-            publicRepositories:
-              type: integer
-            forkedRepositories:
-              type: integer
-            archivedRepositories:
-              type: integer
-            templateRepositories:
-              type: integer
+          $ref: '#/components/schemas/RepositoryBreakdown'
         statistics:
+          $ref: '#/components/schemas/GlobalStatistics'
+
+    RepositoryBreakdown:
+      type: object
+      properties:
+        userRepositories:
+          type: integer
+        organizationRepositories:
+          type: object
+          additionalProperties:
+            type: integer
+        privateRepositories:
+          type: integer
+        publicRepositories:
+          type: integer
+        forkedRepositories:
+          type: integer
+        archivedRepositories:
+          type: integer
+        templateRepositories:
+          type: integer
+
+    GlobalStatistics:
+      type: object
+      properties:
+        totalStars:
+          type: integer
+        totalForks:
+          type: integer
+        totalWatchers:
+          type: integer
+        totalIssues:
+          type: integer
+        totalPullRequests:
+          type: integer
+        totalReleases:
+          type: integer
+        totalCommits:
+          type: integer
+        totalDeployments:
+          type: integer
+        totalEnvironments:
+          type: integer
+        totalLanguages:
+          type: integer
+        averageRepoSize:
+          type: integer
+        mostUsedLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageStat'
+        topTopics:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicStat'
+
+    LanguageStat:
+      type: object
+      properties:
+        name:
+          type: string
+        totalSize:
+          type: integer
+        repoCount:
+          type: integer
+        percentage:
+          type: number
+
+    TopicStat:
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+
+    RepositoriesAnalytics:
+      type: object
+      properties:
+        totalStats:
+          $ref: '#/components/schemas/TotalStats'
+        languageAnalytics:
+          $ref: '#/components/schemas/LanguageAnalytics'
+        topicsAnalytics:
+          $ref: '#/components/schemas/TopicsAnalytics'
+        devOpsMaturity:
+          $ref: '#/components/schemas/DevOpsMaturity'
+
+    TotalStats:
+      type: object
+      properties:
+        totalRepositories:
+          type: integer
+        totalStars:
+          type: integer
+        totalForks:
+          type: integer
+        totalWatchers:
+          type: integer
+        totalIssues:
+          type: integer
+        totalPullRequests:
+          type: integer
+        totalCommits:
+          type: integer
+        totalReleases:
+          type: integer
+        totalDeployments:
+          type: integer
+        repositoriesWithActions:
+          type: integer
+        repositoriesWithSecurity:
+          type: integer
+        repositoriesWithPackages:
+          type: integer
+        repositoriesWithProtection:
+          type: integer
+        averageCommunityHealth:
+          type: integer
+
+    LanguageAnalytics:
+      type: object
+      properties:
+        totalLanguages:
+          type: integer
+        totalSize:
+          type: integer
+        languages:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/LanguageStat'
+        topLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageStat'
+
+    TopicsAnalytics:
+      type: object
+      properties:
+        totalTopics:
+          type: integer
+        repositoriesWithTopics:
+          type: integer
+        topics:
+          type: object
+          additionalProperties:
+            type: integer
+        topTopics:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicStat'
+
+    DevOpsMaturity:
+      type: object
+      properties:
+        cicdAdoption:
+          type: number
+          description: Pourcentage de repositories avec GitHub Actions
+        securityMaturity:
+          type: number
+          description: Pourcentage de repositories avec des alertes de sécurité
+        branchProtectionRate:
+          type: number
+          description: Pourcentage de repositories avec protection de branche
+        averageCommunityHealth:
+          type: integer
+          description: Score moyen de santé communautaire
+
+    CollectionMetadata:
+      type: object
+      properties:
+        username:
+          type: string
+        organizations:
+          type: array
+          items:
+            type: string
+        dataSource:
+          type: string
+        enrichedWithDevOps:
+          type: boolean
+        includesAnalytics:
+          type: boolean
+        generatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
           type: object
           properties:
-            totalStars:
-              type: integer
-            totalForks:
-              type: integer
-            totalWatchers:
-              type: integer
-            totalIssues:
-              type: integer
-            totalPullRequests:
-              type: integer
-            totalReleases:
-              type: integer
-            totalCommits:
-              type: integer
-            totalDeployments:
-              type: integer
-            totalEnvironments:
-              type: integer
-            totalLanguages:
-              type: integer
-            averageRepoSize:
-              type: number
-            mostUsedLanguages:
-              type: array
-              items:
-                type: object
-                properties:
-                  language:
-                    type: string
-                  count:
-                    type: integer
-                  totalSize:
-                    type: integer
-            topTopics:
-              type: array
-              items:
-                type: object
-                properties:
-                  topic:
-                    type: string
-                  count:
-                    type: integer
-            repositoriesWithWebsite:
-              type: integer
-            repositoriesWithDeployments:
-              type: integer
-            repositoriesWithActions:
-              type: integer
-            repositoriesWithSecurityAlerts:
-              type: integer
-            repositoriesWithPackages:
-              type: integer
-            repositoriesWithBranchProtection:
-              type: integer
-            averageCommunityHealth:
-              type: number
-
-  responses:
-    BadRequest:
-      description: Requête invalide
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ValidationError'
-
-    Unauthorized:
-      description: Non autorisé - Token manquant ou invalide
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: "Unauthorized"
-            message: "Token d'authentification requis"
-            timestamp: "2024-01-15T10:30:00.000Z"
-
-    Forbidden:
-      description: Accès interdit - Permissions insuffisantes
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: "Forbidden"
-            message: "Vous n'avez pas les permissions pour accéder à cette ressource"
-            timestamp: "2024-01-15T10:30:00.000Z"
-
-    NotFound:
-      description: Ressource non trouvée
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: "Not Found"
-            message: "La ressource demandée n'existe pas"
-            timestamp: "2024-01-15T10:30:00.000Z"
-
-    TooManyRequests:
-      description: Trop de requêtes - Rate limit dépassé
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: "Too Many Requests"
-            message: "Rate limit dépassé. Réessayez dans 15 minutes."
-            timestamp: "2024-01-15T10:30:00.000Z"
-      headers:
-        Retry-After:
-          description: Nombre de secondes à attendre avant de réessayer
-          schema:
-            type: integer
-        X-RateLimit-Limit:
-          description: Limite de requêtes par période
-          schema:
-            type: integer
-        X-RateLimit-Remaining:
-          description: Nombre de requêtes restantes
-          schema:
-            type: integer
-        X-RateLimit-Reset:
-          description: Timestamp de réinitialisation du rate limit
-          schema:
-            type: integer
-
-
+            type:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Données d'entrée invalides"
+            details:
+              type: object
+            timestamp:
+              type: string
+              format: date-time
 
 tags:
   - name: System
-    description: Endpoints système (health check, ping)
+    description: Endpoints système (santé, connectivité)
   - name: Authentication
-    description: Authentification et gestion des tokens JWT
+    description: Authentification et gestion des sessions
   - name: Users
-    description: Gestion des utilisateurs GitHub
+    description: Gestion des utilisateurs et profils GitHub complets
   - name: Repositories
-    description: Recherche et gestion des repositories
-  - name: Analytics
-    description: Analyses quantitatives et métriques
-  - name: Insights
-    description: Insights IA qualitatifs et recommandations
+    description: Gestion des repositories avec analyses DevOps complètes
 
 externalDocs:
   description: Documentation complète de l'API
