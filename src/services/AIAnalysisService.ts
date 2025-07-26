@@ -1,9 +1,8 @@
-import { DatasetModel } from '@/models/Dataset';
 import { UserModel } from '@/models/User';
 import { RepositoryModel } from '@/models/Repository';
+import { AIAnalysisModel } from '@/models/AIAnalysis';
 import openaiConfig from '@/config/openai';
 import logger from '@/utils/logger';
-import { InsightsExtension, AIInsightsSummary } from '@/types/insights';
 
 // Types helpers pour le typage strict
 interface GitHubLicense {
@@ -112,8 +111,8 @@ export interface AIAnalysisResult {
  */
 export class AIAnalysisService {
   /**
-         * Lance une analyse IA complète d'un utilisateur
-         */
+           * Lance une analyse IA complète d'un utilisateur
+           */
   public static async analyzeUser(username: string): Promise<AIAnalysisResult> {
     const startTime = Date.now();
 
@@ -172,71 +171,25 @@ export class AIAnalysisService {
   }
 
   /**
-         * Récupère une analyse IA existante depuis la base de données
-         */
+   * Récupère une analyse IA existante depuis la base de données
+   */
   public static async getExistingAnalysis(username: string): Promise<AIAnalysisResult | null> {
     try {
-      // Trouver l'utilisateur par username
-      const userData = await UserModel.findByLogin(username);
+      // Récupérer l'analyse IA la plus récente depuis le modèle dédié
+      const aiAnalysis = await AIAnalysisModel.findLatestByUsername(username);
 
-      if (userData === null) {
-        logger.debug('Utilisateur non trouvé pour récupération analyse IA', { username });
+      if (aiAnalysis === null) {
+        logger.debug('Aucune analyse IA trouvée', { username });
         return null;
       }
 
-      // Trouver le dataset le plus récent avec une analyse IA
-      const latestDataset = await DatasetModel.findLatestByUserId(userData.id);
-
-      if (latestDataset?.aiInsights == null) {
-        logger.debug('Aucune analyse IA trouvée', { username, userId: userData.id });
-        return null;
-      }
-
-      // Extraire les données d'analyse IA
-      const aiInsights = latestDataset.aiInsights as unknown as { aiInsights: AIInsightsSummary };
-
-      // Reconvertir vers notre format AIAnalysisResult
-      const analysisResult: AIAnalysisResult = {
-        qualityScore: this.extractScoreFromHighlights(aiInsights.aiInsights.executiveSummary.keyHighlights, 'qualité'),
-        maintenabilityScore: Math.round(aiInsights.aiInsights.confidence * 0.9),
-        securityScore: this.extractScoreFromHighlights(aiInsights.aiInsights.executiveSummary.keyHighlights, 'sécurité'),
-        innovationScore: this.extractScoreFromHighlights(aiInsights.aiInsights.executiveSummary.keyHighlights, 'innovation'),
-        overallHealthScore: Math.min(10, Math.round(aiInsights.aiInsights.confidence / 10)),
-        estimatedVulnerabilities: 10, // Valeur par défaut, à améliorer
-        estimatedBugs: 50, // Valeur par défaut, à améliorer
-        estimatedBuildTime: 120,
-        estimatedTestCoverage: 65,
-        qualityByOrganization: {
-          personal: 60,
-          organization: 70,
-          school: 50,
-        },
-        repositoryScores: aiInsights.aiInsights.skills.technical.map(skill => ({
-          name: skill.skill,
-          qualityScore: skill.confidence,
-          recommendation: skill.evidence[0] ?? 'Continuer à développer',
-          strengths: skill.evidence,
-          improvementAreas: ['Tests unitaires', 'Documentation'],
-        })),
-        insights: {
-          summary: aiInsights.aiInsights.personality.description,
-          strengths: aiInsights.aiInsights.executiveSummary.majorStrengths,
-          weaknesses: [], // À améliorer si nécessaire
-          recommendations: aiInsights.aiInsights.executiveSummary.primaryRecommendations,
-          careerAdvice: aiInsights.aiInsights.skills.leadership.indicators,
-        },
-        metadata: {
-          analysisDate: aiInsights.aiInsights.generatedAt,
-          model: aiInsights.aiInsights.model,
-          confidenceScore: aiInsights.aiInsights.confidence,
-          analysisVersion: aiInsights.aiInsights.metadata.analysisVersion,
-        },
-      };
+      // Convertir depuis PrismaAIAnalysis vers AIAnalysisResult
+      const analysisResult = AIAnalysisModel.toAIAnalysisResult(aiAnalysis);
 
       logger.info('Analyse IA récupérée avec succès', {
         username,
-        datasetId: latestDataset.id,
-        analysisDate: aiInsights.aiInsights.generatedAt,
+        aiAnalysisId: aiAnalysis.id,
+        analysisDate: aiAnalysis.createdAt,
       });
 
       return analysisResult;
@@ -250,8 +203,8 @@ export class AIAnalysisService {
   }
 
   /**
-         * Prépare les données pour l'analyse IA
-         */
+           * Prépare les données pour l'analyse IA
+           */
   private static prepareAnalysisInput(
     userData: { [key: string]: unknown },
     repositories: { [key: string]: unknown }[],
@@ -339,8 +292,8 @@ export class AIAnalysisService {
   }
 
   /**
-         * Extrait les langages d'un repository
-         */
+           * Extrait les langages d'un repository
+           */
   private static extractLanguages(languages: unknown): Record<string, number> {
     if (
       languages === null ||
@@ -372,8 +325,8 @@ export class AIAnalysisService {
   }
 
   /**
-         * Effectue l'analyse IA avec GPT-4o-mini
-         */
+           * Effectue l'analyse IA avec GPT-4o-mini
+           */
   private static async performAIAnalysis(
     input: AIAnalysisInput,
   ): Promise<AIAnalysisResult> {
@@ -422,8 +375,8 @@ export class AIAnalysisService {
   }
 
   /**
-         * Construit le prompt pour l'analyse IA
-         */
+           * Construit le prompt pour l'analyse IA
+           */
   private static buildAnalysisPrompt(input: AIAnalysisInput): string {
     return `
 Analyse ce profil GitHub et génère un JSON avec les métriques suivantes:
@@ -493,8 +446,8 @@ Génère UNIQUEMENT ce JSON (sans markdown):
   }
 
   /**
-         * Valide et complète le résultat IA
-         */
+           * Valide et complète le résultat IA
+           */
   private static validateAndCompleteResult(
     aiResult: Partial<AIAnalysisResult>,
     input: AIAnalysisInput,
@@ -576,8 +529,8 @@ Génère UNIQUEMENT ce JSON (sans markdown):
   }
 
   /**
-         * Génère un résultat de fallback en cas d'erreur IA
-         */
+           * Génère un résultat de fallback en cas d'erreur IA
+           */
   private static generateFallbackResult(
     input: AIAnalysisInput,
   ): AIAnalysisResult {
@@ -663,14 +616,14 @@ Génère UNIQUEMENT ce JSON (sans markdown):
   }
 
   /**
-         * Sauvegarde l'analyse IA dans la base de données
-         */
+     * Sauvegarde l'analyse IA dans la base de données
+     */
   private static async saveAIAnalysis(
     username: string,
     analysisResult: AIAnalysisResult,
   ): Promise<void> {
     try {
-      // Trouver le dataset le plus récent de l'utilisateur
+      // Trouver l'utilisateur pour récupérer son ID
       const userData = await UserModel.findByLogin(username);
 
       if (userData === null) {
@@ -678,22 +631,12 @@ Génère UNIQUEMENT ce JSON (sans markdown):
         return;
       }
 
-      const latestDataset = await DatasetModel.findLatestByUserId(userData.id);
-
-      if (latestDataset === null) {
-        logger.warn('Aucun dataset trouvé pour sauvegarde analyse IA', { username, userId: userData.id });
-        return;
-      }
-
-      // Convertir notre format vers InsightsExtension
-      const insightsExtension = this.convertToInsightsExtension(analysisResult);
-
-      // Sauvegarder l'analyse IA
-      await DatasetModel.updateInsights(latestDataset.id, insightsExtension);
+      // Sauvegarder l'analyse IA avec le nouveau modèle dédié
+      await AIAnalysisModel.upsert(username, userData.id, analysisResult);
 
       logger.info('Analyse IA sauvegardée avec succès', {
         username,
-        datasetId: latestDataset.id,
+        userId: userData.id,
         qualityScore: analysisResult.qualityScore,
         securityScore: analysisResult.securityScore,
       });
@@ -704,204 +647,6 @@ Génère UNIQUEMENT ce JSON (sans markdown):
       });
       // Ne pas lancer l'erreur pour ne pas interrompre le processus principal
     }
-  }
-
-  /**
-         * Convertit notre format d'analyse vers InsightsExtension
-         */
-  private static convertToInsightsExtension(analysisResult: AIAnalysisResult): InsightsExtension {
-    const now = new Date();
-
-    // Créer un format compatible avec AIInsightsSummary
-    const aiInsightsSummary: AIInsightsSummary = {
-      userId: 'temp_user_id', // Sera mis à jour par le DatasetModel
-      generatedAt: now,
-      model: 'gpt-4o-mini',
-      confidence: analysisResult.metadata?.confidenceScore ?? 50,
-
-      // Mapper nos données vers le format attendu
-      personality: {
-        archetype: 'builder',
-        description: analysisResult.insights?.summary ?? 'Analyse du profil développeur',
-        strengths: analysisResult.insights?.strengths ?? [],
-        workingStyle: {
-          preferredProjectSize: 'mixed',
-          collaborationStyle: 'contributor',
-          learningApproach: 'hands_on',
-          problemSolving: 'analytical',
-        },
-        motivations: analysisResult.insights?.strengths ?? [],
-        potentialChallenges: analysisResult.insights?.recommendations ?? [],
-      },
-
-      skills: {
-        technical: (analysisResult.repositoryScores ?? []).slice(0, 5).map(repo => ({
-          skill: repo.name,
-          proficiency: repo.qualityScore > 70 ? 'proficient' : repo.qualityScore > 50 ? 'competent' : 'advanced_beginner' as const,
-          confidence: repo.qualityScore,
-          evidenceStrength: repo.qualityScore > 70 ? 'strong' : repo.qualityScore > 50 ? 'moderate' : 'weak' as const,
-          evidence: repo.strengths ?? [],
-          growthPotential: 'moderate' as const,
-          marketDemand: 'moderate' as const,
-        })),
-        soft: [
-          {
-            skill: 'Problem Solving',
-            level: 'competent' as const,
-            indicators: analysisResult.insights?.strengths ?? [],
-            impactOnCareer: 'significant' as const,
-          },
-        ],
-        leadership: {
-          current: 'individual_contributor' as const,
-          potential: 'emerging' as const,
-          indicators: analysisResult.insights?.careerAdvice ?? [],
-        },
-      },
-
-      career: {
-        currentLevel: analysisResult.qualityScore > 80 ? 'senior' : analysisResult.qualityScore > 60 ? 'mid_level' : 'junior' as const,
-        experienceIndicators: analysisResult.insights?.strengths ?? [],
-        trajectory: {
-          direction: 'ascending' as const,
-          velocity: 'steady' as const,
-          confidence: analysisResult.metadata?.confidenceScore ?? 50,
-        },
-        suitableRoles: (analysisResult.insights?.careerAdvice ?? []).map(advice => ({
-          role: advice,
-          fit: 75,
-          reasoning: 'Basé sur l\'analyse des compétences',
-          requirements: [],
-          growthPath: 'Continue learning and practicing',
-        })),
-        marketPosition: {
-          competitiveness: analysisResult.qualityScore > 70 ? 'above_average' : 'average' as const,
-          uniqueValueProposition: analysisResult.insights?.summary ?? '',
-          differentiators: analysisResult.insights?.strengths ?? [],
-          gaps: analysisResult.insights?.recommendations ?? [],
-        },
-      },
-
-      productivity: {
-        patterns: {
-          peakPerformance: {
-            timeOfDay: 'Matin',
-            dayOfWeek: 'Jours de semaine',
-            seasonality: 'Constante',
-            reasoning: 'Basé sur l\'analyse des commits',
-          },
-          consistency: {
-            level: 'consistent' as const,
-            factors: ['Engagement régulier'],
-            recommendations: analysisResult.insights?.recommendations ?? [],
-          },
-        },
-        efficiency: {
-          codeToImpactRatio: analysisResult.qualityScore > 70 ? 'high' : 'moderate' as const,
-          problemSolvingSpeed: 'steady' as const,
-          qualityConsistency: 'consistent' as const,
-          analysis: analysisResult.insights?.summary ?? '',
-        },
-        workLifeBalance: {
-          sustainabilityScore: Math.max(50, analysisResult.qualityScore),
-          riskFactors: [],
-          positiveIndicators: analysisResult.insights?.strengths ?? [],
-          recommendations: analysisResult.insights?.recommendations ?? [],
-        },
-      },
-
-      recommendations: {
-        immediate: (analysisResult.insights?.recommendations ?? []).slice(0, 3).map(rec => ({
-          category: 'skill' as const,
-          recommendation: rec,
-          reasoning: 'Amélioration prioritaire identifiée',
-          expectedImpact: 'moderate' as const,
-          effort: 'medium' as const,
-          resources: [],
-        })),
-        shortTerm: [
-          {
-            goal: 'Amélioration de la qualité du code',
-            timeframe: '3-6 mois',
-            steps: analysisResult.insights?.recommendations ?? [],
-            metrics: ['Couverture de tests', 'Complexité du code'],
-          },
-        ],
-        longTerm: [
-          {
-            vision: 'Développeur expérimenté',
-            milestones: analysisResult.insights?.careerAdvice ?? [],
-            skills: [],
-            experience: [],
-          },
-        ],
-      },
-
-      strengths: {
-        core: (analysisResult.insights?.strengths ?? []).map(strength => ({
-          strength,
-          manifestation: ['Visible dans les projets'],
-          evidence: ['Analyse des repositories'],
-          leverageOpportunities: ['Projets plus complexes'],
-        })),
-        emerging: [],
-        unique: [],
-      },
-
-      growth: {
-        skills: (analysisResult.insights?.recommendations ?? []).map(rec => ({
-          skill: rec,
-          currentGap: 'moderate' as const,
-          importance: 'beneficial' as const,
-          learningPath: ['Formation', 'Pratique'],
-          timeToCompetency: '3-6 mois',
-          careerImpact: 'Amélioration des opportunités',
-        })),
-        experiences: [],
-        relationships: [],
-      },
-
-      executiveSummary: {
-        keyHighlights: [
-          `Score de qualité: ${analysisResult.qualityScore}%`,
-          `Score de sécurité: ${analysisResult.securityScore}%`,
-          `Score d'innovation: ${analysisResult.innovationScore}%`,
-        ],
-        majorStrengths: analysisResult.insights?.strengths ?? [],
-        primaryRecommendations: analysisResult.insights?.recommendations ?? [],
-        careerOutlook: analysisResult.insights?.summary ?? '',
-      },
-
-      metadata: {
-        analysisVersion: analysisResult.metadata?.analysisVersion ?? '1.0.0',
-        dataPoints: (analysisResult.repositoryScores ?? []).length,
-        processingTime: 10, // Approximation
-        tokens: {
-          input: 1000,
-          output: 500,
-          total: 1500,
-        },
-      },
-    };
-
-    return {
-      aiInsights: aiInsightsSummary,
-      updatedAt: now,
-    };
-  }
-
-  /**
-         * Extrait un score numérique depuis les highlights
-         */
-  private static extractScoreFromHighlights(highlights: string[], keyword: string): number {
-    const highlight = highlights.find(h => h.toLowerCase().includes(keyword.toLowerCase()));
-    if (highlight != null) {
-      const match = highlight.match(/(\d+)%?/);
-      if (match != null) {
-        return parseInt(match[1], 10);
-      }
-    }
-    return 50; // Valeur par défaut
   }
 }
 

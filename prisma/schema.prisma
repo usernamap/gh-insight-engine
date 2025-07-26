@@ -72,6 +72,7 @@ model User {
   // Relations
   repositories    Repository[]
   datasets        Dataset[]
+  aiAnalyses      AIAnalysis[]
   
   @@map("users")
 }
@@ -157,4 +158,50 @@ model Dataset {
   userProfile  User     @relation(fields: [userProfileId], references: [id])
   
   @@map("datasets")
+}
+
+// Collection: ai_analyses - Analyses IA spécialisées
+model AIAnalysis {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  username        String   // GitHub username
+  userId          String   @db.ObjectId // Référence vers User
+  
+  // Données d'analyse IA complètes
+  qualityScore           Float
+  maintenabilityScore    Float
+  securityScore          Float
+  innovationScore        Float
+  overallHealthScore     Float
+  
+  // Estimations IA
+  estimatedVulnerabilities Int
+  estimatedBugs           Int
+  estimatedBuildTime      Int
+  estimatedTestCoverage   Float
+  
+  // Scores par organisation
+  qualityByOrganization  Json // { personal: number, organization: number, school: number }
+  
+  // Scores des repositories
+  repositoryScores       Json // Array<{ name: string, qualityScore: number, recommendation: string, strengths: string[], improvementAreas: string[] }>
+  
+  // Insights générés par l'IA
+  insights               Json // { summary: string, strengths: string[], weaknesses: string[], recommendations: string[], careerAdvice: string[] }
+  
+  // Métadonnées
+  metadata               Json // { analysisDate: Date, model: string, confidenceScore: number, analysisVersion: string }
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relation
+  user           User     @relation(fields: [userId], references: [id])
+  
+  // Index pour requêtes optimisées
+  @@index([username])
+  @@index([userId])
+  @@index([createdAt])
+  
+  @@map("ai_analyses")
 }
