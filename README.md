@@ -32,7 +32,8 @@
 ### Prerequisites
 - Node.js >= 18.14.0
 - MongoDB (local or cloud)
-- GitHub Classic Token with required scopes
+- [GitHub Classic Token](https://github.com/settings/tokens/new) with required scopes (*repo*, *user:email*, *read:user*, *read:org*, *read:packages*, *admin:repo_hook*
+
 
 ### Installation
 
