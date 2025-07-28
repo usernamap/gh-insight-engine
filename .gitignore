@@ -59,5 +59,3 @@ api_data_github.md
 .env.production.local
 
 /docs/index.html
-
-openapi.yaml.backup

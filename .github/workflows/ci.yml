@@ -10,7 +10,6 @@ env:
   NODE_VERSION: '18.14.0'
 
 jobs:
-  # Setup and Cache Dependencies
   setup:
     name: Setup Environment
     runs-on: ubuntu-latest
@@ -41,7 +40,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-
 
-  # Quality Checks
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
@@ -88,7 +86,6 @@ jobs:
     - name: Check API coverage
       run: npm run openapi:coverage
 
-  # Build
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -120,7 +117,6 @@ jobs:
     - name: Build application
       run: npm run build
 
-  # Security Scan
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -154,7 +150,6 @@ jobs:
         echo "Checking for known vulnerabilities..."
         npm audit --audit-level=high || true
 
-  # Database Migration Check
   database:
     name: Database Migration Check
     runs-on: ubuntu-latest
@@ -199,7 +194,6 @@ jobs:
       env:
         DATABASE_URL: mongodb://localhost:27017/test
 
-  # API Documentation Check
   documentation:
     name: API Documentation Check
     runs-on: ubuntu-latest
@@ -235,7 +229,6 @@ jobs:
       run: npm run openapi:diff:breaking
       if: github.event_name == 'pull_request'
 
-  # Performance Check
   performance:
     name: Performance Check
     runs-on: ubuntu-latest
@@ -269,7 +262,6 @@ jobs:
         echo "Checking bundle size..."
         du -sh dist/
 
-  # Deploy to Staging (on main branch)
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
@@ -305,7 +297,6 @@ jobs:
         # Add actual deployment steps here
         # Example: docker build, push to registry, deploy to staging
 
-  # Create Release (on main branch)
   release:
     name: Create Release
     runs-on: ubuntu-latest
