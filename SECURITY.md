@@ -84,12 +84,6 @@ We follow responsible disclosure practices:
 4. **Credit**: We give credit to security researchers who report valid issues
 5. **No Retaliation**: We will not take legal action against security researchers who follow responsible disclosure practices
 
-## Security Contact
-
-- **Email**: [security@example.com]
-- **PGP Key**: [INSERT PGP KEY FINGERPRINT]
-- **Response Time**: 48 hours for acknowledgment, 7 days for detailed response
-
 ## Security Hall of Fame
 
 We recognize security researchers who have helped improve the security of GitHub Insight Engine:
