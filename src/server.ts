@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import { createApp, gracefulShutdown } from './app';
+import { createApp, gracefulShutdown } from '@/app';
 import logger from '@/utils/logger';
 import {
   SERVER_CONFIG,
