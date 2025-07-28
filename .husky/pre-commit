@@ -1,0 +1,12 @@
+echo "🔍 Pre-commit validation..."
+echo "📦 Updating version..."
+npm run version:bump
+echo "📋 OpenAPI validation..."
+npm run openapi:validate
+echo "📊 API coverage verification..."
+npm run openapi:coverage
+echo "🔧 ESLint validation..."
+npm run lint
+echo "🔍 TypeScript validation..."
+npm run typecheck
+echo "✅ Pre-commit validation successful!"
