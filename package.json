@@ -1,0 +1,19 @@
+{
+  "name": "gh-insight-engine",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usernamap/gh-insight-engine.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/usernamap/gh-insight-engine/issues"
+  },
+  "homepage": "https://github.com/usernamap/gh-insight-engine#readme",
+  "description": ""
+}
