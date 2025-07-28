@@ -1,0 +1,43 @@
+Commit Message Template for gh-insight-engine
+Type of change:
+feat:     A new feature
+fix:      A bug fix
+docs:     Documentation only changes
+style:    Changes that do not affect the meaning of the code (white-space, formatting, etc)
+refactor: A code change that neither fixes a bug nor adds a feature
+perf:     A code change that improves performance
+test:     Adding missing tests or correcting existing tests
+chore:    Changes to the build process or auxiliary tools and libraries
+
+Scope (optional):
+api:      API changes
+ci:       CI/CD changes
+db:       Database changes
+docs:     Documentation changes
+security: Security improvements
+deps:     Dependency updates
+
+Subject line (required):
+- Use imperative mood ("add" not "added" or "adds")
+- Don't capitalize first letter
+- No dot (.) at the end
+- Max 50 characters
+
+Body (optional):
+- Use imperative mood
+- Explain what and why vs. how
+- Wrap at 72 characters
+
+Footer (optional):
+- Reference issues being closed
+- Breaking changes
+
+Examples:
+feat(api): add user authentication endpoint
+fix(ci): resolve npm cache issues in workflow
+docs: update README with installation guide
+style: format code with prettier
+refactor(api): simplify authentication middleware
+perf(db): optimize database queries
+test: add unit tests for user controller
+chore(deps): update dependencies to latest versions

@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  login             String       @unique
+  githubId          Int?
+  nodeId            String?
+  avatarUrl         String
+  gravatarId        String?
+  url               String?
+  htmlUrl           String?
+  followersUrl      String?
+  followingUrl      String?
+  gistsUrl          String?
+  starredUrl        String?
+  subscriptionsUrl  String?
+  organizationsUrl  String?
+  reposUrl          String?
+  eventsUrl         String?
+  receivedEventsUrl String?
+  type              String
+  siteAdmin         Boolean
+  name              String
+  company           String?
+  blog              String?
+  location          String?
+  email             String
+  hireable          Boolean?
+  bio               String?
+  twitterUsername   String?
+  publicRepos       Int          @default(0)
+  publicGists       Int          @default(0)
+  followers         Int          @default(0)
+  following         Int          @default(0)
+  createdAt         DateTime
+  updatedAt         DateTime     @updatedAt
+  privateGists      Int?
+  totalPrivateRepos Int?
+  ownedPrivateRepos Int?
+  diskUsage         Int?
+  collaborators     Int?
+  twoFactorAuth     Boolean?
+  plan              Json?
+  organizations     Json?
+  repositories      Repository[]
+  aiAnalyses        AIAnalysis[]
+
+  @@map("users")
+}
+
+model Repository {
+  id                            String    @id @default(auto()) @map("_id") @db.ObjectId
+  nameWithOwner                 String    @unique
+  name                          String
+  description                   String?
+  isPrivate                     Boolean
+  isArchived                    Boolean
+  isFork                        Boolean
+  isTemplate                    Boolean
+  stargazerCount                Int
+  forkCount                     Int
+  watchersCount                 Int
+  subscriberCount               Int?
+  networkCount                  Int?
+  openIssuesCount               Int
+  primaryLanguage               String?
+  languages                     Json
+  topics                        String[]
+  pushedAt                      DateTime?
+  updatedAt                     DateTime
+  createdAt                     DateTime
+  homepageUrl                   String?
+  size                          Int
+  defaultBranchRef              String?
+  license                       Json?
+  hasIssuesEnabled              Boolean
+  hasProjectsEnabled            Boolean
+  hasWikiEnabled                Boolean
+  hasPages                      Boolean?
+  hasDownloads                  Boolean?
+  hasDiscussions                Boolean?
+  vulnerabilityAlertsEnabled    Boolean?
+  securityPolicyEnabled         Boolean?
+  codeOfConductEnabled          Boolean?
+  contributingGuidelinesEnabled Boolean?
+  readmeEnabled                 Boolean?
+  deployments                   Json
+  environments                  Json
+  commits                       Json
+  releases                      Json
+  issues                        Json
+  pullRequests                  Json
+  branchProtectionRules         Json
+  collaborators                 Json
+  githubActions                 Json?
+  security                      Json?
+  packages                      Json?
+  branchProtection              Json?
+  community                     Json?
+  traffic                       Json?
+
+  diskUsage Int?
+  owner     Json
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("repositories")
+}
+
+model AIAnalysis {
+  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
+  username                 String
+  userId                   String   @db.ObjectId
+  qualityScore             Float
+  maintenabilityScore      Float
+  securityScore            Float
+  innovationScore          Float
+  overallHealthScore       Float
+  estimatedVulnerabilities Int
+  estimatedBugs            Int
+  estimatedBuildTime       Int
+  estimatedTestCoverage    Float
+  qualityByOrganization    Json
+  repositoryScores         Json
+  insights                 Json
+  metadata                 Json
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id])
+
+  @@index([username])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_analyses")
+}

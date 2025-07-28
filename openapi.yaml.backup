@@ -1,0 +1,3037 @@
+# 🚀 GitHub Insight Engine API - Ultimate Developer Analytics
+# The most powerful GitHub analytics API ever built - analyze, visualize, and optimize your development journey
+openapi: 3.0.3
+info:
+  title: "GitHub Insight Engine API"
+  description: |
+    REST API for GitHub data collection, analysis, and insights generation.
+    
+    **Authentication**: JWT tokens obtained via `/auth/login`
+    **Data Flow**: Collect → Store → Analyze → Retrieve
+    **Rate Limits**: Standard GitHub API rate limits apply during collection
+    **Automatic Scheduling**: Built-in scheduling service with automatic token management
+  version: 0.1.77
+  contact:
+    name: Github
+    url: https://github.com/octocat/gh-insight-engine
+  license:
+    name: MIT
+    url: https://github.com/octocat/gh-insight-engine/blob/main/LICENSE
+
+servers:
+  - url: https://github.lucas-blanchard.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+  - {}
+
+paths:
+  /health:
+    get:
+      summary: Service health check
+      description: Returns API health status and system information
+      operationId: healthCheck
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ping:
+    get:
+      summary: Connectivity test
+      description: Basic connectivity test endpoint
+      operationId: ping
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Pong response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+
+  /auth/login:
+    post:
+      summary: GitHub token authentication
+      description: |
+        Authenticate with GitHub Classic token to obtain JWT for API access.
+        Supports graceful degradation during GitHub API outages.
+        
+        **Required GitHub token scopes:**
+        - `repo` - Private repository access
+        - `user` - User profile information  
+        - `read:org` - Organization data access
+        
+        **Used by scheduling service**: This endpoint is automatically called by the
+        scheduling service to obtain authentication tokens for automated operations.
+      operationId: login
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid GitHub token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+  /auth/me:
+    get:
+      summary: Get current user authentication status
+      description: |
+        Check if the current user is authenticated and return minimal user information.
+        This endpoint is useful for client-side authentication state management.
+        
+        **Authentication**: Optional - returns different responses based on authentication status
+        **Response**: Always returns a consistent structure with authentication status
+      operationId: getCurrentUser
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: User is authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Response when user is authenticated
+                properties:
+                  authenticated:
+                    type: boolean
+                    description: Whether the user is authenticated
+                    example: true
+                  message:
+                    type: string
+                    description: Human-readable message about authentication status
+                    example: "User is authenticated"
+                  user:
+                    type: object
+                    description: User information
+                    properties:
+                      id:
+                        type: string
+                        description: User identifier (database ID)
+                        example: "6886b0451b936714e3647e57"
+                      username:
+                        type: string
+                        description: GitHub username
+                        example: "usernamap"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:21:50.541Z"
+        '401':
+          description: User is not authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Response when user is not authenticated
+                properties:
+                  error:
+                    type: string
+                    description: Error type when not authenticated
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable message about authentication status
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:21:35.190Z"
+
+  /users/{username}:
+    post:
+      summary: Collect user profile data
+      description: Fetch and store GitHub user profile data from GitHub API
+      operationId: collectUserData
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '201':
+          description: User data collected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCollectionResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only collect own user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+    get:
+      summary: Get user profile
+      description: Retrieve stored user profile and analysis status
+      operationId: getUserProfile
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete user and all associated data
+      description: Delete user profile and all associated repositories and AI analyses
+      operationId: deleteUserData
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: User and associated data deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDeletionResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only delete own user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /repositories/{username}:
+    post:
+      summary: Collect repository data
+      description: |
+        Start repository collection process. Returns immediately with status 202 Accepted.
+        Use GET /repositories/{username}/status to monitor progress.
+      operationId: collectRepositoriesData
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '202':
+          description: Repository collection started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryCollectionStartedResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only collect own repository data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+    get:
+      summary: Get user repositories
+      description: Retrieve stored repositories and analytics
+      operationId: getUserRepositories
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: Repositories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoriesResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '404':
+          description: No repositories found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete user repositories
+      description: Delete all stored repositories for a user from the database
+      operationId: deleteUserRepositories
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: Repositories deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryDeletionResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only delete own repository data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No repositories found to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+  /repositories/{username}/status:
+    get:
+      summary: Get repository collection status
+      description: Get the status of repository collection for a user
+      operationId: getCollectionStatus
+      tags:
+        - Repositories
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryStatusResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only check own collection status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No collection status found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /summary/{username}:
+    get:
+      summary: Get developer analytics summary
+      description: Generate comprehensive developer analytics from stored data
+      operationId: getDeveloperSummary
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: Summary generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeveloperSummaryResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '404':
+          description: No data available for analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+  /ai/status:
+    get:
+      summary: AI service status
+      description: Get AI service availability and configuration
+      operationId: getAIServiceStatus
+      tags:
+        - AI Analysis
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: AI service status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIServiceStatusResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+  /ai/{username}:
+    post:
+      summary: Perform AI analysis
+      description: Execute AI-powered code quality and security analysis
+      operationId: performAIAnalysis
+      tags:
+        - AI Analysis
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '201':
+          description: AI analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisCreateResponse'
+        '400':
+          description: Insufficient data for analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only analyze own profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+    get:
+      summary: Get AI analysis results
+      description: Retrieve existing AI analysis results
+      operationId: getAIAnalysis
+      tags:
+        - AI Analysis
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: AI analysis retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisResultResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '404':
+          description: No AI analysis found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+    delete:
+      summary: Delete all AI analyses for a user
+      description: Delete all stored AI analyses for a user from the database
+      operationId: deleteAIAnalysis
+      tags:
+        - AI Analysis
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: AI analyses deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisDeletionResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only delete own AI analyses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No AI analyses found to delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+  /refresh/{username}:
+    post:
+      summary: Refresh all user data
+      description: |
+        Start complete data refresh for a user by chaining all collection steps:
+        1. User profile data collection (POST /users/{username})
+        2. Repository data collection (POST /repositories/{username})
+        3. AI analysis execution (POST /ai/{username})
+        
+        Returns immediately with status 202 Accepted.
+        Use GET /refresh/{username}/status to monitor progress.
+        
+        This operation can take several minutes. In case of partial failure,
+        successfully collected data is preserved.
+        
+        **Scheduling Integration**: This endpoint is used by the automatic
+        scheduling service with automatic token management. The scheduling
+        service calls `/auth/login` to obtain fresh JWT tokens before
+        executing this refresh operation.
+      operationId: refreshUserData
+      tags:
+        - Refresh
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '202':
+          description: Refresh started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshStartedResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only refresh own data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Complete failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "RATE_LIMIT_ERROR"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "GitHub API rate limit exceeded. Please try again later or contact GitHub Support if the issue persists."
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+
+  /refresh/{username}/status:
+    get:
+      summary: Get refresh status
+      description: Get the status of data refresh for a user
+      operationId: getRefreshStatus
+      tags:
+        - Refresh
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsernameParam'
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshStatusResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error type
+                    example: "Unauthorized"
+                  message:
+                    type: string
+                    description: Human-readable error message
+                    example: "Please log in to access this resource"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: "2025-07-28T07:36:05.494Z"
+        '403':
+          description: Can only check own refresh status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No refresh status found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /auth/login (24h validity).
+        Used by both manual API calls and the automatic scheduling service.
+
+  parameters:
+    UsernameParam:
+      name: username
+      in: path
+      required: true
+      description: GitHub username
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9]([a-zA-Z0-9\-]){0,38}$'
+        example: "octocat"
+
+  schemas:
+    # System Responses
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        service:
+          type: string
+          example: "GitHub Insight Engine API"
+        version:
+          type: string
+          example: "0.1.47"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-27T10:13:00.707Z"
+        uptime:
+          type: number
+          description: Server uptime in seconds
+          example: 3910.636379583
+        environment:
+          type: string
+          example: "development"
+
+    PingResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "pong"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-27T09:24:43.481Z"
+
+    # Authentication
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - fullName
+        - githubToken
+      properties:
+        username:
+          type: string
+          description: GitHub username
+          example: "octocat"
+        fullName:
+          type: string
+          description: User full name (required for scheduling service)
+          example: "The Octocat"
+        githubToken:
+          type: string
+          description: GitHub Classic token with required scopes
+          example: "ghp_xxxxxxxxxxxxxxxxxxxx"
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Authentication successful"
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              description: User identifier
+              example: "octocat"
+            username:
+              type: string
+              description: GitHub username
+              example: "octocat"
+            hasValidToken:
+              type: boolean
+              example: true
+        tokens:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              description: JWT token for API requests (used by scheduling service)
+              example: "eyJhbGciOiJxxxxxxxxxxx"
+            tokenType:
+              type: string
+              example: "Bearer"
+            expiresIn:
+              type: string
+              example: "24h"
+        permissions:
+          type: object
+          properties:
+            canAccessPrivateRepos:
+              type: boolean
+              example: true
+            canReadOrgs:
+              type: boolean
+              example: false
+            canReadUser:
+              type: boolean
+              example: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-27T10:22:26.591Z"
+
+
+
+    # User Operations
+    UserCollectionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "User profile collection successful"
+        status:
+          type: string
+          enum: ["completed", "partial", "failed"]
+        userProfile:
+          type: object
+          properties:
+            login:
+              type: string
+            id:
+              type: integer
+            name:
+              type: string
+            public_repos:
+              type: integer
+            followers:
+              type: integer
+            following:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+        metadata:
+          type: object
+          properties:
+            collectedAt:
+              type: string
+              format: date-time
+            source:
+              type: string
+              example: "github_api"
+        timestamp:
+          type: string
+          format: date-time
+
+    UserProfileResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            name:
+              type: string
+            avatarUrl:
+              type: string
+            bio:
+              type: string
+              nullable: true
+            company:
+              type: string
+              nullable: true
+            location:
+              type: string
+              nullable: true
+            publicRepos:
+              type: integer
+            followers:
+              type: integer
+            following:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+        analysis:
+          type: object
+          properties:
+            hasStoredData:
+              type: boolean
+            lastAnalyzed:
+              type: string
+              format: date-time
+            hasAiInsights:
+              type: boolean
+            repositoriesStored:
+              type: integer
+            dataSource:
+              type: string
+              enum: ["database", "live", "cache"]
+        timestamp:
+          type: string
+          format: date-time
+
+    # Repository Operations
+
+
+    RepositoryCollectionStartedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Repository collection started"
+        status:
+          type: string
+          enum: ["in_progress"]
+        summary:
+          type: object
+          properties:
+            username:
+              type: string
+            message:
+              type: string
+              example: "Collection in progress. Use GET /repositories/{username}/status to check progress."
+        metadata:
+          type: object
+          properties:
+            startedAt:
+              type: string
+              format: date-time
+            estimatedCompletion:
+              type: string
+              format: date-time
+            currentStep:
+              type: integer
+              minimum: 1
+            totalSteps:
+              type: integer
+              minimum: 1
+        timestamp:
+          type: string
+          format: date-time
+
+    RepositoriesResponse:
+      type: object
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Repository'
+        analytics:
+          $ref: '#/components/schemas/RepositoryAnalytics'
+        metadata:
+          type: object
+          properties:
+            username:
+              type: string
+            dataSource:
+              type: string
+              example: "database"
+            accessLevel:
+              type: string
+              enum: ["full", "public"]
+            repositoriesCount:
+              type: integer
+            isEmpty:
+              type: boolean
+            message:
+              type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    Repository:
+      type: object
+      properties:
+        nameWithOwner:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isPrivate:
+          type: boolean
+        isArchived:
+          type: boolean
+        isFork:
+          type: boolean
+        isTemplate:
+          type: boolean
+        stargazerCount:
+          type: integer
+        forkCount:
+          type: integer
+        watchersCount:
+          type: integer
+        primaryLanguage:
+          type: string
+          nullable: true
+        languages:
+          type: object
+          properties:
+            totalSize:
+              type: integer
+            nodes:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+        topics:
+          type: array
+          items:
+            type: string
+        pushedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        homepageUrl:
+          type: string
+          nullable: true
+        size:
+          type: integer
+        defaultBranchRef:
+          type: string
+          nullable: true
+        hasIssuesEnabled:
+          type: boolean
+        hasWikiEnabled:
+          type: boolean
+        hasPages:
+          type: boolean
+          nullable: true
+        readmeEnabled:
+          type: boolean
+          nullable: true
+        commits:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        issues:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        pullRequests:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        releases:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        deployments:
+          type: object
+          properties:
+            totalCount:
+              type: integer
+        owner:
+          type: object
+          properties:
+            login:
+              type: string
+            type:
+              type: string
+
+    RepositoryAnalytics:
+      type: object
+      properties:
+        totalStats:
+          type: object
+          properties:
+            totalRepositories:
+              type: integer
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            totalWatchers:
+              type: integer
+            totalIssues:
+              type: integer
+            totalPullRequests:
+              type: integer
+            totalCommits:
+              type: integer
+            totalReleases:
+              type: integer
+            totalDeployments:
+              type: integer
+            repositoriesWithActions:
+              type: integer
+            repositoriesWithSecurity:
+              type: integer
+            repositoriesWithPackages:
+              type: integer
+            repositoriesWithProtection:
+              type: integer
+            averageCommunityHealth:
+              type: integer
+        languageAnalytics:
+          type: object
+          properties:
+            totalLanguages:
+              type: integer
+            totalSize:
+              type: integer
+            languages:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  totalSize:
+                    type: integer
+                  repoCount:
+                    type: integer
+                  percentage:
+                    type: number
+            topLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  totalSize:
+                    type: integer
+                  repoCount:
+                    type: integer
+                  percentage:
+                    type: number
+        topicsAnalytics:
+          type: object
+          properties:
+            totalTopics:
+              type: integer
+            repositoriesWithTopics:
+              type: integer
+            topics:
+              type: object
+              additionalProperties:
+                type: integer
+            topTopics:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  count:
+                    type: integer
+        devOpsMaturity:
+          type: object
+          properties:
+            cicdAdoption:
+              type: number
+            securityMaturity:
+              type: number
+            branchProtectionRate:
+              type: number
+            averageCommunityHealth:
+              type: number
+
+    # Analytics Summary
+    DeveloperSummaryResponse:
+      type: object
+      properties:
+        summary:
+          $ref: '#/components/schemas/DeveloperSummary'
+        generatedAt:
+          type: string
+          format: date-time
+        computationTime:
+          type: number
+          description: Computation time in milliseconds
+        accessLevel:
+          type: string
+          enum: ["complete"]
+        timestamp:
+          type: string
+          format: date-time
+        dataSource:
+          type: string
+          enum: ["realtime"]
+        repositoriesAnalyzed:
+          type: integer
+
+    DeveloperSummary:
+      type: object
+      properties:
+        profile:
+          type: object
+          properties:
+            login:
+              type: string
+            name:
+              type: string
+            bio:
+              type: string
+            location:
+              type: string
+            company:
+              type: string
+            blog:
+              type: string
+            email:
+              type: string
+            avatarUrl:
+              type: string
+            reputationScore:
+              type: number
+            influenceLevel:
+              type: string
+            expertiseAreas:
+              type: array
+              items:
+                type: string
+            totalContributions:
+              type: integer
+            activeYears:
+              type: integer
+            consistencyScore:
+              type: number
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            totalWatchers:
+              type: integer
+            careerLevel:
+              type: string
+            specializations:
+              type: array
+              items:
+                type: object
+                properties:
+                  area:
+                    type: string
+                  level:
+                    type: number
+                  yearsOfExperience:
+                    type: integer
+                  confidence:
+                    type: number
+        portfolioOverview:
+          type: object
+          properties:
+            totalRepositories:
+              type: integer
+            publicRepositories:
+              type: integer
+            privateRepositories:
+              type: integer
+            contributedRepositories:
+              type: integer
+            portfolioQualityScore:
+              type: number
+            averageStarsPerRepo:
+              type: number
+            projectDiversityScore:
+              type: number
+            totalLinesOfCode:
+              type: integer
+            organizationBreakdown:
+              type: object
+              properties:
+                personal:
+                  type: integer
+                organization:
+                  type: integer
+                school:
+                  type: integer
+            technologyLevels:
+              type: object
+              properties:
+                expert:
+                  type: integer
+                advanced:
+                  type: integer
+                operational:
+                  type: integer
+            projectTypes:
+              type: object
+              properties:
+                webApplications:
+                  type: integer
+                mobileApplications:
+                  type: integer
+                libraries:
+                  type: integer
+                frameworks:
+                  type: integer
+                tools:
+                  type: integer
+                games:
+                  type: integer
+                aiMl:
+                  type: integer
+                iot:
+                  type: integer
+                blockchain:
+                  type: integer
+                other:
+                  type: integer
+            projectMaturity:
+              type: object
+              properties:
+                prototype:
+                  type: integer
+                mvp:
+                  type: integer
+                production:
+                  type: integer
+                mature:
+                  type: integer
+                legacy:
+                  type: integer
+            totalLanguages:
+              type: integer
+            primaryLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  proficiencyLevel:
+                    type: number
+                  totalBytes:
+                    type: integer
+                  repositoryCount:
+                    type: integer
+                  recentUsage:
+                    type: boolean
+                  trend:
+                    type: string
+            emergingLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  proficiencyLevel:
+                    type: number
+                  totalBytes:
+                    type: integer
+                  repositoryCount:
+                    type: integer
+                  recentUsage:
+                    type: boolean
+                  trend:
+                    type: string
+            recentActivity:
+              type: object
+              properties:
+                last30Days:
+                  type: object
+                  properties:
+                    commits:
+                      type: integer
+                    pullRequests:
+                      type: integer
+                    issues:
+                      type: integer
+                    repositories:
+                      type: integer
+                last90Days:
+                  type: object
+                  properties:
+                    commits:
+                      type: integer
+                    pullRequests:
+                      type: integer
+                    issues:
+                      type: integer
+                    repositories:
+                      type: integer
+                lastYear:
+                  type: object
+                  properties:
+                    commits:
+                      type: integer
+                    pullRequests:
+                      type: integer
+                    issues:
+                      type: integer
+                    repositories:
+                      type: integer
+            productivityMetrics:
+              type: object
+              properties:
+                commitsPerDay:
+                  type: number
+                averageCommitSize:
+                  type: integer
+                codeChurnRate:
+                  type: number
+                featureDeliveryRate:
+                  type: number
+                bugFixRate:
+                  type: integer
+        technologyExpertise:
+          type: object
+          properties:
+            overallExpertiseScore:
+              type: number
+            frontendExpertise:
+              type: object
+              properties:
+                score:
+                  type: number
+                dominantTechnologies:
+                  type: array
+                  items:
+                    type: string
+                emergingInterests:
+                  type: array
+                  items:
+                    type: string
+                marketabilityScore:
+                  type: number
+            backendExpertise:
+              type: object
+              properties:
+                score:
+                  type: number
+                dominantTechnologies:
+                  type: array
+                  items:
+                    type: string
+                emergingInterests:
+                  type: array
+                  items:
+                    type: string
+                marketabilityScore:
+                  type: number
+            mobileExpertise:
+              type: object
+              properties:
+                score:
+                  type: number
+                dominantTechnologies:
+                  type: array
+                  items:
+                    type: string
+                emergingInterests:
+                  type: array
+                  items:
+                    type: string
+                marketabilityScore:
+                  type: number
+            devOpsExpertise:
+              type: object
+              properties:
+                score:
+                  type: number
+                dominantTechnologies:
+                  type: array
+                  items:
+                    type: string
+                emergingInterests:
+                  type: array
+                  items:
+                    type: string
+                marketabilityScore:
+                  type: number
+            dataExpertise:
+              type: object
+              properties:
+                score:
+                  type: number
+                dominantTechnologies:
+                  type: array
+                  items:
+                    type: string
+                emergingInterests:
+                  type: array
+                  items:
+                    type: string
+                marketabilityScore:
+                  type: number
+            aiMlExpertise:
+              type: object
+              properties:
+                score:
+                  type: number
+                dominantTechnologies:
+                  type: array
+                  items:
+                    type: string
+                emergingInterests:
+                  type: array
+                  items:
+                    type: string
+                marketabilityScore:
+                  type: number
+            expertLevel:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  masteryLevel:
+                    type: number
+                  yearsOfExperience:
+                    type: integer
+                  projectCount:
+                    type: integer
+                  marketDemand:
+                    type: string
+            advancedLevel:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  masteryLevel:
+                    type: number
+                  yearsOfExperience:
+                    type: integer
+                  projectCount:
+                    type: integer
+                  marketDemand:
+                    type: string
+            intermediateLevel:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  masteryLevel:
+                    type: number
+                  yearsOfExperience:
+                    type: integer
+                  projectCount:
+                    type: integer
+                  marketDemand:
+                    type: string
+            beginnerLevel:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  masteryLevel:
+                    type: number
+                  yearsOfExperience:
+                    type: integer
+                  projectCount:
+                    type: integer
+                  marketDemand:
+                    type: string
+            learningTrends:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  progressRate:
+                    type: number
+                  learningVelocity:
+                    type: string
+                  futureRelevance:
+                    type: number
+            recommendedTechnologies:
+              type: array
+              items:
+                type: string
+        devOpsMaturity:
+          type: object
+          properties:
+            devOpsScore:
+              type: number
+            maturityLevel:
+              type: string
+            cicdAdoption:
+              type: number
+            testingMaturity:
+              type: number
+            securityMaturity:
+              type: number
+            monitoringMaturity:
+              type: number
+            automationScore:
+              type: number
+            workflowEfficiency:
+              type: number
+            codeQualityScore:
+              type: number
+            documentationScore:
+              type: number
+            bestPractices:
+              type: array
+              items:
+                type: object
+                properties:
+                  practice:
+                    type: string
+                  adoptionLevel:
+                    type: number
+                  implementationQuality:
+                    type: number
+                  industryStandard:
+                    type: boolean
+            improvementAreas:
+              type: array
+              items:
+                type: string
+        communityImpact:
+          type: object
+          properties:
+            impactScore:
+              type: number
+            influenceRadius:
+              type: integer
+            openSourceContributions:
+              type: integer
+            maintainedProjects:
+              type: integer
+            issuesResolved:
+              type: integer
+            pullRequestsMerged:
+              type: integer
+            followersGrowth:
+              type: object
+              properties:
+                current:
+                  type: integer
+                sixMonthsAgo:
+                  type: integer
+                oneYearAgo:
+                  type: integer
+                growthRate:
+                  type: number
+                trajectory:
+                  type: string
+            starsMilestones:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  value:
+                    type: integer
+                  achievedAt:
+                    type: string
+                    format: date-time
+                  significance:
+                    type: string
+            featuredProjects:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  stars:
+                    type: integer
+                  significance:
+                    type: string
+                  technologies:
+                    type: array
+                    items:
+                      type: string
+                  impactScore:
+                    type: number
+            achievements:
+              type: array
+              items:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  category:
+                    type: string
+                  rarity:
+                    type: string
+                  unlockedAt:
+                    type: string
+                    format: date-time
+            mentoringScore:
+              type: number
+            leadershipIndicators:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  evidence:
+                    type: string
+                  strength:
+                    type: number
+        growthInsights:
+          type: object
+          properties:
+            growthTrajectory:
+              type: object
+              properties:
+                direction:
+                  type: string
+                velocity:
+                  type: number
+                momentum:
+                  type: number
+                sustainability:
+                  type: number
+            careerProgression:
+              type: object
+              properties:
+                currentLevel:
+                  type: string
+                yearsToNext:
+                  type: integer
+                progressToNext:
+                  type: number
+                keyMilestones:
+                  type: array
+                  items:
+                    type: string
+            activityTrends:
+              type: array
+              items:
+                type: object
+                properties:
+                  metric:
+                    type: string
+                  trend:
+                    type: string
+                  changeRate:
+                    type: number
+                  seasonality:
+                    type: boolean
+            productivityTrends:
+              type: array
+              items:
+                type: object
+                properties:
+                  period:
+                    type: string
+                  efficiency:
+                    type: number
+                  quality:
+                    type: number
+                  innovation:
+                    type: number
+            technologyEvolution:
+              type: array
+              items:
+                type: object
+            skillProgression:
+              type: array
+              items:
+                type: object
+            futureGrowthPotential:
+              type: number
+            recommendedFocusAreas:
+              type: array
+              items:
+                type: string
+        recommendations:
+          type: object
+          properties:
+            careerRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  priority:
+                    type: string
+                  effort:
+                    type: string
+                  timeline:
+                    type: string
+                  potentialImpact:
+                    type: number
+            technologyRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  rationale:
+                    type: string
+                  currentRelevance:
+                    type: number
+                  futureRelevance:
+                    type: number
+                  learningDifficulty:
+                    type: string
+                  marketDemand:
+                    type: string
+            projectRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  technologies:
+                    type: array
+                    items:
+                      type: string
+                  estimatedImpact:
+                    type: number
+                  complexity:
+                    type: string
+            learningRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  topic:
+                    type: string
+                  resources:
+                    type: array
+                    items:
+                      type: string
+                  priority:
+                    type: number
+                  estimatedTime:
+                    type: string
+                  prerequisites:
+                    type: array
+                    items:
+                      type: string
+            communityRecommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  potentialImpact:
+                    type: number
+        industryBenchmarks:
+          type: object
+          properties:
+            overallPercentile:
+              type: number
+            categoryPercentiles:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                  percentile:
+                    type: number
+                  rank:
+                    type: string
+            industryComparisons:
+              type: array
+              items:
+                type: object
+                properties:
+                  industry:
+                    type: string
+                  position:
+                    type: string
+                  metrics:
+                    type: object
+                    properties:
+                      avgSkillLevel:
+                        type: number
+                      avgContributions:
+                        type: integer
+            marketPosition:
+              type: object
+              properties:
+                overallRank:
+                  type: string
+                strengths:
+                  type: array
+                  items:
+                    type: string
+                differentiators:
+                  type: array
+                  items:
+                    type: string
+                marketValue:
+                  type: string
+            competitiveAdvantages:
+              type: array
+              items:
+                type: string
+            industryTrends:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  trend:
+                    type: string
+                  adoptionRate:
+                    type: number
+                  futureOutlook:
+                    type: string
+        interfaceMetrics:
+          type: object
+          properties:
+            projects:
+              type: integer
+            commits:
+              type: integer
+            technologies:
+              type: integer
+            activeProjects:
+              type: integer
+            projectsAnalyzed:
+              type: integer
+            totalLinesOfCode:
+              type: integer
+            totalStars:
+              type: integer
+            totalForks:
+              type: integer
+            organizationBreakdown:
+              type: object
+              properties:
+                personal:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    percentage:
+                      type: number
+                organization:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    percentage:
+                      type: number
+                school:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    percentage:
+                      type: number
+            technologyLevels:
+              type: object
+              properties:
+                expert:
+                  type: integer
+                advanced:
+                  type: integer
+                operational:
+                  type: integer
+            averageScore:
+              type: number
+            topRepositories:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  category:
+                    type: string
+                  stars:
+                    type: integer
+                  forks:
+                    type: integer
+                  languages:
+                    type: array
+                    items:
+                      type: string
+                  lastUpdate:
+                    type: string
+                    format: date-time
+                  source:
+                    type: string
+        metadata:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            dataFreshness:
+              type: object
+              properties:
+                userProfile:
+                  type: string
+                  format: date-time
+                repositories:
+                  type: string
+                  format: date-time
+                overallFreshness:
+                  type: string
+                recommendedUpdate:
+                  type: boolean
+            analysisVersion:
+              type: string
+            computationTime:
+              type: integer
+            dataCompleteness:
+              type: number
+            confidenceScore:
+              type: number
+            dataSources:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  lastUpdated:
+                    type: string
+                    format: date-time
+                  completeness:
+                    type: number
+                  reliability:
+                    type: number
+            analysisParameters:
+              type: object
+              properties:
+                includePrimaryLanguagesOnly:
+                  type: boolean
+                minimumStarsThreshold:
+                  type: integer
+                timeRangeMonths:
+                  type: integer
+                includeForkedRepos:
+                  type: boolean
+                weightingStrategy:
+                  type: string
+              maximum: 100
+            averageStarsPerRepo:
+              type: number
+            projectDiversityScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            totalLinesOfCode:
+              type: integer
+            organizationBreakdown:
+              type: object
+              properties:
+                personal:
+                  type: integer
+                organization:
+                  type: integer
+                school:
+                  type: integer
+            technologyLevels:
+              type: object
+              properties:
+                expert:
+                  type: integer
+                advanced:
+                  type: integer
+                operational:
+                  type: integer
+            totalLanguages:
+              type: integer
+            primaryLanguages:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  proficiencyLevel:
+                    type: number
+                  totalBytes:
+                    type: integer
+                  repositoryCount:
+                    type: integer
+                  recentUsage:
+                    type: boolean
+                  trend:
+                    type: string
+                    enum: ["growing", "stable", "declining"]
+
+    # AI Analysis
+
+    AIAnalysisResultResponse:
+      type: object
+      properties:
+        analysis:
+          $ref: '#/components/schemas/AIAnalysisResult'
+        metadata:
+          type: object
+          properties:
+            dataSource:
+              type: string
+              example: "ai_analysis"
+            analysisAge:
+              type: number
+              description: Analysis age in hours
+            isStale:
+              type: boolean
+            accessLevel:
+              type: string
+              enum: ["public", "complete"]
+            lastAnalyzed:
+              type: string
+              format: date-time
+            model:
+              type: string
+            recommendation:
+              type: string
+        interfaceMetrics:
+          type: object
+          properties:
+            qualityAverage:
+              type: string
+              example: "87.5%"
+            vulnerabilities:
+              type: integer
+              nullable: true
+            bugsDetected:
+              type: integer
+              nullable: true
+            buildTime:
+              type: string
+              nullable: true
+              example: "120s"
+            testCoverage:
+              type: string
+              nullable: true
+              example: "78.5%"
+            healthScore:
+              type: string
+              example: "8.5"
+            organizationQualityScores:
+              type: object
+              properties:
+                personal:
+                  type: string
+                organization:
+                  type: string
+                school:
+                  type: string
+            topRepositoryScores:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  qualityScore:
+                    type: string
+                  recommendation:
+                    type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    AIAnalysisCreateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        status:
+          type: string
+        analysis:
+          $ref: '#/components/schemas/AIAnalysisResult'
+        performance:
+          type: object
+          properties:
+            processingTime:
+              type: string
+            model:
+              type: string
+            confidenceScore:
+              type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    AIAnalysisResult:
+      type: object
+      properties:
+        qualityScore:
+          type: number
+        maintenabilityScore:
+          type: number
+        securityScore:
+          type: number
+        innovationScore:
+          type: number
+        overallHealthScore:
+          type: number
+        estimatedVulnerabilities:
+          type: integer
+        estimatedBugs:
+          type: integer
+        estimatedBuildTime:
+          type: integer
+        estimatedTestCoverage:
+          type: number
+        qualityByOrganization:
+          type: object
+          properties:
+            personal:
+              type: number
+            organization:
+              type: number
+            school:
+              type: number
+        repositoryScores:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              qualityScore:
+                type: number
+              recommendation:
+                type: string
+              strengths:
+                type: array
+                items:
+                  type: string
+              improvementAreas:
+                type: array
+                items:
+                  type: string
+        insights:
+          type: object
+          properties:
+            summary:
+              type: string
+            strengths:
+              type: array
+              items:
+                type: string
+            weaknesses:
+              type: array
+              items:
+                type: string
+            recommendations:
+              type: array
+              items:
+                type: string
+            careerAdvice:
+              type: array
+              items:
+                type: string
+        metadata:
+          type: object
+          properties:
+            analysisDate:
+              type: string
+              format: date-time
+            model:
+              type: string
+            confidenceScore:
+              type: number
+            analysisVersion:
+              type: string
+
+    AIServiceStatusResponse:
+      type: object
+      properties:
+        service:
+          type: string
+          example: "AI Analysis Service"
+        status:
+          type: string
+          enum: ["available", "unavailable"]
+        configuration:
+          type: object
+          properties:
+            model:
+              type: string
+            maxTokens:
+              type: integer
+            temperature:
+              type: number
+        capabilities:
+          type: object
+          properties:
+            qualityAnalysis:
+              type: boolean
+            securityAnalysis:
+              type: boolean
+            performanceAnalysis:
+              type: boolean
+            repositoryScoring:
+              type: boolean
+            careerInsights:
+              type: boolean
+        limitations:
+          type: array
+          items:
+            type: string
+        fallbackMode:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            description:
+              type: string
+        timestamp:
+          type: string
+          format: date-time
+
+
+
+    RefreshStartedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Data refresh started"
+        success:
+          type: boolean
+          example: true
+        username:
+          type: string
+          example: "octocat"
+        refreshStatus:
+          type: string
+          enum: ["in_progress"]
+        metadata:
+          type: object
+          properties:
+            startedAt:
+              type: string
+              format: date-time
+            estimatedCompletion:
+              type: string
+              format: date-time
+            currentStep:
+              type: integer
+              minimum: 1
+            totalSteps:
+              type: integer
+              minimum: 1
+        timestamp:
+          type: string
+          format: date-time
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          enum:
+            - "VALIDATION_ERROR"
+            - "AUTHENTICATION_ERROR"
+            - "AUTHORIZATION_ERROR"
+            - "NOT_FOUND_ERROR"
+            - "EXTERNAL_SERVICE_ERROR"
+            - "RATE_LIMIT_ERROR"
+            - "INTERNAL_SERVER_ERROR"
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "The provided data does not match the expected format"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "githubToken"
+              message:
+                type: string
+                example: "Username is required"
+              code:
+                type: string
+                example: "too_small"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-27T10:18:08.760Z"
+        path:
+          type: string
+          example: "/api/auth/login"
+        method:
+          type: string
+          example: "POST"
+        stack:
+          type: string
+          description: Error stack trace (development only)
+
+    RepositoryDeletionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Repository deletion successful"
+        status:
+          type: string
+          enum: ["completed"]
+        summary:
+          type: object
+          properties:
+            username:
+              type: string
+            repositoriesCount:
+              type: integer
+              description: Number of repositories deleted
+              example: 123
+            dataFreshness:
+              type: string
+              enum: ["database"]
+              example: "database"
+        metadata:
+          type: object
+          properties:
+            collectedAt:
+              type: string
+              format: date-time
+              example: "2025-07-28T07:36:05.494Z"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-28T07:36:05.494Z"
+
+    RepositoryStatusResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Repository collection in progress"
+        collectionStatus:
+          type: string
+          enum: ["in_progress", "completed", "failed", "not_found"]
+          description: Current status of the collection process
+        progressPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress percentage (0-100)
+        startedAt:
+          type: string
+          format: date-time
+          description: When the collection started
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the collection completed (if finished)
+        estimatedCompletion:
+          type: string
+          format: date-time
+          nullable: true
+          description: Estimated completion time
+        currentStep:
+          type: integer
+          minimum: 1
+          description: Current step in the collection process
+        totalSteps:
+          type: integer
+          minimum: 1
+          description: Total number of steps in the collection process
+        error:
+          type: string
+          nullable: true
+          description: Error message if collection failed
+        timestamp:
+          type: string
+          format: date-time
+
+    AIAnalysisDeletionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "AI analysis deleted successfully"
+        status:
+          type: string
+          enum: ["completed"]
+          example: "completed"
+        summary:
+          type: object
+          properties:
+            username:
+              type: string
+              example: "octocat"
+            deletedCount:
+              type: integer
+              description: Number of AI analyses deleted
+              example: 3
+            dataFreshness:
+              type: string
+              enum: ["database"]
+              example: "database"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-28T07:36:05.494Z"
+
+    UserDeletionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "User and associated data deleted successfully"
+        status:
+          type: string
+          enum: ["completed"]
+          example: "completed"
+        summary:
+          type: object
+          properties:
+            username:
+              type: string
+              example: "octocat"
+            userDeleted:
+              type: boolean
+              description: Whether the user was successfully deleted
+              example: true
+            repositoriesDeleted:
+              type: integer
+              description: Number of repositories deleted
+              example: 5
+            aiAnalysesDeleted:
+              type: integer
+              description: Number of AI analyses deleted
+              example: 2
+            dataFreshness:
+              type: string
+              enum: ["database"]
+              example: "database"
+        metadata:
+          type: object
+          properties:
+            deletedAt:
+              type: string
+              format: date-time
+              description: When the deletion occurred
+              example: "2025-07-28T07:36:05.494Z"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-07-28T07:36:05.494Z"
+
+    RefreshStatusResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Refresh in progress"
+        status:
+          type: string
+          enum: ["in_progress", "completed", "failed"]
+        progressPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Progress percentage (0-100)
+        startedAt:
+          type: string
+          format: date-time
+          description: When the refresh started
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the refresh completed (if finished)
+        estimatedCompletion:
+          type: string
+          format: date-time
+          nullable: true
+          description: Estimated completion time
+        currentStep:
+          type: integer
+          minimum: 1
+          description: Current step in the refresh process
+        totalSteps:
+          type: integer
+          minimum: 1
+          description: Total number of steps in the refresh process
+        error:
+          type: string
+          nullable: true
+          description: Error message if refresh failed
+        timestamp:
+          type: string
+          format: date-time
+
+tags:
+  - name: System
+    description: Health and connectivity endpoints
+  - name: Authentication
+    description: GitHub token authentication (used by scheduling service)
+  - name: Users
+    description: User profile management
+  - name: Repositories
+    description: Repository data and analytics
+  - name: Analytics
+    description: Comprehensive developer analytics
+  - name: AI Analysis
+    description: AI-powered code analysis
+  - name: Refresh
+    description: Complete data refresh operations (used by scheduling service)
+
+externalDocs:
+  description: API Documentation
+  url: https://docs.gh-insight-engine.com

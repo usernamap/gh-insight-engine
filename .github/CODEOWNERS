@@ -1,0 +1,56 @@
+# Global owners
+* @usernamap
+
+# API and Documentation
+/openapi.yaml @usernamap
+/docs/ @usernamap
+/src/routes/ @usernamap
+/src/controllers/ @usernamap
+
+# Database and Models
+/prisma/ @usernamap
+/src/models/ @usernamap
+
+# Services and Business Logic
+/src/services/ @usernamap
+
+# Configuration and Setup
+/src/config/ @usernamap
+/src/constants/ @usernamap
+/src/types/ @usernamap
+
+# Middleware and Utilities
+/src/middleware/ @usernamap
+/src/utils/ @usernamap
+
+# Testing
+/tests/ @usernamap
+*.test.ts @usernamap
+*.spec.ts @usernamap
+
+# CI/CD and Build
+.github/workflows/ @usernamap
+.github/ISSUE_TEMPLATE/ @usernamap
+.github/PULL_REQUEST_TEMPLATE.md @usernamap
+.github/CODEOWNERS @usernamap
+
+# Documentation
+README.md @usernamap
+CONTRIBUTING.md @usernamap
+CODE_OF_CONDUCT.md @usernamap
+SECURITY.md @usernamap
+CHANGELOG.md @usernamap
+
+# Scripts and Tools
+/scripts/ @usernamap
+.husky/ @usernamap
+eslint.config.js @usernamap
+tsconfig.json @usernamap
+.prettierrc @usernamap
+
+# Package Management
+package.json @usernamap
+package-lock.json @usernamap
+
+# MCP Integration
+/mcp/ @usernamap
