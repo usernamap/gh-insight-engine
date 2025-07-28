@@ -279,4 +279,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Built with ❤️ for the developer community**
 
+❤️ [Donation Link](https://lucas-blanchard.com/don) ❤️
+
 ## 🏆 Acknowledgements
