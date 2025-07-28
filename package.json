@@ -1,6 +1,6 @@
 {
   "name": "gh-insight-engine",
-  "version": "0.1.93",
+  "version": "0.1.94",
   "private": true,
   "type": "module",
   "scripts": {
@@ -29,6 +29,7 @@
     "openapi:lint:json": "spectral lint openapi.yaml --format json",
     "openapi:validate": "spectral lint openapi.yaml --format stylish --fail-severity error --fail-severity warn",
     "openapi:diff": "openapi-diff openapi.yaml openapi.yaml.backup",
+    "openapi:diff:breaking": "openapi-diff openapi.yaml openapi.yaml.backup",
     "openapi:backup": "cp openapi.yaml openapi.yaml.backup",
     "openapi:check": "npm run openapi:validate && npm run openapi:coverage && npm run openapi:diff:breaking",
     "openapi:coverage": "node scripts/validate-api-coverage.js",
