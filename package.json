@@ -1,11 +1,11 @@
 {
   "name": "gh-insight-engine",
-  "version": "0.1.96",
+  "version": "0.1.100",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "npm run openapi:validate && tsx watch src/server.ts",
-    "start": "node dist/server.js",
+    "start": "tsx dist/server.js",
     "build": "npm run clean && npm run openapi:validate && npm run typecheck && npx prisma generate && tsc --outDir dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts --max-warnings 0",
@@ -61,6 +61,7 @@
     "openapi-diff": "^0.23.7",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   },
   "dependencies": {
@@ -98,8 +99,6 @@
     "recast": "^0.23.11",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.20.3",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
     "zod": "^3.25.76"

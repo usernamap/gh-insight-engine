@@ -23,7 +23,7 @@
     "removeComments": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "baseUrl": "./src",
     "paths": {
       "@/*": [
