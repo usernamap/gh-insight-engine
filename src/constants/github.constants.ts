@@ -82,6 +82,31 @@ export const GITHUB_CONSTANTS = {
   WORKFLOW_RUNS_LIMIT: 100, // GitHub GraphQL max limit
   ORGANIZATIONS_PER_PAGE: 100,
 
+  // Infrastructure Error Handling - For HTTP errors like 502, 503, 504
+  INFRASTRUCTURE_ERROR_CODES: [500, 502, 503, 504] as const,
+  INFRASTRUCTURE_ERROR_PATTERNS: [
+    'bad gateway',
+    'service unavailable',
+    'gateway timeout',
+    'internal server error',
+    '502 bad gateway',
+    '503 service unavailable',
+    '504 gateway timeout',
+    '500 internal server error',
+  ] as const,
+
+  // Infrastructure Error Retry Configuration - Longer delays for infrastructure issues
+  INFRASTRUCTURE_ERROR_MAX_RETRIES: 5, // More retries for infrastructure issues  
+  INFRASTRUCTURE_ERROR_BASE_DELAY: 30000, // 30 seconds base delay (reduced for faster recovery)
+  INFRASTRUCTURE_ERROR_MAX_DELAY: 180000, // 3 minutes maximum delay
+  INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER: 1.8, // Moderate backoff for infrastructure
+  INFRASTRUCTURE_ERROR_JITTER_FACTOR: 0.2, // Add more jitter to avoid thundering herd
+
+  // Circuit Breaker Configuration
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: 3, // Failures before opening circuit
+  CIRCUIT_BREAKER_TIMEOUT: 300000, // 5 minutes timeout before half-open
+  CIRCUIT_BREAKER_SUCCESS_THRESHOLD: 2, // Successes needed to close circuit
+
   // Status Values
   SUCCESS_STATUS: 'success',
   FAILURE_STATUS: 'failure',

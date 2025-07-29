@@ -108,10 +108,10 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     defaultBranchRef: node.defaultBranchRef?.name ?? GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING,
     license: node.licenseInfo
       ? {
-          name: node.licenseInfo.name,
-          spdxId: node.licenseInfo.spdxId,
-          url: node.licenseInfo.url,
-        }
+        name: node.licenseInfo.name,
+        spdxId: node.licenseInfo.spdxId,
+        url: node.licenseInfo.url,
+      }
       : null,
     hasIssuesEnabled: node.hasIssuesEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
     hasProjectsEnabled: node.hasProjectsEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
@@ -129,70 +129,70 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     environments: node.environments ?? { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT },
     commits:
       node.commits?.target?.history?.totalCount !== undefined &&
-      typeof node.commits.target.history.totalCount === 'number'
+        typeof node.commits.target.history.totalCount === 'number'
         ? {
-            totalCount: node.commits.target.history.totalCount,
-            recent: Array.isArray(node.commits.target.history.nodes)
-              ? node.commits.target.history.nodes.map(commit => ({
-                  oid: commit.oid,
-                  message: commit.message,
-                  committedDate: new Date(commit.committedDate),
-                  author: {
-                    name: commit.author.name,
-                    email: commit.author.email,
-                    login: commit.author.user?.login ?? null,
-                  },
-                  additions: commit.additions,
-                  deletions: commit.deletions,
-                  changedFiles: commit.changedFiles,
-                }))
-              : [],
-          }
+          totalCount: node.commits.target.history.totalCount,
+          recent: Array.isArray(node.commits.target.history.nodes)
+            ? node.commits.target.history.nodes.map(commit => ({
+              oid: commit.oid,
+              message: commit.message,
+              committedDate: new Date(commit.committedDate),
+              author: {
+                name: commit.author.name,
+                email: commit.author.email,
+                login: commit.author.user?.login ?? null,
+              },
+              additions: commit.additions,
+              deletions: commit.deletions,
+              changedFiles: commit.changedFiles,
+            }))
+            : [],
+        }
         : { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, recent: [] },
 
     releases:
       typeof node.releases?.totalCount === 'number' && Array.isArray(node.releases?.nodes)
         ? {
-            totalCount: node.releases.totalCount,
-            latestRelease:
-              node.releases.nodes.length > GITHUB_CONSTANTS.DEFAULT_COUNT
-                ? {
-                    name: node.releases.nodes[0].name,
-                    tagName: node.releases.nodes[0].tagName,
-                    publishedAt: new Date(node.releases.nodes[0].publishedAt),
-                    isLatest: node.releases.nodes[0].isLatest,
-                  }
-                : null,
-          }
+          totalCount: node.releases.totalCount,
+          latestRelease:
+            node.releases.nodes.length > GITHUB_CONSTANTS.DEFAULT_COUNT
+              ? {
+                name: node.releases.nodes[0].name,
+                tagName: node.releases.nodes[0].tagName,
+                publishedAt: new Date(node.releases.nodes[0].publishedAt),
+                isLatest: node.releases.nodes[0].isLatest,
+              }
+              : null,
+        }
         : { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, latestRelease: null },
 
     issues:
       typeof node.issues?.totalCount === 'number'
         ? {
-            totalCount: node.issues.totalCount,
-            openCount: node.issues.openCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-            closedCount: node.issues.closedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-          }
+          totalCount: node.issues.totalCount,
+          openCount: node.issues.openCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+          closedCount: node.issues.closedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+        }
         : {
-            totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            openCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            closedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          },
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          openCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          closedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        },
 
     pullRequests:
       typeof node.pullRequests?.totalCount === 'number'
         ? {
-            totalCount: node.pullRequests.totalCount,
-            openCount: node.pullRequests.openCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-            closedCount: node.pullRequests.closedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-            mergedCount: node.pullRequests.mergedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-          }
+          totalCount: node.pullRequests.totalCount,
+          openCount: node.pullRequests.openCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+          closedCount: node.pullRequests.closedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+          mergedCount: node.pullRequests.mergedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+        }
         : {
-            totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            openCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            closedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            mergedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          },
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          openCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          closedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          mergedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        },
     branchProtectionRules: node.branchProtectionRules ?? {
       totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
     },
@@ -458,11 +458,25 @@ export class GitHubService {
 
       return repos;
     } catch (_error: unknown) {
+      const error = _error as Error;
+
+      // Check if this is an infrastructure error with fallback message
+      if (error.message.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
+        logger.warn('GitHub API infrastructure issues detected, returning empty repository list', {
+          error: error.message,
+          fallbackMode: true,
+        });
+
+        // Return empty array instead of throwing for degraded mode operation
+        return [];
+      }
+
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_USER_REPOSITORIES, {
-        error: (_error as Error).message,
+        error: error.message,
       });
+
       throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.REPOSITORY_RETRIEVAL_FAILED}${(_error as Error).message}`
+        `${GITHUB_SERVICE_ERROR_MESSAGES.REPOSITORY_RETRIEVAL_FAILED}${error.message}`
       );
     }
   }
@@ -588,12 +602,27 @@ export class GitHubService {
 
       return repos;
     } catch (_error: unknown) {
+      const error = _error as Error;
+
+      // Check if this is an infrastructure error with fallback message
+      if (error.message.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
+        logger.warn('GitHub API infrastructure issues detected, returning empty organization repository list', {
+          orgName,
+          error: error.message,
+          fallbackMode: true,
+        });
+
+        // Return empty array instead of throwing for degraded mode operation
+        return [];
+      }
+
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_ORG_REPOSITORIES, {
         orgName,
-        error: (_error as Error).message,
+        error: error.message,
       });
+
       throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.ORG_REPOSITORY_RETRIEVAL_FAILED}${(_error as Error).message}`
+        `${GITHUB_SERVICE_ERROR_MESSAGES.ORG_REPOSITORY_RETRIEVAL_FAILED}${error.message}`
       );
     }
   }
@@ -708,41 +737,41 @@ export class GitHubService {
           totalCount: dependabotAlerts.length ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           open: Array.isArray(dependabotAlerts)
             ? dependabotAlerts.filter(
-                (alert: GitHubRestDependabotAlert) => alert.state === GITHUB_CONSTANTS.OPEN_STATE
-              ).length
+              (alert: GitHubRestDependabotAlert) => alert.state === GITHUB_CONSTANTS.OPEN_STATE
+            ).length
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
           fixed: Array.isArray(dependabotAlerts)
             ? dependabotAlerts.filter(
-                (alert: GitHubRestDependabotAlert) => alert.state === GITHUB_CONSTANTS.FIXED_STATE
-              ).length
+              (alert: GitHubRestDependabotAlert) => alert.state === GITHUB_CONSTANTS.FIXED_STATE
+            ).length
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
           dismissed: Array.isArray(dependabotAlerts)
             ? dependabotAlerts.filter(
-                (alert: GitHubRestDependabotAlert) =>
-                  alert.state === GITHUB_CONSTANTS.DISMISSED_STATE
-              ).length
+              (alert: GitHubRestDependabotAlert) =>
+                alert.state === GITHUB_CONSTANTS.DISMISSED_STATE
+            ).length
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         secretScanning: {
           totalCount: secretAlerts.length ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           resolved: Array.isArray(secretAlerts)
             ? secretAlerts.filter(
-                (alert: GitHubRestCodeScanningAlert) =>
-                  alert.state === GITHUB_CONSTANTS.RESOLVED_STATE
-              ).length
+              (alert: GitHubRestCodeScanningAlert) =>
+                alert.state === GITHUB_CONSTANTS.RESOLVED_STATE
+            ).length
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         codeScanning: {
           totalCount: codeAlerts.length ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           open: Array.isArray(codeAlerts)
             ? codeAlerts.filter(
-                (alert: GitHubRestCodeScanningAlert) => alert.state === GITHUB_CONSTANTS.OPEN_STATE
-              ).length
+              (alert: GitHubRestCodeScanningAlert) => alert.state === GITHUB_CONSTANTS.OPEN_STATE
+            ).length
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
           fixed: Array.isArray(codeAlerts)
             ? codeAlerts.filter(
-                (alert: GitHubRestCodeScanningAlert) => alert.state === GITHUB_CONSTANTS.FIXED_STATE
-              ).length
+              (alert: GitHubRestCodeScanningAlert) => alert.state === GITHUB_CONSTANTS.FIXED_STATE
+            ).length
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         hasSecurityPolicy: GITHUB_CONSTANTS.DEFAULT_FALSE,
@@ -1071,7 +1100,7 @@ export class GitHubService {
             : undefined,
         branchProtection:
           branchProtection.status === 'fulfilled' &&
-          isValidGitHubBranchProtection(branchProtection.value)
+            isValidGitHubBranchProtection(branchProtection.value)
             ? branchProtection.value
             : undefined,
         community:
