@@ -4,6 +4,7 @@ import { logWithContext } from '@/utils/logger';
 import { AuthenticatedUser, GitHubRepo } from '@/types';
 import { UserModel, RepositoryModel } from '@/models';
 import { GitHubService } from '@/services';
+import { UserController } from '@/controllers';
 import {
   REPO_MESSAGES,
   REPO_LOG_MESSAGES,
@@ -92,6 +93,9 @@ export class RepoController {
         estimatedCompletion: new Date(Date.now() + 3 * 60 * 1000),
       });
 
+      // Get user data to obtain proper user ID
+      const { savedUser } = await UserController.collectUserDataInternal(githubToken);
+
       const { enrichedRepositories, organizations } = await this.collectRepositoriesInternal(
         githubToken,
         username
@@ -107,7 +111,7 @@ export class RepoController {
       });
 
       for (const repo of enrichedRepositories) {
-        await RepositoryModel.upsert(repo, username);
+        await RepositoryModel.upsert(repo, savedUser.id);
       }
 
       this.updateCollectionStatus(username, {
@@ -233,7 +237,8 @@ export class RepoController {
       }
 
       const repositoriesResult = await RepositoryModel.findByUserId(userData.id, {
-        limit: REPO_CONSTANTS.DEFAULT_LIMIT,
+        // No limit - return ALL repositories for this user
+        limit: undefined,
         includePrivate: true,
         sortBy: REPO_STATUS_VALUES.UPDATED,
         sortOrder: REPO_STATUS_VALUES.DESC,
@@ -323,8 +328,8 @@ export class RepoController {
       languageStats[lang].percentage =
         Math.round(
           (languageStats[lang].totalSize / totalSize) *
-            REPO_CONSTANTS.PERCENTAGE_MULTIPLIER *
-            REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
+          REPO_CONSTANTS.PERCENTAGE_MULTIPLIER *
+          REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
         ) / REPO_CONSTANTS.PERCENTAGE_MULTIPLIER;
     });
 
@@ -437,7 +442,7 @@ export class RepoController {
       averageCommunityHealth:
         Math.round(
           validRepositories.reduce((sum, r) => sum + (r.community?.healthPercentage ?? 0), 0) /
-            validRepositories.length
+          validRepositories.length
         ) || 0,
     };
 
@@ -449,17 +454,17 @@ export class RepoController {
       cicdAdoption:
         totalStats.totalRepositories > 0
           ? (totalStats.repositoriesWithActions / totalStats.totalRepositories) *
-            REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
+          REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
           : 0,
       securityMaturity:
         totalStats.totalRepositories > 0
           ? (totalStats.repositoriesWithSecurity / totalStats.totalRepositories) *
-            REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
+          REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
           : 0,
       branchProtectionRate:
         totalStats.totalRepositories > 0
           ? (totalStats.repositoriesWithProtection / totalStats.totalRepositories) *
-            REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
+          REPO_CONSTANTS.PERCENTAGE_MULTIPLIER
           : 0,
       averageCommunityHealth: totalStats.averageCommunityHealth,
     };
@@ -498,7 +503,8 @@ export class RepoController {
         }
 
         const repositoriesResult = await RepositoryModel.findByUserId(userData.id, {
-          limit: REPO_CONSTANTS.DEFAULT_LIMIT,
+          // No limit - get ALL repositories for deletion count
+          limit: undefined,
           includePrivate: true,
           sortBy: REPO_STATUS_VALUES.UPDATED,
           sortOrder: REPO_STATUS_VALUES.DESC,
