@@ -72,15 +72,15 @@ export const GITHUB_CONSTANTS = {
     'API rate limit exceeded for user',
   ] as const,
 
-  // Pagination Limits
-  ORGANIZATIONS_LIMIT: 50,
-  USER_REPOSITORIES_LIMIT: 20,
-  ORG_REPOSITORIES_LIMIT: 50,
-  LANGUAGES_LIMIT: 10,
-  TOPICS_LIMIT: 5,
-  COMMITS_LIMIT: 10,
-  WORKFLOW_RUNS_LIMIT: 20,
-  ORGANIZATIONS_PER_PAGE: 10,
+  // Pagination Limits - Increased for complete data collection
+  ORGANIZATIONS_LIMIT: 1000,
+  USER_REPOSITORIES_LIMIT: 1000, // Increased from 20 to 100 to get more repos per page
+  ORG_REPOSITORIES_LIMIT: 1000, // Increased from 50 to 100 to get more repos per page
+  LANGUAGES_LIMIT: 1000,
+  TOPICS_LIMIT: 5000,
+  COMMITS_LIMIT: 1000,
+  WORKFLOW_RUNS_LIMIT: 1000,
+  ORGANIZATIONS_PER_PAGE: 100,
 
   // Status Values
   SUCCESS_STATUS: 'success',
@@ -138,7 +138,7 @@ export const DEFAULT_USER_PROFILE = {
 
 // Repository Controller Constants
 export const REPO_CONSTANTS = {
-  DEFAULT_LIMIT: 200,
+  DEFAULT_LIMIT: Number.MAX_SAFE_INTEGER, // No pagination limit - return ALL repositories
   TOP_LANGUAGES_LIMIT: 10,
   TOP_LANGUAGES_DISPLAY: 5,
   TOP_TOPICS_LIMIT: 15,
