@@ -141,7 +141,7 @@ export class RepositoryModel {
 
     try {
       const {
-        limit = REPOSITORY_DEFAULTS.LIMIT,
+        limit, // No default limit - undefined means no limit
         offset = REPOSITORY_DEFAULTS.OFFSET,
         includePrivate = REPOSITORY_DEFAULTS.INCLUDE_PRIVATE,
         sortBy = REPOSITORY_DEFAULTS.SORT_BY,
@@ -175,7 +175,7 @@ export class RepositoryModel {
       const [repositories, total] = await Promise.all([
         prisma.repository.findMany({
           where,
-          take: limit,
+          ...(limit !== undefined && { take: limit }), // Only apply limit if defined
           skip: offset,
           orderBy,
         }),
@@ -379,7 +379,7 @@ export class RepositoryModel {
       const [repositories, total] = await Promise.all([
         prisma.repository.findMany({
           where,
-          take: filters.limit ?? REPOSITORY_DEFAULTS.LIMIT,
+          ...(filters.limit !== undefined && { take: filters.limit }), // Only apply limit if defined
           skip: filters.offset ?? REPOSITORY_DEFAULTS.OFFSET,
           orderBy: { stargazerCount: REPOSITORY_DEFAULTS.SORT_ORDER },
           include: {
