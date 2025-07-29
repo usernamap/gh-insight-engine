@@ -72,14 +72,14 @@ export const GITHUB_CONSTANTS = {
     'API rate limit exceeded for user',
   ] as const,
 
-  // Pagination Limits - Increased for complete data collection
-  ORGANIZATIONS_LIMIT: 1000,
-  USER_REPOSITORIES_LIMIT: 1000, // Increased from 20 to 100 to get more repos per page
-  ORG_REPOSITORIES_LIMIT: 1000, // Increased from 50 to 100 to get more repos per page
-  LANGUAGES_LIMIT: 1000,
-  TOPICS_LIMIT: 5000,
-  COMMITS_LIMIT: 1000,
-  WORKFLOW_RUNS_LIMIT: 1000,
+  // Pagination Limits - Respect GitHub GraphQL API limits
+  ORGANIZATIONS_LIMIT: 100, // GitHub GraphQL max limit
+  USER_REPOSITORIES_LIMIT: 100, // GitHub GraphQL max limit
+  ORG_REPOSITORIES_LIMIT: 100, // GitHub GraphQL max limit
+  LANGUAGES_LIMIT: 100, // GitHub GraphQL max limit
+  TOPICS_LIMIT: 100, // GitHub GraphQL max limit
+  COMMITS_LIMIT: 100, // GitHub GraphQL max limit
+  WORKFLOW_RUNS_LIMIT: 100, // GitHub GraphQL max limit
   ORGANIZATIONS_PER_PAGE: 100,
 
   // Status Values
