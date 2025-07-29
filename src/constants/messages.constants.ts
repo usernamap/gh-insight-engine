@@ -74,6 +74,13 @@ export const GITHUB_MESSAGES = {
   RATE_LIMIT_OPTIMIZED_WAIT: 'Rate limit reached, using optimized wait time',
   RATE_LIMIT_BACKOFF_APPLIED: 'Applying exponential backoff for retry',
 
+  // Infrastructure Error Messages
+  INFRASTRUCTURE_ERROR_DETECTED: 'GitHub infrastructure error detected',
+  INFRASTRUCTURE_ERROR_BACKOFF: 'Applying infrastructure error backoff',
+  INFRASTRUCTURE_ERROR_WAIT_PREFIX: 'GitHub infrastructure issue, waiting for ',
+  INFRASTRUCTURE_ERROR_FALLBACK: 'Falling back to degraded mode due to persistent infrastructure errors',
+  INFRASTRUCTURE_ERROR_RECOVERY: 'Attempting recovery from infrastructure error',
+
   // Cleanup Messages
   CONFIGURATION_CLEANED_UP: 'GitHub configuration cleaned up',
 

@@ -82,6 +82,26 @@ export const GITHUB_CONSTANTS = {
   WORKFLOW_RUNS_LIMIT: 100, // GitHub GraphQL max limit
   ORGANIZATIONS_PER_PAGE: 100,
 
+  // Infrastructure Error Handling - For HTTP errors like 502, 503, 504
+  INFRASTRUCTURE_ERROR_CODES: [500, 502, 503, 504] as const,
+  INFRASTRUCTURE_ERROR_PATTERNS: [
+    'bad gateway',
+    'service unavailable',
+    'gateway timeout',
+    'internal server error',
+    '502 bad gateway',
+    '503 service unavailable',
+    '504 gateway timeout',
+    '500 internal server error',
+  ] as const,
+
+  // Infrastructure Error Retry Configuration - Longer delays for infrastructure issues
+  INFRASTRUCTURE_ERROR_MAX_RETRIES: 3, // Fewer retries for infrastructure issues
+  INFRASTRUCTURE_ERROR_BASE_DELAY: 60000, // 1 minute base delay
+  INFRASTRUCTURE_ERROR_MAX_DELAY: 300000, // 5 minutes maximum delay
+  INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER: 2.0, // Aggressive backoff for infrastructure
+  INFRASTRUCTURE_ERROR_JITTER_FACTOR: 0.1, // Add jitter to avoid thundering herd
+
   // Status Values
   SUCCESS_STATUS: 'success',
   FAILURE_STATUS: 'failure',

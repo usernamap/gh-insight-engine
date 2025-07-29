@@ -227,6 +227,19 @@ export class GitHubConfig {
           continue;
         }
 
+        if (this.isInfrastructureError(_error) && attempt < GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES) {
+          const waitTime = this.calculateInfrastructureWaitTime(attempt);
+          logger.warn(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_WAIT_PREFIX}${waitTime}ms`, {
+            attempt: attempt + 1,
+            maxRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
+            originalError: (_error as Error).message,
+            errorType: 'infrastructure',
+          });
+
+          await this.wait(waitTime);
+          continue;
+        }
+
         if (attempt === maxRetries) {
           logger.error(GITHUB_MESSAGES.GRAPHQL_FAILED_ATTEMPTS, {
             error: (_error as Error).message,
@@ -237,7 +250,7 @@ export class GitHubConfig {
 
         const backoffTime = Math.min(
           GITHUB_CONSTANTS.RATE_LIMIT_MIN_BACKOFF *
-            Math.pow(GITHUB_CONSTANTS.RATE_LIMIT_BACKOFF_MULTIPLIER, attempt),
+          Math.pow(GITHUB_CONSTANTS.RATE_LIMIT_BACKOFF_MULTIPLIER, attempt),
           GITHUB_CONSTANTS.RATE_LIMIT_MAX_BACKOFF
         );
         logger.warn(`${GITHUB_MESSAGES.RATE_LIMIT_BACKOFF_APPLIED}: ${backoffTime}ms`, {
@@ -289,6 +302,20 @@ export class GitHubConfig {
           continue;
         }
 
+        if (this.isInfrastructureError(_error) && attempt < GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES) {
+          const waitTime = this.calculateInfrastructureWaitTime(attempt);
+          logger.warn(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_WAIT_PREFIX}${waitTime}ms`, {
+            endpoint,
+            attempt: attempt + 1,
+            maxRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
+            originalError: (_error as Error).message,
+            errorType: 'infrastructure',
+          });
+
+          await this.wait(waitTime);
+          continue;
+        }
+
         if (attempt === maxRetries) {
           logger.error(GITHUB_MESSAGES.REST_FAILED_ATTEMPTS, {
             endpoint,
@@ -300,7 +327,7 @@ export class GitHubConfig {
 
         const backoffTime = Math.min(
           GITHUB_CONSTANTS.RATE_LIMIT_MIN_BACKOFF *
-            Math.pow(GITHUB_CONSTANTS.RATE_LIMIT_BACKOFF_MULTIPLIER, attempt),
+          Math.pow(GITHUB_CONSTANTS.RATE_LIMIT_BACKOFF_MULTIPLIER, attempt),
           GITHUB_CONSTANTS.RATE_LIMIT_MAX_BACKOFF
         );
         logger.warn(`${GITHUB_MESSAGES.RATE_LIMIT_BACKOFF_APPLIED}: ${backoffTime}ms`, {
@@ -349,6 +376,21 @@ export class GitHubConfig {
     );
   }
 
+  private isInfrastructureError(_error: unknown): boolean {
+    const errorMessage = (_error as Error).message?.toLowerCase() ?? '';
+    const status = (_error as { status?: number }).status;
+
+    // Check for infrastructure error HTTP status codes
+    if (status != null && GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_CODES.includes(status as 500 | 502 | 503 | 504)) {
+      return true;
+    }
+
+    // Check for infrastructure error patterns in the error message
+    return GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_PATTERNS.some(pattern =>
+      errorMessage.includes(pattern.toLowerCase())
+    );
+  }
+
   private calculateWaitTime(_error: unknown): number {
     const headers = (_error as { response?: { headers?: Record<string, string> } }).response
       ?.headers;
@@ -356,7 +398,7 @@ export class GitHubConfig {
       const resetTime =
         parseInt(
           headers[GITHUB_CONSTANTS.RATE_LIMIT_RESET_HEADER] ??
-            GITHUB_CONSTANTS.RATE_LIMIT_RESET_DEFAULT
+          GITHUB_CONSTANTS.RATE_LIMIT_RESET_DEFAULT
         ) * 1000;
       const currentTime = Date.now();
       const waitTime = Math.max(resetTime - currentTime, 0);
@@ -365,6 +407,19 @@ export class GitHubConfig {
     }
 
     return GITHUB_CONSTANTS.RATE_LIMIT_WAIT_TIME_DEFAULT;
+  }
+
+  private calculateInfrastructureWaitTime(attempt: number): number {
+    // Calculate exponential backoff with jitter for infrastructure errors
+    const baseDelay = GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_BASE_DELAY;
+    const exponentialDelay = baseDelay * Math.pow(GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER, attempt);
+
+    // Add jitter to prevent thundering herd effect
+    const jitter = exponentialDelay * GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_JITTER_FACTOR * Math.random();
+    const delayWithJitter = exponentialDelay + jitter;
+
+    // Cap at maximum delay
+    return Math.min(delayWithJitter, GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_DELAY);
   }
 
   private wait(ms: number): Promise<void> {
