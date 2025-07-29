@@ -81,6 +81,17 @@ export const GITHUB_MESSAGES = {
   INFRASTRUCTURE_ERROR_FALLBACK: 'Falling back to degraded mode due to persistent infrastructure errors',
   INFRASTRUCTURE_ERROR_RECOVERY: 'Attempting recovery from infrastructure error',
 
+  // Circuit Breaker Messages
+  CIRCUIT_BREAKER_OPENED: 'Circuit breaker opened due to repeated GitHub API failures',
+  CIRCUIT_BREAKER_HALF_OPEN: 'Circuit breaker half-open, testing GitHub API recovery',
+  CIRCUIT_BREAKER_CLOSED: 'Circuit breaker closed, GitHub API recovered',
+  CIRCUIT_BREAKER_BLOCKED: 'Request blocked by circuit breaker, GitHub API unavailable',
+
+  // Degraded Mode Messages
+  DEGRADED_MODE_ENABLED: 'Degraded mode enabled due to GitHub API instability',
+  DEGRADED_MODE_OPERATION: 'Operating in degraded mode with limited functionality',
+  DEGRADED_MODE_RECOVERY_ATTEMPT: 'Attempting to exit degraded mode',
+
   // Cleanup Messages
   CONFIGURATION_CLEANED_UP: 'GitHub configuration cleaned up',
 
@@ -295,6 +306,9 @@ export const REPO_LOG_MESSAGES = {
   UPDATE_COLLECTION_STATUS: 'update_collection_status',
   UPDATE_COLLECTION_STATUS_SUCCESS: 'update_collection_status_success',
   UPDATE_COLLECTION_STATUS_ERROR: 'update_collection_status_error',
+  // Degraded mode log messages
+  DEGRADED_MODE_OPERATION: 'degraded_mode_operation',
+  DEGRADED_MODE_ENABLED: 'degraded_mode_enabled',
 } as const;
 
 // Repository Controller Response Fields

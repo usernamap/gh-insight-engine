@@ -96,11 +96,16 @@ export const GITHUB_CONSTANTS = {
   ] as const,
 
   // Infrastructure Error Retry Configuration - Longer delays for infrastructure issues
-  INFRASTRUCTURE_ERROR_MAX_RETRIES: 3, // Fewer retries for infrastructure issues
-  INFRASTRUCTURE_ERROR_BASE_DELAY: 60000, // 1 minute base delay
-  INFRASTRUCTURE_ERROR_MAX_DELAY: 300000, // 5 minutes maximum delay
-  INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER: 2.0, // Aggressive backoff for infrastructure
-  INFRASTRUCTURE_ERROR_JITTER_FACTOR: 0.1, // Add jitter to avoid thundering herd
+  INFRASTRUCTURE_ERROR_MAX_RETRIES: 5, // More retries for infrastructure issues  
+  INFRASTRUCTURE_ERROR_BASE_DELAY: 30000, // 30 seconds base delay (reduced for faster recovery)
+  INFRASTRUCTURE_ERROR_MAX_DELAY: 180000, // 3 minutes maximum delay
+  INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER: 1.8, // Moderate backoff for infrastructure
+  INFRASTRUCTURE_ERROR_JITTER_FACTOR: 0.2, // Add more jitter to avoid thundering herd
+
+  // Circuit Breaker Configuration
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: 3, // Failures before opening circuit
+  CIRCUIT_BREAKER_TIMEOUT: 300000, // 5 minutes timeout before half-open
+  CIRCUIT_BREAKER_SUCCESS_THRESHOLD: 2, // Successes needed to close circuit
 
   // Status Values
   SUCCESS_STATUS: 'success',

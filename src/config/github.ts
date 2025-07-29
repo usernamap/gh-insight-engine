@@ -4,10 +4,33 @@ import { GitHubTokenValidationResult, RateLimitInfo } from '@/types';
 import logger from '@/utils/logger';
 import { GITHUB_CONSTANTS, GITHUB_MESSAGES, ERROR_CONSTANTS } from '@/constants';
 
+// Circuit Breaker State
+export const enum CircuitBreakerState {
+  // eslint-disable-next-line no-unused-vars
+  CLOSED = 'CLOSED',
+  // eslint-disable-next-line no-unused-vars  
+  OPEN = 'OPEN',
+  // eslint-disable-next-line no-unused-vars
+  HALF_OPEN = 'HALF_OPEN'
+}
+
+interface CircuitBreakerData {
+  state: CircuitBreakerState;
+  failureCount: number;
+  lastFailureTime: number;
+  successCount: number;
+}
+
 export class GitHubConfig {
   private octokit: Octokit | null = null;
   private token: string | null = null;
   private rateLimitInfo: RateLimitInfo | null = null;
+  private circuitBreaker: CircuitBreakerData = {
+    state: CircuitBreakerState.CLOSED,
+    failureCount: 0,
+    lastFailureTime: 0,
+    successCount: 0
+  };
 
   public async initialize(githubToken: string): Promise<void> {
     this.token = githubToken;
@@ -199,13 +222,24 @@ export class GitHubConfig {
       throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
     }
 
+    // Check circuit breaker
+    if (!this.checkCircuitBreaker()) {
+      logger.warn(GITHUB_MESSAGES.CIRCUIT_BREAKER_BLOCKED);
+      throw this.createFallbackError(new Error(GITHUB_MESSAGES.CIRCUIT_BREAKER_BLOCKED));
+    }
+
     let lastError: Error | undefined;
+    let infrastructureErrorCount = 0;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         await this.checkRateLimit();
 
         const response = await this.octokit.graphql<T>(query, variables);
+
+        // Record success for circuit breaker
+        this.recordSuccess();
+
         return response;
       } catch (_error: unknown) {
         logger.error(GITHUB_MESSAGES.DEBUG_GRAPHQL_ERROR, {
@@ -227,23 +261,38 @@ export class GitHubConfig {
           continue;
         }
 
-        if (this.isInfrastructureError(_error) && attempt < GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES) {
-          const waitTime = this.calculateInfrastructureWaitTime(attempt);
-          logger.warn(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_WAIT_PREFIX}${waitTime}ms`, {
-            attempt: attempt + 1,
-            maxRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
-            originalError: (_error as Error).message,
-            errorType: 'infrastructure',
-          });
+        if (this.isInfrastructureError(_error)) {
+          infrastructureErrorCount++;
 
-          await this.wait(waitTime);
-          continue;
+          if (infrastructureErrorCount <= GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES) {
+            const waitTime = this.calculateInfrastructureWaitTime(infrastructureErrorCount - 1);
+            logger.warn(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_WAIT_PREFIX}${waitTime}ms`, {
+              attempt: infrastructureErrorCount,
+              maxRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
+              originalError: (_error as Error).message,
+              errorType: 'infrastructure',
+            });
+
+            await this.wait(waitTime);
+            continue;
+          } else {
+            // Record failure for circuit breaker after exhausting infrastructure retries
+            this.recordFailure();
+            logger.error(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK, {
+              infrastructureAttempts: infrastructureErrorCount,
+              maxInfrastructureRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
+            });
+          }
         }
 
         if (attempt === maxRetries) {
+          // Record failure for circuit breaker
+          this.recordFailure();
+
           logger.error(GITHUB_MESSAGES.GRAPHQL_FAILED_ATTEMPTS, {
             error: (_error as Error).message,
             attempts: maxRetries + 1,
+            infrastructureAttempts: infrastructureErrorCount,
           });
           break;
         }
@@ -261,7 +310,7 @@ export class GitHubConfig {
       }
     }
 
-    throw lastError ?? new Error(GITHUB_MESSAGES.GRAPHQL_QUERY_FAILED);
+    throw this.createFallbackError(lastError ?? new Error(GITHUB_MESSAGES.GRAPHQL_QUERY_FAILED));
   }
 
   public async executeRestRequest<T = Record<string, unknown>>(
@@ -273,13 +322,23 @@ export class GitHubConfig {
       throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
     }
 
+    // Check circuit breaker
+    if (!this.checkCircuitBreaker()) {
+      logger.warn(GITHUB_MESSAGES.CIRCUIT_BREAKER_BLOCKED);
+      throw this.createFallbackError(new Error(GITHUB_MESSAGES.CIRCUIT_BREAKER_BLOCKED));
+    }
+
     let lastError: Error | undefined;
+    let infrastructureErrorCount = 0;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         await this.checkRateLimit();
 
         const response = await this.octokit.request(endpoint, options as Record<string, unknown>);
+
+        // Record success for circuit breaker
+        this.recordSuccess();
 
         logger.debug(GITHUB_MESSAGES.REST_REQUEST_SUCCESS, {
           endpoint,
@@ -302,25 +361,41 @@ export class GitHubConfig {
           continue;
         }
 
-        if (this.isInfrastructureError(_error) && attempt < GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES) {
-          const waitTime = this.calculateInfrastructureWaitTime(attempt);
-          logger.warn(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_WAIT_PREFIX}${waitTime}ms`, {
-            endpoint,
-            attempt: attempt + 1,
-            maxRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
-            originalError: (_error as Error).message,
-            errorType: 'infrastructure',
-          });
+        if (this.isInfrastructureError(_error)) {
+          infrastructureErrorCount++;
 
-          await this.wait(waitTime);
-          continue;
+          if (infrastructureErrorCount <= GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES) {
+            const waitTime = this.calculateInfrastructureWaitTime(infrastructureErrorCount - 1);
+            logger.warn(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_WAIT_PREFIX}${waitTime}ms`, {
+              endpoint,
+              attempt: infrastructureErrorCount,
+              maxRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
+              originalError: (_error as Error).message,
+              errorType: 'infrastructure',
+            });
+
+            await this.wait(waitTime);
+            continue;
+          } else {
+            // Record failure for circuit breaker after exhausting infrastructure retries
+            this.recordFailure();
+            logger.error(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK, {
+              endpoint,
+              infrastructureAttempts: infrastructureErrorCount,
+              maxInfrastructureRetries: GITHUB_CONSTANTS.INFRASTRUCTURE_ERROR_MAX_RETRIES,
+            });
+          }
         }
 
         if (attempt === maxRetries) {
+          // Record failure for circuit breaker
+          this.recordFailure();
+
           logger.error(GITHUB_MESSAGES.REST_FAILED_ATTEMPTS, {
             endpoint,
             error: (_error as Error).message,
             attempts: maxRetries + 1,
+            infrastructureAttempts: infrastructureErrorCount,
           });
           break;
         }
@@ -338,7 +413,7 @@ export class GitHubConfig {
       }
     }
 
-    throw lastError ?? new Error(GITHUB_MESSAGES.REST_REQUEST_FAILED);
+    throw this.createFallbackError(lastError ?? new Error(GITHUB_MESSAGES.REST_REQUEST_FAILED));
   }
 
   private async checkRateLimit(): Promise<void> {
@@ -424,6 +499,60 @@ export class GitHubConfig {
 
   private wait(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private checkCircuitBreaker(): boolean {
+    const now = Date.now();
+
+    switch (this.circuitBreaker.state) {
+      case CircuitBreakerState.CLOSED:
+        return true;
+
+      case CircuitBreakerState.OPEN:
+        if (now - this.circuitBreaker.lastFailureTime > GITHUB_CONSTANTS.CIRCUIT_BREAKER_TIMEOUT) {
+          this.circuitBreaker.state = CircuitBreakerState.HALF_OPEN;
+          this.circuitBreaker.successCount = 0;
+          logger.info(GITHUB_MESSAGES.CIRCUIT_BREAKER_HALF_OPEN);
+          return true;
+        }
+        return false;
+
+      case CircuitBreakerState.HALF_OPEN:
+        return true;
+
+      default:
+        return true;
+    }
+  }
+
+  private recordSuccess(): void {
+    if (this.circuitBreaker.state === CircuitBreakerState.HALF_OPEN) {
+      this.circuitBreaker.successCount++;
+      if (this.circuitBreaker.successCount >= GITHUB_CONSTANTS.CIRCUIT_BREAKER_SUCCESS_THRESHOLD) {
+        this.circuitBreaker.state = CircuitBreakerState.CLOSED;
+        this.circuitBreaker.failureCount = 0;
+        logger.info(GITHUB_MESSAGES.CIRCUIT_BREAKER_CLOSED);
+      }
+    } else if (this.circuitBreaker.state === CircuitBreakerState.CLOSED) {
+      this.circuitBreaker.failureCount = 0;
+    }
+  }
+
+  private recordFailure(): void {
+    this.circuitBreaker.failureCount++;
+    this.circuitBreaker.lastFailureTime = Date.now();
+
+    if (this.circuitBreaker.failureCount >= GITHUB_CONSTANTS.CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+      this.circuitBreaker.state = CircuitBreakerState.OPEN;
+      logger.warn(GITHUB_MESSAGES.CIRCUIT_BREAKER_OPENED, {
+        failureCount: this.circuitBreaker.failureCount,
+        threshold: GITHUB_CONSTANTS.CIRCUIT_BREAKER_FAILURE_THRESHOLD
+      });
+    }
+  }
+
+  private createFallbackError(originalError: Error): Error {
+    return new Error(`${GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK}: ${originalError.message}`);
   }
 
   public getOctokit(): Octokit | null {

@@ -12,6 +12,7 @@ import {
   REPO_STATUS_VALUES,
   REPO_STATUS_CODES,
   REPO_CONSTANTS,
+  GITHUB_MESSAGES,
 } from '@/constants';
 
 const collectionStatusMap = new Map<
@@ -154,18 +155,83 @@ export class RepoController {
   static async collectRepositoriesInternal(
     githubToken: string,
     username: string
-  ): Promise<{ enrichedRepositories: GitHubRepo[]; organizations: string[] }> {
+  ): Promise<{ enrichedRepositories: GitHubRepo[]; organizations: string[]; degradedMode?: boolean }> {
     const githubService = await GitHubService.create(githubToken);
+    let degradedMode = false;
 
-    let allRepositories = await githubService.getUserRepos();
+    // Try to get user repositories with fallback to empty array
+    let allRepositories: GitHubRepo[] = [];
+    try {
+      allRepositories = await githubService.getUserRepos();
 
-    const organizations = await githubService.getUserOrganizations();
+      if (allRepositories.length === 0) {
+        logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_OPERATION, 'internal', true, {
+          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+          reason: 'Empty user repositories response',
+        });
+        degradedMode = true;
+      }
+    } catch (error: unknown) {
+      const errorMessage = String(error);
+
+      if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
+        logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
+          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+          reason: 'GitHub infrastructure issues',
+          error: errorMessage,
+        });
+        degradedMode = true;
+        allRepositories = []; // Continue with empty array
+      } else {
+        logWithContext.api(REPO_LOG_MESSAGES.GET_USER_REPOSITORIES_ERROR, 'internal', false, {
+          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+          [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
+        });
+        throw error; // Re-throw non-infrastructure errors
+      }
+    }
+
+    // Try to get organizations with fallback
+    let organizations: string[] = [];
+    try {
+      organizations = await githubService.getUserOrganizations();
+    } catch (error: unknown) {
+      const errorMessage = String(error);
+
+      if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
+        logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
+          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+          reason: 'Cannot fetch organizations due to infrastructure issues',
+          error: errorMessage,
+        });
+        degradedMode = true;
+        organizations = []; // Continue with empty array
+      } else {
+        logWithContext.api(REPO_LOG_MESSAGES.GET_ORG_REPOS_ERROR, 'internal', false, {
+          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+          [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
+        });
+        // Don't throw, just continue without organizations
+        organizations = [];
+        degradedMode = true;
+      }
+    }
 
     const userFullName = process.env.GITHUB_FULL_NAME ?? '';
 
+    // Process organization repositories with enhanced error handling
     for (const orgName of organizations) {
       try {
         const orgRepos = await githubService.getOrgRepos(orgName);
+
+        if (orgRepos.length === 0) {
+          logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_OPERATION, 'internal', true, {
+            [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
+            reason: 'Empty organization repositories response',
+          });
+          degradedMode = true;
+        }
+
         const userOrgRepos = orgRepos.filter(repo => {
           const isOwner = repo.owner.login === username;
 
@@ -195,28 +261,60 @@ export class RepoController {
         });
         allRepositories = [...allRepositories, ...userOrgRepos];
       } catch (error: unknown) {
-        logWithContext.api(REPO_LOG_MESSAGES.GET_ORG_REPOS_ERROR, 'internal', false, {
-          [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
-          [REPO_RESPONSE_FIELDS.ERROR]: String(error),
-        });
+        const errorMessage = String(error);
+
+        if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
+          logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
+            [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
+            reason: 'Infrastructure issues fetching organization repositories',
+            error: errorMessage,
+          });
+          degradedMode = true;
+        } else {
+          logWithContext.api(REPO_LOG_MESSAGES.GET_ORG_REPOS_ERROR, 'internal', false, {
+            [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
+            [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
+          });
+          degradedMode = true;
+        }
       }
     }
 
+    // Enrich repositories with enhanced error handling
     const enrichedRepositories = await Promise.all(
       allRepositories.map(async repo => {
         try {
           return await githubService.enrichWithDevOpsData(repo);
         } catch (error: unknown) {
-          logWithContext.api(REPO_LOG_MESSAGES.ENRICH_REPO_ERROR, 'internal', false, {
-            [REPO_RESPONSE_FIELDS.REPO]: repo.nameWithOwner,
-            [REPO_RESPONSE_FIELDS.ERROR]: String(error),
-          });
-          return repo;
+          const errorMessage = String(error);
+
+          if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
+            logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_OPERATION, 'internal', true, {
+              [REPO_RESPONSE_FIELDS.REPO]: repo.nameWithOwner,
+              reason: 'Cannot enrich repository due to infrastructure issues',
+            });
+            degradedMode = true;
+          } else {
+            logWithContext.api(REPO_LOG_MESSAGES.ENRICH_REPO_ERROR, 'internal', false, {
+              [REPO_RESPONSE_FIELDS.REPO]: repo.nameWithOwner,
+              [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
+            });
+          }
+          return repo; // Return non-enriched repo
         }
       })
     );
 
-    return { enrichedRepositories, organizations };
+    if (degradedMode) {
+      logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
+        [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+        repositoriesFound: enrichedRepositories.length,
+        organizationsChecked: organizations.length,
+        finalStatus: 'degraded_mode_completed',
+      });
+    }
+
+    return { enrichedRepositories, organizations, degradedMode };
   }
 
   static getUserRepositories = asyncHandler(async (req: Request, res: Response): Promise<void> => {
