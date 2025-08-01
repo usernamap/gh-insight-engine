@@ -233,13 +233,29 @@ export class GitHubService {
   public constructor(_token?: string) {
     this.githubConfig = new GitHubConfig();
     if (_token != null && _token !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING) {
-      void this.githubConfig.initialize(_token);
+      // Note: Constructor initialization is fire-and-forget for compatibility
+      // Use GitHubService.create() for proper error handling
+      void this.githubConfig.initialize(_token).catch((error) => {
+        logger.warn('GitHub initialization failed in constructor', {
+          error: error instanceof Error ? error.message : String(error),
+          token: _token != null ? `${_token.substring(0, 8)}***` : undefined,
+        });
+      });
     }
   }
 
   static async create(token: string): Promise<GitHubService> {
     const service = new GitHubService(token);
-    await service.githubConfig.initialize(token);
+    const initResult = await service.githubConfig.initialize(token);
+    
+    if (!initResult.success) {
+      if (initResult.isRateLimitError === true) {
+        throw new Error(`GitHub API rate limit exceeded: ${initResult.error ?? 'Please wait 10-30 minutes and try again.'}`);
+      } else {
+        throw new Error(`GitHub initialization failed: ${initResult.error ?? 'Unknown error'}`);
+      }
+    }
+    
     return service;
   }
 

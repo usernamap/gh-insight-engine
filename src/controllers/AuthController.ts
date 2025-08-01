@@ -133,7 +133,24 @@ export class AuthController {
     }
 
     try {
-      await githubConfig.initialize(githubToken);
+      const initResult = await githubConfig.initialize(githubToken);
+
+      // Handle initialization failures gracefully
+      if (!initResult.success) {
+        if (initResult.isRateLimitError === true) {
+          logWithContext.auth(AUTH_LOG_MESSAGES.GITHUB_TOKEN_INVALID, username, false, {
+            reason: 'rate_limit_during_initialization',
+            error: initResult.error,
+          });
+          throw createError.authorization(initResult.error ?? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.');
+        } else {
+          logWithContext.auth(AUTH_LOG_MESSAGES.GITHUB_TOKEN_INVALID, username, false, {
+            reason: 'initialization_failed',
+            error: initResult.error,
+          });
+          throw createError.authentication(initResult.error ?? 'GitHub configuration initialization failed');
+        }
+      }
 
       const githubService = await GitHubService.create(githubToken);
       const userProfile = await githubService.getUserProfile();

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { User as PrismaUser } from '@prisma/client';
 import { asyncHandler, createError } from '@/middleware';
 import { logWithContext } from '@/utils';
+import logger from '@/utils/logger';
 import { AuthenticatedUser } from '@/types';
 import { RepositoryModel } from '@/models';
 import { RepoController, UserController, AIController } from '@/controllers';
@@ -87,7 +88,37 @@ export class RefreshController {
       [REFRESH_RESPONSE_FIELDS.TIMESTAMP]: new Date().toISOString(),
     });
 
-    this.refreshUserDataBackground(authenticatedUser.githubToken, username);
+    // Start background refresh with comprehensive error handling
+    this.refreshUserDataBackground(authenticatedUser.githubToken, username).catch((error) => {
+      // This catch block ensures no unhandled rejections occur
+      logger.error('Critical error in background refresh process', {
+        username,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update status to failed with appropriate error message
+      const isRateLimitError = error instanceof Error &&
+        (error.name === 'GitHubRateLimitError' ||
+          error.message.includes('rate limit') ||
+          error.message.includes('API rate limit exceeded'));
+
+      const errorMessage = isRateLimitError
+        ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
+        : (error instanceof Error ? error.message : 'An unexpected error occurred during data refresh');
+
+      this.updateRefreshStatus(username, {
+        status: 'failed',
+        progressPercentage: 0,
+        startedAt: new Date(),
+        error: errorMessage,
+        completedAt: new Date(),
+        currentStep: 1,
+        totalSteps: 3,
+        steps: [],
+      });
+    });
   });
 
   private static updateRefreshStatus(
@@ -151,7 +182,7 @@ export class RefreshController {
       });
 
       // Check for rate limit errors in the status
-      const isRateLimitError = status.error != null && 
+      const isRateLimitError = status.error != null &&
         (status.error.includes('rate limit') || status.error.includes('API rate limit exceeded'));
 
       const responseData = {
@@ -173,7 +204,7 @@ export class RefreshController {
         [REFRESH_RESPONSE_FIELDS.TOTAL_STEPS]: status.totalSteps,
         ...(status.error != null && { [REFRESH_RESPONSE_FIELDS.ERROR]: status.error }),
         ...(status.steps != null && { [REFRESH_RESPONSE_FIELDS.STEPS]: status.steps }),
-        ...(isRateLimitError && { 
+        ...(isRateLimitError && {
           rateLimitError: true,
           waitTime: '10-30 minutes',
           documentation: 'This error occurs when GitHub API rate limits are exceeded. Wait 10-30 minutes before retrying.'
