@@ -150,8 +150,15 @@ export class RefreshController {
         [REFRESH_RESPONSE_FIELDS.REFRESH_STATUS]: status.status,
       });
 
-      res.status(REFRESH_STATUS_CODES.SUCCESS).json({
+      // Check for rate limit errors in the status
+      const isRateLimitError = status.error != null && 
+        (status.error.includes('rate limit') || status.error.includes('API rate limit exceeded'));
+
+      const responseData = {
         [REFRESH_RESPONSE_FIELDS.MESSAGE]: ((): string => {
+          if (isRateLimitError) {
+            return 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.';
+          }
           if (status.status === 'in_progress') return REFRESH_MESSAGES.STATUS_IN_PROGRESS;
           if (status.status === 'completed') return REFRESH_MESSAGES.STATUS_COMPLETED;
           if (status.status === 'failed') return REFRESH_MESSAGES.STATUS_FAILED;
@@ -166,8 +173,15 @@ export class RefreshController {
         [REFRESH_RESPONSE_FIELDS.TOTAL_STEPS]: status.totalSteps,
         ...(status.error != null && { [REFRESH_RESPONSE_FIELDS.ERROR]: status.error }),
         ...(status.steps != null && { [REFRESH_RESPONSE_FIELDS.STEPS]: status.steps }),
+        ...(isRateLimitError && { 
+          rateLimitError: true,
+          waitTime: '10-30 minutes',
+          documentation: 'This error occurs when GitHub API rate limits are exceeded. Wait 10-30 minutes before retrying.'
+        }),
         [REFRESH_RESPONSE_FIELDS.TIMESTAMP]: new Date().toISOString(),
-      });
+      };
+
+      res.status(REFRESH_STATUS_CODES.SUCCESS).json(responseData);
     } catch (error) {
       logWithContext.api('get_refresh_status_error', req.path, false, {
         [REFRESH_RESPONSE_FIELDS.TARGET_USERNAME]: username,
@@ -224,11 +238,22 @@ export class RefreshController {
       } catch (error: unknown) {
         const userStepDuration = Date.now() - userStepStart;
         const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // Check if this is a rate limit error
+        const isRateLimitError = error instanceof Error &&
+          (error.name === 'GitHubRateLimitError' ||
+            errorMessage.includes('rate limit') ||
+            errorMessage.includes('API rate limit exceeded'));
+
+        const stepError = isRateLimitError
+          ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
+          : errorMessage;
+
         steps.push({
           step: REFRESH_STEPS.USERS,
           success: false,
           duration: userStepDuration,
-          error: errorMessage,
+          error: stepError,
         });
         failedAt = REFRESH_STEPS.USERS;
         throw error;
@@ -274,11 +299,22 @@ export class RefreshController {
       } catch (error: unknown) {
         const repoStepDuration = Date.now() - repoStepStart;
         const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // Check if this is a rate limit error
+        const isRateLimitError = error instanceof Error &&
+          (error.name === 'GitHubRateLimitError' ||
+            errorMessage.includes('rate limit') ||
+            errorMessage.includes('API rate limit exceeded'));
+
+        const stepError = isRateLimitError
+          ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
+          : errorMessage;
+
         steps.push({
           step: REFRESH_STEPS.REPOSITORIES,
           success: false,
           duration: repoStepDuration,
-          error: errorMessage,
+          error: stepError,
         });
         failedAt = REFRESH_STEPS.REPOSITORIES;
         throw error;
@@ -305,11 +341,22 @@ export class RefreshController {
       } catch (error: unknown) {
         const aiStepDuration = Date.now() - aiStepStart;
         const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // Check if this is a rate limit error
+        const isRateLimitError = error instanceof Error &&
+          (error.name === 'GitHubRateLimitError' ||
+            errorMessage.includes('rate limit') ||
+            errorMessage.includes('API rate limit exceeded'));
+
+        const stepError = isRateLimitError
+          ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
+          : errorMessage;
+
         steps.push({
           step: REFRESH_STEPS.AI,
           success: false,
           duration: aiStepDuration,
-          error: errorMessage,
+          error: stepError,
         });
         failedAt = REFRESH_STEPS.AI;
         throw error;
@@ -336,11 +383,21 @@ export class RefreshController {
       const totalDuration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
 
+      // Check if this is a rate limit error for the overall status
+      const isRateLimitError = error instanceof Error &&
+        (error.name === 'GitHubRateLimitError' ||
+          errorMessage.includes('rate limit') ||
+          errorMessage.includes('API rate limit exceeded'));
+
+      const finalError = isRateLimitError
+        ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
+        : errorMessage;
+
       this.updateRefreshStatus(username, {
         status: 'failed',
         progressPercentage: 0,
         startedAt: new Date(),
-        error: errorMessage,
+        error: finalError,
         completedAt: new Date(),
         currentStep: 1,
         totalSteps: 3,
