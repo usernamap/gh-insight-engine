@@ -13,6 +13,7 @@ import {
   GitHubGraphQLOrganizationRepositoriesResponse,
   GraphQLResponse,
   UserProfile,
+  GitHubCommit,
 } from '@/types';
 
 import { GitHubConfig } from '@/config/github';
@@ -910,63 +911,107 @@ export class GitHubService {
         }
       }
 
-      // Enrich commits data via REST API
-      if (commitsResponse.status === 'fulfilled') {
-        const commitsData = commitsResponse.value as unknown;
-        if (Array.isArray(commitsData) && commitsData.length > 0) {
-          const commitsArray = commitsData as Array<Record<string, unknown>>;
+            // Enrich commits data - get ALL commits from the repository
+      try {
+        logger.info('Fetching ALL commits for repository', {
+          repo: repo.nameWithOwner,
+          method: 'graphql_pagination',
+        });
 
-                    // Use realistic commit count - don't fabricate numbers
-          let actualTotalCount = commitsArray.length;
-          
-          // If we got exactly the per_page limit (10), there might be more
-          // But we shouldn't guess wildly - just indicate it's at least this many
-          if (commitsArray.length === 10) {
-            // Check if there's a next page to see if there are more commits
-            try {
-              const nextPageResponse = await this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/commits`, { 
-                per_page: 1, 
-                page: 2 
-              });
-              if (Array.isArray(nextPageResponse) && nextPageResponse.length > 0) {
-                // There are more commits, but we don't know exactly how many
-                // Use a more conservative approach: indicate "10+" instead of fabricating a number
-                actualTotalCount = commitsArray.length; // Keep it real - just the ones we retrieved
-              }
-            } catch (checkError) {
-              // If we can't check, just use what we have
-              logger.debug('Could not verify if more commits exist', {
+        const allCommits = await this.getAllRepositoryCommits(owner, repoName, 'main');
+        
+        if (allCommits.length > 0) {
+          repo.commits = {
+            totalCount: allCommits.length,
+            recent: allCommits,
+          };
+
+          logger.info('Successfully enriched repository with all commits', {
+            repo: repo.nameWithOwner,
+            totalCommits: allCommits.length,
+            method: 'graphql_complete',
+          });
+        } else {
+          // Fallback to REST API if GraphQL fails
+          logger.warn('GraphQL commit retrieval returned no commits, trying REST API fallback', {
+            repo: repo.nameWithOwner,
+          });
+
+          if (commitsResponse.status === 'fulfilled') {
+            const commitsData = commitsResponse.value as unknown;
+            if (Array.isArray(commitsData) && commitsData.length > 0) {
+              const commitsArray = commitsData as Array<Record<string, unknown>>;
+
+              repo.commits = {
+                totalCount: commitsArray.length,
+                recent: commitsArray.map(commit => {
+                  const commitObj = commit.commit as Record<string, unknown> | undefined;
+                  const authorObj = commitObj?.author as Record<string, unknown> | undefined;
+                  const committerObj = commitObj?.committer as Record<string, unknown> | undefined;
+                  const githubAuthor = commit.author as Record<string, unknown> | undefined;
+                  const statsObj = commit.stats as Record<string, unknown> | undefined;
+                  const filesArray = commit.files as unknown[] | undefined;
+
+                  return {
+                    oid: String(commit.sha ?? ''),
+                    message: String(commitObj?.message ?? ''),
+                    committedDate: new Date(String(committerObj?.date ?? new Date())),
+                    author: {
+                      name: String(authorObj?.name ?? ''),
+                      email: String(authorObj?.email ?? ''),
+                      login: githubAuthor?.login != null ? String(githubAuthor.login) : null,
+                    },
+                    additions: Number(statsObj?.additions ?? 0),
+                    deletions: Number(statsObj?.deletions ?? 0),
+                    changedFiles: Array.isArray(filesArray) ? filesArray.length : 0,
+                  };
+                }),
+              };
+
+              logger.info('Used REST API fallback for commits', {
                 repo: repo.nameWithOwner,
-                error: (checkError as Error).message,
+                commitsRetrieved: commitsArray.length,
+                method: 'rest_fallback',
               });
             }
           }
+        }
+      } catch (commitError) {
+        logger.error('Failed to retrieve commits via GraphQL, trying REST fallback', {
+          repo: repo.nameWithOwner,
+          error: (commitError as Error).message,
+        });
 
-          repo.commits = {
-            totalCount: actualTotalCount,
-            recent: commitsArray.map(commit => {
-              const commitObj = commit.commit as Record<string, unknown> | undefined;
-              const authorObj = commitObj?.author as Record<string, unknown> | undefined;
-              const committerObj = commitObj?.committer as Record<string, unknown> | undefined;
-              const githubAuthor = commit.author as Record<string, unknown> | undefined;
-              const statsObj = commit.stats as Record<string, unknown> | undefined;
-              const filesArray = commit.files as unknown[] | undefined;
+        // Last resort: REST API fallback
+        if (commitsResponse.status === 'fulfilled') {
+          const commitsData = commitsResponse.value as unknown;
+          if (Array.isArray(commitsData) && commitsData.length > 0) {
+            const commitsArray = commitsData as Array<Record<string, unknown>>;
 
-              return {
-                oid: String(commit.sha ?? ''),
-                message: String(commitObj?.message ?? ''),
-                committedDate: new Date(String(committerObj?.date ?? new Date())),
-                author: {
-                  name: String(authorObj?.name ?? ''),
-                  email: String(authorObj?.email ?? ''),
-                  login: githubAuthor?.login != null ? String(githubAuthor.login) : null,
-                },
-                additions: Number(statsObj?.additions ?? 0),
-                deletions: Number(statsObj?.deletions ?? 0),
-                changedFiles: Array.isArray(filesArray) ? filesArray.length : 0,
-              };
-            }),
-          };
+            repo.commits = {
+              totalCount: commitsArray.length,
+              recent: commitsArray.slice(0, 10).map(commit => {
+                const commitObj = commit.commit as Record<string, unknown> | undefined;
+                const authorObj = commitObj?.author as Record<string, unknown> | undefined;
+                const committerObj = commitObj?.committer as Record<string, unknown> | undefined;
+                const githubAuthor = commit.author as Record<string, unknown> | undefined;
+
+                return {
+                  oid: String(commit.sha ?? ''),
+                  message: String(commitObj?.message ?? ''),
+                  committedDate: new Date(String(committerObj?.date ?? new Date())),
+                  author: {
+                    name: String(authorObj?.name ?? ''),
+                    email: String(authorObj?.email ?? ''),
+                    login: githubAuthor?.login != null ? String(githubAuthor.login) : null,
+                  },
+                  additions: 0, // REST API doesn't provide this in commit list
+                  deletions: 0, // REST API doesn't provide this in commit list
+                  changedFiles: 0, // REST API doesn't provide this in commit list
+                };
+              }),
+            };
+          }
         }
       }
 
@@ -1719,6 +1764,180 @@ export class GitHubService {
     });
 
     return enrichedRepo;
+  }
+
+  /**
+   * Retrieve ALL commits from a repository's default branch using GraphQL with pagination
+   * @param owner Repository owner
+   * @param repoName Repository name
+   * @param branchName Branch name (default: main)
+   * @returns Promise<GitHubCommit[]> - All commits from the branch
+   */
+  public async getAllRepositoryCommits(
+    owner: string, 
+    repoName: string, 
+    branchName = 'main'
+  ): Promise<GitHubCommit[]> {
+    const allCommits: GitHubCommit[] = [];
+    let cursor: string | null = null;
+    let hasNextPage = true;
+    const maxCommitsPerRequest = 100; // GitHub GraphQL max for commits
+    
+    try {
+      while (hasNextPage) {
+        const query = `
+          query($owner: String!, $name: String!, $cursor: String, $branchName: String!) {
+            repository(owner: $owner, name: $name) {
+              ref(qualifiedName: $branchName) {
+                target {
+                  ... on Commit {
+                    history(first: ${maxCommitsPerRequest}, after: $cursor) {
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                      totalCount
+                      nodes {
+                        oid
+                        message
+                        committedDate
+                        author {
+                          name
+                          email
+                          user { login }
+                        }
+                        additions
+                        deletions
+                        changedFiles
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `;
+
+                 const variables: Record<string, string> = {
+           owner,
+           name: repoName,
+           branchName: `refs/heads/${branchName}`,
+           ...(cursor != null && cursor !== '' ? { cursor } : {})
+         };
+
+         const response: unknown = await this.githubConfig.executeGraphQLQuery(query, variables);
+         
+         interface CommitHistoryResponse {
+           repository?: {
+             ref?: {
+               target?: {
+                 history?: {
+                   pageInfo?: { hasNextPage: boolean; endCursor: string };
+                   totalCount?: number;
+                   nodes?: Array<{
+                     oid: string;
+                     message: string;
+                     committedDate: string;
+                     author: {
+                       name: string;
+                       email: string;
+                       user?: { login: string };
+                     };
+                     additions: number;
+                     deletions: number;
+                     changedFiles: number;
+                   }>;
+                 };
+               };
+             };
+           };
+         }
+         
+         const historyData = (response as CommitHistoryResponse)?.repository?.ref?.target?.history;
+
+         if (historyData?.nodes == null || !Array.isArray(historyData.nodes)) {
+          logger.warn('No commit history found for repository', {
+            owner,
+            repoName,
+            branchName,
+          });
+          break;
+        }
+
+                 // Convert and add commits to collection
+         const commits = historyData.nodes.map((commit: {
+           oid: string;
+           message: string;
+           committedDate: string;
+           author: {
+             name: string;
+             email: string;
+             user?: { login: string };
+           };
+           additions: number;
+           deletions: number;
+           changedFiles: number;
+         }) => ({
+           oid: commit.oid,
+           message: commit.message,
+           committedDate: new Date(commit.committedDate),
+           author: {
+             name: commit.author.name,
+             email: commit.author.email,
+             login: commit.author.user?.login ?? null,
+           },
+           additions: commit.additions,
+           deletions: commit.deletions,
+           changedFiles: commit.changedFiles,
+         }));
+
+        allCommits.push(...commits);
+
+        // Update pagination info
+        hasNextPage = historyData.pageInfo?.hasNextPage ?? false;
+        cursor = historyData.pageInfo?.endCursor ?? null;
+
+        logger.debug('Fetched commits batch', {
+          owner,
+          repoName,
+          batchSize: commits.length,
+          totalSoFar: allCommits.length,
+          hasNextPage,
+        });
+
+        // Safety check to prevent infinite loops
+        if (allCommits.length > 50000) {
+          logger.warn('Commit retrieval stopped - repository has too many commits', {
+            owner,
+            repoName,
+            retrievedCount: allCommits.length,
+            maxAllowed: 50000,
+          });
+          break;
+        }
+      }
+
+      logger.info('Successfully retrieved all commits for repository', {
+        owner,
+        repoName,
+        totalCommits: allCommits.length,
+        branchName,
+      });
+
+      return allCommits;
+
+    } catch (error) {
+      logger.error('Failed to retrieve all commits for repository', {
+        owner,
+        repoName,
+        branchName,
+        error: (error as Error).message,
+        retrievedSoFar: allCommits.length,
+      });
+      
+      // Return what we've collected so far instead of throwing
+      return allCommits;
+    }
   }
 
   public sanitizeDescription(description: string): string {
