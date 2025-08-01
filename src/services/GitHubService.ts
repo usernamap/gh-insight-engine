@@ -288,7 +288,6 @@ export class GitHubService {
 
       const orgNames = organizations.map((org: { login: string }) => org.login);
 
-      // Handle pagination for organizations
       if (pageInfo?.hasNextPage === true) {
         const nextOrgs = await this.getUserOrganizations(pageInfo.endCursor);
         orgNames.push(...nextOrgs);
@@ -300,11 +299,9 @@ export class GitHubService {
         method: 'graphql_paginated',
       });
 
-      // REST API verification - ensure we get ALL organizations
       try {
         const restOrgs = await this.getUserOrganizationsRestFallback();
 
-        // Check if GraphQL missed any organizations
         const missedOrgs = restOrgs.filter(restOrg => !orgNames.includes(restOrg));
 
         if (missedOrgs.length > 0) {
@@ -315,11 +312,9 @@ export class GitHubService {
             fallbackToRest: true,
           });
 
-          // Return REST API results as they are more complete
           return restOrgs;
         }
 
-        // GraphQL results are complete
         return orgNames;
       } catch (restError) {
         logger.warn('REST API verification failed, using GraphQL results', {
@@ -337,7 +332,6 @@ export class GitHubService {
         attemptingRestFallback: true,
       });
 
-      // REST API fallback when GraphQL fails completely
       try {
         logger.info('GraphQL failed, using REST API fallback for organizations', {
           reason: 'GraphQL failed',
@@ -359,7 +353,6 @@ export class GitHubService {
           nonBlocking: true,
         });
 
-        // Return empty array as last resort - non-blocking error handling
         return [];
       }
     }
@@ -371,7 +364,7 @@ export class GitHubService {
   private async getUserOrganizationsRestFallback(): Promise<string[]> {
     try {
       const response = await this.githubConfig.executeRestRequest('GET /user/orgs', {
-        per_page: 100, // GitHub REST API max per page
+        per_page: 100,
       });
 
       const orgs = (response as unknown as Array<{ login: string }>) ?? [];
@@ -467,7 +460,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Instead of throwing, rethrow to let caller decide how to handle
       throw new Error(
         `${GITHUB_SERVICE_ERROR_MESSAGES.PROFILE_RETRIEVAL_FAILED}${(error as Error).message}`
       );
@@ -595,7 +587,6 @@ export class GitHubService {
       }
     `;
 
-    // Simple retry for recoverable errors (502, 503, 504)
     const maxRetries = 2;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -753,12 +744,12 @@ export class GitHubService {
             hasWikiEnabled: Boolean(repoData.has_wiki),
             hasPages: Boolean(repoData.has_pages),
             hasDownloads: Boolean(repoData.has_downloads),
-            hasDiscussions: false, // Not available in REST API
-            vulnerabilityAlertsEnabled: false, // Not available in REST API
-            securityPolicyEnabled: false, // Not available in REST API
-            codeOfConductEnabled: false, // Not available in REST API
-            contributingGuidelinesEnabled: false, // Not available in REST API
-            readmeEnabled: false, // Not available in REST API
+            hasDiscussions: false,
+            vulnerabilityAlertsEnabled: false,
+            securityPolicyEnabled: false,
+            codeOfConductEnabled: false,
+            contributingGuidelinesEnabled: false,
+            readmeEnabled: false,
             deployments: { totalCount: 0 },
             environments: { totalCount: 0 },
             commits: {
@@ -788,12 +779,11 @@ export class GitHubService {
               type: String(owner?.type ?? ''),
               avatarUrl: String(owner?.avatar_url ?? ''),
             },
-            recentPullRequests: [], // REST API doesn't provide PR details in repo list
+            recentPullRequests: [],
           };
         })
       );
 
-      // Enrich repositories with missing data when using REST fallback
       const enrichedRepos = await Promise.allSettled(
         convertedRepos.map(repo => this.enrichRepositoryData(repo))
       );
@@ -804,7 +794,6 @@ export class GitHubService {
 
       allRepos.push(...finalRepos);
 
-      // Check if there are more pages (GitHub REST API returns up to 100 per page)
       if (repos.length === 100) {
         return await this.getUserReposRestFallback(page + 1, allRepos);
       }
@@ -845,8 +834,7 @@ export class GitHubService {
   public async enrichRepositoryData(repo: GitHubRepo): Promise<GitHubRepo> {
     try {
       const [owner, repoName] = repo.nameWithOwner.split('/');
-      
-      // Get additional repository information
+
       const [repoDetails, issuesResponse, pullRequestsResponse, releasesResponse] = await Promise.allSettled([
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}`),
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/issues`, { state: 'all', per_page: 1 }),
@@ -854,14 +842,12 @@ export class GitHubService {
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/releases`, { per_page: 1 }),
       ]);
 
-      // Enrich with actual data if available
       if (repoDetails.status === 'fulfilled' && repoDetails.value != null) {
         const details = repoDetails.value as Record<string, unknown>;
         repo.hasPages = Boolean(details.has_pages);
         repo.hasDiscussions = Boolean(details.has_discussions);
       }
 
-      // Enrich issues data
       if (issuesResponse.status === 'fulfilled') {
         const issuesHeaders = issuesResponse.value as { headers?: { link?: string } };
         const linkHeader = issuesHeaders?.headers?.link;
@@ -873,7 +859,6 @@ export class GitHubService {
         }
       }
 
-      // Enrich pull requests data
       if (pullRequestsResponse.status === 'fulfilled') {
         const prHeaders = pullRequestsResponse.value as { headers?: { link?: string } };
         const linkHeader = prHeaders?.headers?.link;
@@ -885,7 +870,6 @@ export class GitHubService {
         }
       }
 
-      // Enrich releases data
       if (releasesResponse.status === 'fulfilled') {
         const releasesData = releasesResponse.value as unknown;
         if (Array.isArray(releasesData) && releasesData.length > 0) {
@@ -950,10 +934,9 @@ export class GitHubService {
       const languages: GitHubLanguage[] = Object.entries(languageData).map(([name, size]) => ({
         name,
         size,
-        percentage: Math.round((size / totalSize) * 100 * 100) / 100, // Round to 2 decimal places
+        percentage: Math.round((size / totalSize) * 100 * 100) / 100,
       }));
 
-      // Sort by size (descending)
       languages.sort((a, b) => b.size - a.size);
 
       logger.debug('Retrieved repository languages', {
@@ -976,7 +959,6 @@ export class GitHubService {
   }
 
   public async getOrgRepos(orgName: string, cursor?: string): Promise<GitHubRepo[]> {
-    // Enhanced GraphQL query with better context for organization repositories
     const query = `
       query($orgName: String!, $cursor: String) {
         organization(login: $orgName) {
@@ -1121,11 +1103,9 @@ export class GitHubService {
       const pageInfo = (response as GitHubGraphQLOrganizationRepositoriesResponse)?.organization
         ?.repositories?.pageInfo;
 
-      // Enhanced conversion with better context handling
       const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => {
         const convertedRepo = toGitHubRepo(node);
 
-        // Enhanced collaborators context (keeping existing structure)
         if (node.collaborators?.totalCount != null) {
           convertedRepo.collaborators = {
             totalCount: node.collaborators.totalCount,
@@ -1135,7 +1115,6 @@ export class GitHubService {
         return convertedRepo;
       });
 
-      // Recursive pagination with context preservation
       if (pageInfo?.hasNextPage === true) {
         const nextRepos = await this.getOrgRepos(orgName, pageInfo.endCursor);
         repos.push(...nextRepos);
@@ -1220,7 +1199,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Return default data instead of throwing - non-blocking error handling
       return {
         workflowsCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
         lastRunStatus: GITHUB_CONSTANTS.UNKNOWN_STATUS,
@@ -1314,7 +1292,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Return default data instead of throwing - non-blocking error handling
       return {
         dependabotAlerts: {
           totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
@@ -1371,7 +1348,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Return default data instead of throwing - non-blocking error handling
       return {
         totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
         types: []
@@ -1431,7 +1407,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Return default data instead of throwing - non-blocking error handling
       return { rules: [] };
     }
   }
@@ -1473,7 +1448,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Return default data instead of throwing - non-blocking error handling
       return {
         healthPercentage: GITHUB_CONSTANTS.DEFAULT_PERCENTAGE,
         hasReadme: GITHUB_CONSTANTS.DEFAULT_FALSE,
@@ -1544,7 +1518,6 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      // Return default data instead of throwing - non-blocking error handling
       return {
         views: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
         clones: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
@@ -1560,7 +1533,6 @@ export class GitHubService {
       nameWithOwner: repo.nameWithOwner,
     });
 
-    // Use Promise.allSettled to prevent any single failure from blocking all enrichment
     const [githubActions, security, packages, branchProtection, community, traffic] =
       await Promise.allSettled([
         this.getGitHubActionsData(owner, repoName),
@@ -1604,7 +1576,6 @@ export class GitHubService {
           : undefined,
     };
 
-    // Log any failed enrichments for debugging but don't block execution
     const failedEnrichments = [
       { name: 'githubActions', result: githubActions },
       { name: 'security', result: security },

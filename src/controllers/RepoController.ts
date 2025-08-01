@@ -93,7 +93,6 @@ export class RepoController {
         estimatedCompletion: new Date(Date.now() + 3 * 60 * 1000),
       });
 
-      // Get user data to obtain proper user ID - with non-blocking error handling
       let savedUser;
       try {
         const result = await UserController.collectUserDataInternal(githubToken);
@@ -106,7 +105,6 @@ export class RepoController {
           message: 'User data collection failed but repository collection continues',
         });
 
-        // Try to find existing user in database or create minimal user entry
         try {
           const existingUser = await UserModel.findByLogin(username);
           if (existingUser) {
@@ -117,7 +115,6 @@ export class RepoController {
               nonBlocking: true,
             });
           } else {
-            // Create minimal user entry to continue with repository collection
             const githubService = await GitHubService.create(githubToken);
             const basicProfile = await githubService.getUserProfile();
             savedUser = await UserModel.upsert(basicProfile);
@@ -137,7 +134,6 @@ export class RepoController {
             message: 'All user data collection attempts failed, aborting repository collection',
           });
 
-          // If we can't get any user data, we can't proceed with repository collection
           throw new Error(`Cannot proceed with repository collection: ${String(fallbackError)}`);
         }
       }
@@ -203,7 +199,6 @@ export class RepoController {
   ): Promise<{ enrichedRepositories: GitHubRepo[]; organizations: string[] }> {
     const githubService = await GitHubService.create(githubToken);
 
-    // STEP 1: Get user profile context first for detailed requests
     let userProfile: import('@/types').UserProfile | undefined;
     try {
       userProfile = await githubService.getUserProfile();
@@ -222,7 +217,6 @@ export class RepoController {
       });
     }
 
-    // STEP 2: Get ALL organizations with verification (GraphQL + REST fallback)
     const organizations = await githubService.getUserOrganizations();
 
     logWithContext.api('organizations_discovery_completed', 'internal', true, {
@@ -232,7 +226,6 @@ export class RepoController {
       source: 'verified_complete',
     });
 
-    // STEP 3: Get user repositories with context-aware requests
     const allRepositories = await githubService.getUserRepos();
 
     logWithContext.api('user_repositories_discovery_completed', 'internal', true, {
@@ -241,7 +234,6 @@ export class RepoController {
       source: allRepositories.length > 0 ? 'api_successful' : 'fallback_or_empty',
     });
 
-    // STEP 4: Process organization repositories with user context
     const userFullName = userProfile?.name ?? process.env.GITHUB_FULL_NAME ?? '';
     let totalOrgReposProcessed = 0;
     let totalOrgReposFiltered = 0;
@@ -257,12 +249,9 @@ export class RepoController {
       const orgRepos = await githubService.getOrgRepos(orgName);
       totalOrgReposProcessed += orgRepos.length;
 
-      // STRICT filtering with enhanced context from user profile
       const userOrgRepos = orgRepos.filter(repo => {
-        // 1. Check if user is the owner of the repository
         const isOwner = repo.owner.login === username;
 
-        // 2. Check if user has recent commits in this repository
         const hasCommits = repo.commits.recent.some(commit => {
           const commitAuthorLogin = commit.author.login;
           const commitAuthorName = commit.author.name;
@@ -274,12 +263,10 @@ export class RepoController {
           );
         });
 
-        // 3. Check if user has recent Pull Requests in this repository
         const hasPullRequests = repo.recentPullRequests.some(pr => {
           return pr.author.login === username;
         });
 
-        // 4. Check if repository name mentions the user (username/fullname in repository name)
         const repoName = repo.name.toLowerCase();
         const repoNameWithOwner = repo.nameWithOwner.toLowerCase();
         const usernameLower = username.toLowerCase();
@@ -294,8 +281,6 @@ export class RepoController {
           (profileNameLower !== '' && repoName.includes(profileNameLower)) ||
           (profileNameLower !== '' && repoNameWithOwner.includes(profileNameLower));
 
-        // STRICT: Only include if user has actually contributed or is mentioned
-        // Include repositories where user: owns, has commits, has PRs, or is mentioned in name
         const hasActualContribution = isOwner || hasCommits || hasPullRequests || hasMentionInName;
 
         return hasActualContribution;
@@ -319,7 +304,6 @@ export class RepoController {
       allRepositories.push(...userOrgRepos);
     }
 
-    // STEP 5: Log comprehensive discovery summary
     logWithContext.api('repository_discovery_summary', 'internal', true, {
       [REPO_RESPONSE_FIELDS.USERNAME]: username,
       userRepositories: allRepositories.length - totalOrgReposFiltered,
@@ -331,7 +315,6 @@ export class RepoController {
       discoveryComplete: true,
     });
 
-    // STEP 6: Enrich repositories with DevOps data using Promise.allSettled to prevent blocking
     const enrichmentResults = await Promise.allSettled(
       allRepositories.map(async repo => {
         try {
@@ -343,13 +326,11 @@ export class RepoController {
             nonBlocking: true,
           });
 
-          // Return non-enriched repo on error - continue processing
           return repo;
         }
       })
     );
 
-    // Extract successful results and log any failures
     const enrichedRepositories: GitHubRepo[] = [];
     let failedEnrichments = 0;
 
@@ -364,7 +345,6 @@ export class RepoController {
           nonBlocking: true,
         });
 
-        // Still include the non-enriched repository
         enrichedRepositories.push(allRepositories[index]);
       }
     });
@@ -407,7 +387,6 @@ export class RepoController {
       }
 
       const repositoriesResult = await RepositoryModel.findByUserId(userData.id, {
-        // No limit - return ALL repositories for this user
         limit: undefined,
         includePrivate: true,
         sortBy: REPO_STATUS_VALUES.UPDATED,
@@ -673,7 +652,6 @@ export class RepoController {
         }
 
         const repositoriesResult = await RepositoryModel.findByUserId(userData.id, {
-          // No limit - get ALL repositories for deletion count
           limit: undefined,
           includePrivate: true,
           sortBy: REPO_STATUS_VALUES.UPDATED,
