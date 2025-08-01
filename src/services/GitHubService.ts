@@ -95,10 +95,10 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
       nodes:
         node.languages?.edges?.map(edge => {
           const totalSize = node.languages?.totalSize ?? GITHUB_CONSTANTS.DEFAULT_COUNT;
-          const percentage = totalSize > 0 
+          const percentage = totalSize > 0
             ? Math.round((edge.size / totalSize) * 100 * 100) / 100 // Round to 2 decimal places
             : GITHUB_CONSTANTS.DEFAULT_PERCENTAGE;
-          
+
           return {
             name: edge.node.name,
             size: edge.size,
@@ -157,49 +157,42 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
         }
         : { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, recent: [] },
 
-    releases:
-      typeof node.releases?.totalCount === 'number' && Array.isArray(node.releases?.nodes)
-        ? {
-          totalCount: node.releases.totalCount,
-          latestRelease:
-            node.releases.nodes.length > GITHUB_CONSTANTS.DEFAULT_COUNT
-              ? {
-                name: node.releases.nodes[0].name,
-                tagName: node.releases.nodes[0].tagName,
-                publishedAt: new Date(node.releases.nodes[0].publishedAt),
-                isLatest: node.releases.nodes[0].isLatest,
-              }
-              : null,
-        }
-        : { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, latestRelease: null },
+    releases: {
+      totalCount: node.releases?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+      latestRelease:
+        Array.isArray(node.releases?.nodes) && node.releases.nodes.length > 0
+          ? {
+            name: node.releases.nodes[0].name,
+            tagName: node.releases.nodes[0].tagName,
+            publishedAt: new Date(node.releases.nodes[0].publishedAt),
+            isLatest: node.releases.nodes[0].isLatest,
+          }
+          : null,
+    },
 
-    issues:
-      typeof node.issues?.totalCount === 'number'
-        ? {
-          totalCount: node.issues.totalCount,
-          openCount: node.issues.openCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-          closedCount: node.issues.closedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-        }
-        : {
-          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          openCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          closedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-        },
+    issues: {
+      totalCount: (node as GitHubGraphQLRepositoryNode & {
+        issuesTotal?: { totalCount: number };
+        issuesClosed?: { totalCount: number };
+      }).issuesTotal?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+      openCount: node.issues?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+      closedCount: (node as GitHubGraphQLRepositoryNode & {
+        issuesClosed?: { totalCount: number };
+      }).issuesClosed?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+    },
 
-    pullRequests:
-      typeof node.pullRequests?.totalCount === 'number'
-        ? {
-          totalCount: node.pullRequests.totalCount,
-          openCount: node.pullRequests.openCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-          closedCount: node.pullRequests.closedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-          mergedCount: node.pullRequests.mergedCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
-        }
-        : {
-          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          openCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          closedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          mergedCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-        },
+    pullRequests: {
+      totalCount: (node as GitHubGraphQLRepositoryNode & {
+        pullRequestsTotal?: { totalCount: number };
+      }).pullRequestsTotal?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+      openCount: node.pullRequests?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+      closedCount: (node as GitHubGraphQLRepositoryNode & {
+        pullRequestsClosed?: { totalCount: number };
+      }).pullRequestsClosed?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+      mergedCount: (node as GitHubGraphQLRepositoryNode & {
+        pullRequestsMerged?: { totalCount: number };
+      }).pullRequestsMerged?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
+    },
     branchProtectionRules: node.branchProtectionRules ?? {
       totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
     },
@@ -532,9 +525,30 @@ export class GitHubService {
               hasIssuesEnabled
               hasProjectsEnabled
               hasWikiEnabled
-              issues { totalCount }
-              pullRequests { totalCount }
-              releases { totalCount }
+              hasPages
+              hasDownloads
+              hasDiscussions
+              vulnerabilityAlertsEnabled
+              securityPolicyEnabled
+              codeOfConductEnabled
+              contributingGuidelinesEnabled
+              readmeEnabled
+              issues(states: [OPEN]) { totalCount }
+              issuesClosed: issues(states: [CLOSED]) { totalCount }
+              issuesTotal: issues { totalCount }
+              pullRequests(states: [OPEN]) { totalCount }
+              pullRequestsClosed: pullRequests(states: [CLOSED]) { totalCount }
+              pullRequestsMerged: pullRequests(states: [MERGED]) { totalCount }
+              pullRequestsTotal: pullRequests { totalCount }
+              releases { 
+                totalCount
+                nodes(first: 1) {
+                  name
+                  tagName
+                  publishedAt
+                  isLatest
+                }
+              }
               deployments { totalCount }
               environments { totalCount }
               commits: defaultBranchRef {
@@ -779,7 +793,16 @@ export class GitHubService {
         })
       );
 
-      allRepos.push(...convertedRepos);
+      // Enrich repositories with missing data when using REST fallback
+      const enrichedRepos = await Promise.allSettled(
+        convertedRepos.map(repo => this.enrichRepositoryData(repo))
+      );
+
+      const finalRepos = enrichedRepos.map((result, index) =>
+        result.status === 'fulfilled' ? result.value : convertedRepos[index]
+      );
+
+      allRepos.push(...finalRepos);
 
       // Check if there are more pages (GitHub REST API returns up to 100 per page)
       if (repos.length === 100) {
@@ -812,6 +835,90 @@ export class GitHubService {
     return recoverablePatterns.some(pattern =>
       errorMessage.toLowerCase().includes(pattern.toLowerCase())
     );
+  }
+
+  /**
+   * Enrich repository data with missing information from GitHub REST API
+   * @param repo Repository to enrich
+   * @returns Promise<GitHubRepo> - Repository with enriched data
+   */
+  public async enrichRepositoryData(repo: GitHubRepo): Promise<GitHubRepo> {
+    try {
+      const [owner, repoName] = repo.nameWithOwner.split('/');
+      
+      // Get additional repository information
+      const [repoDetails, issuesResponse, pullRequestsResponse, releasesResponse] = await Promise.allSettled([
+        this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}`),
+        this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/issues`, { state: 'all', per_page: 1 }),
+        this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/pulls`, { state: 'all', per_page: 1 }),
+        this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/releases`, { per_page: 1 }),
+      ]);
+
+      // Enrich with actual data if available
+      if (repoDetails.status === 'fulfilled' && repoDetails.value != null) {
+        const details = repoDetails.value as Record<string, unknown>;
+        repo.hasPages = Boolean(details.has_pages);
+        repo.hasDiscussions = Boolean(details.has_discussions);
+      }
+
+      // Enrich issues data
+      if (issuesResponse.status === 'fulfilled') {
+        const issuesHeaders = issuesResponse.value as { headers?: { link?: string } };
+        const linkHeader = issuesHeaders?.headers?.link;
+        if (linkHeader != null && linkHeader !== '') {
+          const lastPageMatch = linkHeader.match(/page=(\d+)>; rel="last"/);
+          if (lastPageMatch) {
+            repo.issues.totalCount = parseInt(lastPageMatch[1], 10);
+          }
+        }
+      }
+
+      // Enrich pull requests data
+      if (pullRequestsResponse.status === 'fulfilled') {
+        const prHeaders = pullRequestsResponse.value as { headers?: { link?: string } };
+        const linkHeader = prHeaders?.headers?.link;
+        if (linkHeader != null && linkHeader !== '') {
+          const lastPageMatch = linkHeader.match(/page=(\d+)>; rel="last"/);
+          if (lastPageMatch) {
+            repo.pullRequests.totalCount = parseInt(lastPageMatch[1], 10);
+          }
+        }
+      }
+
+      // Enrich releases data
+      if (releasesResponse.status === 'fulfilled') {
+        const releasesData = releasesResponse.value as unknown;
+        if (Array.isArray(releasesData) && releasesData.length > 0) {
+          const latestRelease = releasesData[0] as Record<string, unknown>;
+          repo.releases = {
+            totalCount: releasesData.length,
+            latestRelease: {
+              name: String(latestRelease.name ?? ''),
+              tagName: String(latestRelease.tag_name ?? ''),
+              publishedAt: new Date(String(latestRelease.published_at)),
+              isLatest: true,
+            },
+          };
+        }
+      }
+
+      logger.debug('Repository data enriched', {
+        repo: repo.nameWithOwner,
+        hasPages: repo.hasPages,
+        hasDiscussions: repo.hasDiscussions,
+        issuesTotal: repo.issues.totalCount,
+        pullRequestsTotal: repo.pullRequests.totalCount,
+        releasesTotal: repo.releases.totalCount,
+      });
+
+      return repo;
+    } catch (error) {
+      logger.warn('Failed to enrich repository data, using default values', {
+        repo: repo.nameWithOwner,
+        error: (error as Error).message,
+      });
+      return repo;
+    }
   }
 
   /**
@@ -920,9 +1027,30 @@ export class GitHubService {
               hasIssuesEnabled
               hasProjectsEnabled
               hasWikiEnabled
-              issues { totalCount }
-              pullRequests { totalCount }
-              releases { totalCount }
+              hasPages
+              hasDownloads
+              hasDiscussions
+              vulnerabilityAlertsEnabled
+              securityPolicyEnabled
+              codeOfConductEnabled
+              contributingGuidelinesEnabled
+              readmeEnabled
+              issues(states: [OPEN]) { totalCount }
+              issuesClosed: issues(states: [CLOSED]) { totalCount }
+              issuesTotal: issues { totalCount }
+              pullRequests(states: [OPEN]) { totalCount }
+              pullRequestsClosed: pullRequests(states: [CLOSED]) { totalCount }
+              pullRequestsMerged: pullRequests(states: [MERGED]) { totalCount }
+              pullRequestsTotal: pullRequests { totalCount }
+              releases { 
+                totalCount
+                nodes(first: 1) {
+                  name
+                  tagName
+                  publishedAt
+                  isLatest
+                }
+              }
               deployments { totalCount }
               environments { totalCount }
               commits: defaultBranchRef {
