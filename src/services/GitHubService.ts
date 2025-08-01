@@ -508,7 +508,29 @@ export class GitHubService {
               createdAt
               homepageUrl
               diskUsage
-              defaultBranchRef { name }
+              defaultBranchRef {
+                name
+                target {
+                  ... on Commit {
+                    history(first: 10) {
+                      totalCount
+                      nodes {
+                        oid
+                        message
+                        committedDate
+                        author {
+                          name
+                          email
+                          user { login }
+                        }
+                        additions
+                        deletions
+                        changedFiles
+                      }
+                    }
+                  }
+                }
+              }
               licenseInfo {
                 name
                 spdxId
@@ -893,9 +915,35 @@ export class GitHubService {
         const commitsData = commitsResponse.value as unknown;
         if (Array.isArray(commitsData) && commitsData.length > 0) {
           const commitsArray = commitsData as Array<Record<string, unknown>>;
+
+                    // Use realistic commit count - don't fabricate numbers
+          let actualTotalCount = commitsArray.length;
           
+          // If we got exactly the per_page limit (10), there might be more
+          // But we shouldn't guess wildly - just indicate it's at least this many
+          if (commitsArray.length === 10) {
+            // Check if there's a next page to see if there are more commits
+            try {
+              const nextPageResponse = await this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/commits`, { 
+                per_page: 1, 
+                page: 2 
+              });
+              if (Array.isArray(nextPageResponse) && nextPageResponse.length > 0) {
+                // There are more commits, but we don't know exactly how many
+                // Use a more conservative approach: indicate "10+" instead of fabricating a number
+                actualTotalCount = commitsArray.length; // Keep it real - just the ones we retrieved
+              }
+            } catch (checkError) {
+              // If we can't check, just use what we have
+              logger.debug('Could not verify if more commits exist', {
+                repo: repo.nameWithOwner,
+                error: (checkError as Error).message,
+              });
+            }
+          }
+
           repo.commits = {
-            totalCount: commitsArray.length >= 10 ? 1000 : commitsArray.length, // Estimate if we got full page
+            totalCount: actualTotalCount,
             recent: commitsArray.map(commit => {
               const commitObj = commit.commit as Record<string, unknown> | undefined;
               const authorObj = commitObj?.author as Record<string, unknown> | undefined;
@@ -1038,7 +1086,29 @@ export class GitHubService {
               createdAt
               homepageUrl
               diskUsage
-              defaultBranchRef { name }
+              defaultBranchRef {
+                name
+                target {
+                  ... on Commit {
+                    history(first: 15) {
+                      totalCount
+                      nodes {
+                        oid
+                        message
+                        committedDate
+                        author {
+                          name
+                          email
+                          user { login }
+                        }
+                        additions
+                        deletions
+                        changedFiles
+                      }
+                    }
+                  }
+                }
+              }
               licenseInfo {
                 name
                 spdxId
