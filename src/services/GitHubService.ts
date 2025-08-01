@@ -135,12 +135,12 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     deployments: node.deployments ?? { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT },
     environments: node.environments ?? { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT },
     commits:
-      node.commits?.target?.history?.totalCount !== undefined &&
-        typeof node.commits.target.history.totalCount === 'number'
+      node.defaultBranchRef?.target?.history?.totalCount !== undefined &&
+        typeof node.defaultBranchRef.target.history.totalCount === 'number'
         ? {
-          totalCount: node.commits.target.history.totalCount,
-          recent: Array.isArray(node.commits.target.history.nodes)
-            ? node.commits.target.history.nodes.map(commit => ({
+          totalCount: node.defaultBranchRef.target.history.totalCount,
+          recent: Array.isArray(node.defaultBranchRef.target.history.nodes)
+            ? node.defaultBranchRef.target.history.nodes.map(commit => ({
               oid: commit.oid,
               message: commit.message,
               committedDate: new Date(commit.committedDate),
@@ -543,7 +543,8 @@ export class GitHubService {
               }
               deployments { totalCount }
               environments { totalCount }
-              commits: defaultBranchRef {
+              defaultBranchRef {
+                name
                 target {
                   ... on Commit {
                     history(first: 10) {
@@ -835,11 +836,12 @@ export class GitHubService {
     try {
       const [owner, repoName] = repo.nameWithOwner.split('/');
 
-      const [repoDetails, issuesResponse, pullRequestsResponse, releasesResponse] = await Promise.allSettled([
+      const [repoDetails, issuesResponse, pullRequestsResponse, releasesResponse, commitsResponse] = await Promise.allSettled([
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}`),
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/issues`, { state: 'all', per_page: 1 }),
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/pulls`, { state: 'all', per_page: 1 }),
         this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/releases`, { per_page: 1 }),
+        this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repoName}/commits`, { per_page: 10 }),
       ]);
 
       if (repoDetails.status === 'fulfilled' && repoDetails.value != null) {
@@ -886,6 +888,40 @@ export class GitHubService {
         }
       }
 
+      // Enrich commits data via REST API
+      if (commitsResponse.status === 'fulfilled') {
+        const commitsData = commitsResponse.value as unknown;
+        if (Array.isArray(commitsData) && commitsData.length > 0) {
+          const commitsArray = commitsData as Array<Record<string, unknown>>;
+          
+          repo.commits = {
+            totalCount: commitsArray.length >= 10 ? 1000 : commitsArray.length, // Estimate if we got full page
+            recent: commitsArray.map(commit => {
+              const commitObj = commit.commit as Record<string, unknown> | undefined;
+              const authorObj = commitObj?.author as Record<string, unknown> | undefined;
+              const committerObj = commitObj?.committer as Record<string, unknown> | undefined;
+              const githubAuthor = commit.author as Record<string, unknown> | undefined;
+              const statsObj = commit.stats as Record<string, unknown> | undefined;
+              const filesArray = commit.files as unknown[] | undefined;
+
+              return {
+                oid: String(commit.sha ?? ''),
+                message: String(commitObj?.message ?? ''),
+                committedDate: new Date(String(committerObj?.date ?? new Date())),
+                author: {
+                  name: String(authorObj?.name ?? ''),
+                  email: String(authorObj?.email ?? ''),
+                  login: githubAuthor?.login != null ? String(githubAuthor.login) : null,
+                },
+                additions: Number(statsObj?.additions ?? 0),
+                deletions: Number(statsObj?.deletions ?? 0),
+                changedFiles: Array.isArray(filesArray) ? filesArray.length : 0,
+              };
+            }),
+          };
+        }
+      }
+
       logger.debug('Repository data enriched', {
         repo: repo.nameWithOwner,
         hasPages: repo.hasPages,
@@ -893,6 +929,8 @@ export class GitHubService {
         issuesTotal: repo.issues.totalCount,
         pullRequestsTotal: repo.pullRequests.totalCount,
         releasesTotal: repo.releases.totalCount,
+        commitsTotal: repo.commits.totalCount,
+        commitsRecent: repo.commits.recent.length,
       });
 
       return repo;
@@ -1035,7 +1073,8 @@ export class GitHubService {
               }
               deployments { totalCount }
               environments { totalCount }
-              commits: defaultBranchRef {
+              defaultBranchRef {
+                name
                 target {
                   ... on Commit {
                     history(first: 15) {

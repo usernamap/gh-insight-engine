@@ -10,7 +10,7 @@ info:
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
     **Automatic Scheduling**: Built-in scheduling service with automatic token management
-  version: 0.1.114
+  version: 0.1.115
   contact:
     name: Github
     url: https://github.com/octocat/gh-insight-engine

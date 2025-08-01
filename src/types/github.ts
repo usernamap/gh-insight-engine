@@ -409,11 +409,7 @@ export interface GitHubGraphQLCommitHistory {
   nodes: GitHubGraphQLCommitNode[];
 }
 
-export interface GitHubGraphQLCommits {
-  target: {
-    history: GitHubGraphQLCommitHistory;
-  };
-}
+
 
 export interface GitHubGraphQLOrganizationNode {
   login: string;
@@ -478,7 +474,12 @@ export interface GitHubGraphQLRepositoryNode {
   createdAt: string;
   homepageUrl: string;
   diskUsage: number;
-  defaultBranchRef: { name: string } | null;
+  defaultBranchRef: {
+    name: string;
+    target?: {
+      history?: GitHubGraphQLCommitHistory;
+    };
+  } | null;
   licenseInfo: GitHubGraphQLLicense | null;
   hasIssuesEnabled: boolean;
   hasProjectsEnabled: boolean;
@@ -493,7 +494,6 @@ export interface GitHubGraphQLRepositoryNode {
   readmeEnabled: boolean;
   deployments: { totalCount: number };
   environments: { totalCount: number };
-  commits: GitHubGraphQLCommits;
   releases: {
     totalCount: number;
     nodes: Array<{
