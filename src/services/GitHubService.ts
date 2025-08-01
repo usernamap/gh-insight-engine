@@ -911,7 +911,7 @@ export class GitHubService {
         }
       }
 
-            // Enrich commits data - get ALL commits from the repository
+      // Enrich commits data - get ALL commits from the repository
       try {
         logger.info('Fetching ALL commits for repository', {
           repo: repo.nameWithOwner,
@@ -919,7 +919,7 @@ export class GitHubService {
         });
 
         const allCommits = await this.getAllRepositoryCommits(owner, repoName, 'main');
-        
+
         if (allCommits.length > 0) {
           repo.commits = {
             totalCount: allCommits.length,
@@ -1774,15 +1774,15 @@ export class GitHubService {
    * @returns Promise<GitHubCommit[]> - All commits from the branch
    */
   public async getAllRepositoryCommits(
-    owner: string, 
-    repoName: string, 
+    owner: string,
+    repoName: string,
     branchName = 'main'
   ): Promise<GitHubCommit[]> {
     const allCommits: GitHubCommit[] = [];
     let cursor: string | null = null;
     let hasNextPage = true;
     const maxCommitsPerRequest = 100; // GitHub GraphQL max for commits
-    
+
     try {
       while (hasNextPage) {
         const query = `
@@ -1818,44 +1818,44 @@ export class GitHubService {
           }
         `;
 
-                 const variables: Record<string, string> = {
-           owner,
-           name: repoName,
-           branchName: `refs/heads/${branchName}`,
-           ...(cursor != null && cursor !== '' ? { cursor } : {})
-         };
+        const variables: Record<string, string> = {
+          owner,
+          name: repoName,
+          branchName: `refs/heads/${branchName}`,
+          ...(cursor != null && cursor !== '' ? { cursor } : {})
+        };
 
-         const response: unknown = await this.githubConfig.executeGraphQLQuery(query, variables);
-         
-         interface CommitHistoryResponse {
-           repository?: {
-             ref?: {
-               target?: {
-                 history?: {
-                   pageInfo?: { hasNextPage: boolean; endCursor: string };
-                   totalCount?: number;
-                   nodes?: Array<{
-                     oid: string;
-                     message: string;
-                     committedDate: string;
-                     author: {
-                       name: string;
-                       email: string;
-                       user?: { login: string };
-                     };
-                     additions: number;
-                     deletions: number;
-                     changedFiles: number;
-                   }>;
-                 };
-               };
-             };
-           };
-         }
-         
-         const historyData = (response as CommitHistoryResponse)?.repository?.ref?.target?.history;
+        const response: unknown = await this.githubConfig.executeGraphQLQuery(query, variables);
 
-         if (historyData?.nodes == null || !Array.isArray(historyData.nodes)) {
+        interface CommitHistoryResponse {
+          repository?: {
+            ref?: {
+              target?: {
+                history?: {
+                  pageInfo?: { hasNextPage: boolean; endCursor: string };
+                  totalCount?: number;
+                  nodes?: Array<{
+                    oid: string;
+                    message: string;
+                    committedDate: string;
+                    author: {
+                      name: string;
+                      email: string;
+                      user?: { login: string };
+                    };
+                    additions: number;
+                    deletions: number;
+                    changedFiles: number;
+                  }>;
+                };
+              };
+            };
+          };
+        }
+
+        const historyData = (response as CommitHistoryResponse)?.repository?.ref?.target?.history;
+
+        if (historyData?.nodes == null || !Array.isArray(historyData.nodes)) {
           logger.warn('No commit history found for repository', {
             owner,
             repoName,
@@ -1864,32 +1864,32 @@ export class GitHubService {
           break;
         }
 
-                 // Convert and add commits to collection
-         const commits = historyData.nodes.map((commit: {
-           oid: string;
-           message: string;
-           committedDate: string;
-           author: {
-             name: string;
-             email: string;
-             user?: { login: string };
-           };
-           additions: number;
-           deletions: number;
-           changedFiles: number;
-         }) => ({
-           oid: commit.oid,
-           message: commit.message,
-           committedDate: new Date(commit.committedDate),
-           author: {
-             name: commit.author.name,
-             email: commit.author.email,
-             login: commit.author.user?.login ?? null,
-           },
-           additions: commit.additions,
-           deletions: commit.deletions,
-           changedFiles: commit.changedFiles,
-         }));
+        // Convert and add commits to collection
+        const commits = historyData.nodes.map((commit: {
+          oid: string;
+          message: string;
+          committedDate: string;
+          author: {
+            name: string;
+            email: string;
+            user?: { login: string };
+          };
+          additions: number;
+          deletions: number;
+          changedFiles: number;
+        }) => ({
+          oid: commit.oid,
+          message: commit.message,
+          committedDate: new Date(commit.committedDate),
+          author: {
+            name: commit.author.name,
+            email: commit.author.email,
+            login: commit.author.user?.login ?? null,
+          },
+          additions: commit.additions,
+          deletions: commit.deletions,
+          changedFiles: commit.changedFiles,
+        }));
 
         allCommits.push(...commits);
 
@@ -1934,7 +1934,7 @@ export class GitHubService {
         error: (error as Error).message,
         retrievedSoFar: allCommits.length,
       });
-      
+
       // Return what we've collected so far instead of throwing
       return allCommits;
     }

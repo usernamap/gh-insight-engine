@@ -678,3 +678,27 @@ export interface GitHubRestPopularPath {
 export interface GitHubRestTrafficPaths {
   paths: GitHubRestPopularPath[];
 }
+
+/**
+ * Custom error class for GitHub API rate limit errors
+ */
+export class GitHubRateLimitError extends Error {
+  public readonly isRateLimitError = true;
+  public readonly waitTime: string;
+  public readonly resetTime?: number;
+
+  constructor(message?: string, resetTime?: number) {
+    const errorMessage = message != null && message !== '' 
+      ? message 
+      : 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.';
+    super(errorMessage);
+    this.name = 'GitHubRateLimitError';
+    this.waitTime = '10-30 minutes';
+    this.resetTime = resetTime;
+    
+    // Maintains proper stack trace for where our error was thrown
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, GitHubRateLimitError);
+    }
+  }
+}

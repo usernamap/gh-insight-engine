@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 
-import { GitHubTokenValidationResult, RateLimitInfo } from '@/types';
+import { GitHubTokenValidationResult, RateLimitInfo, GitHubRateLimitError } from '@/types';
 import logger from '@/utils/logger';
 import { GITHUB_CONSTANTS, GITHUB_MESSAGES, ERROR_CONSTANTS } from '@/constants';
 
@@ -24,6 +24,16 @@ export class GitHubConfig {
     try {
       const validation = await this.validateToken();
       if (!validation.valid) {
+        // Handle rate limit errors specifically
+        if (validation.isRateLimitError === true) {
+          logger.error('GitHub API rate limit exceeded during initialization', {
+            error: validation.error,
+            rateLimitError: true,
+          });
+          throw new GitHubRateLimitError(GITHUB_MESSAGES.RATE_LIMIT_INITIALIZATION_ERROR);
+        }
+
+        // Handle other validation errors
         throw new Error(
           `${GITHUB_MESSAGES.INVALID_TOKEN_PREFIX}${validation.error ?? GITHUB_MESSAGES.UNKNOWN_ERROR}`
         );
@@ -34,6 +44,11 @@ export class GitHubConfig {
         scopes: validation.scopes,
       });
     } catch (error) {
+      // Re-throw GitHubRateLimitError as-is
+      if (error instanceof GitHubRateLimitError) {
+        throw error;
+      }
+
       logger.error('GitHub configuration initialization failed', {
         error: (error as Error).message,
       });
@@ -98,7 +113,7 @@ export class GitHubConfig {
       if (this.isRateLimitError(_error)) {
         return {
           valid: false,
-          error: GITHUB_MESSAGES.RATE_LIMIT_EXCEEDED_DETAILED,
+          error: GITHUB_MESSAGES.RATE_LIMIT_SIMPLE_MESSAGE,
           isRateLimitError: true,
         };
       }

@@ -769,8 +769,15 @@ export class RepoController {
         [REPO_RESPONSE_FIELDS.COLLECTION_STATUS]: status.status,
       });
 
-      res.status(REPO_STATUS_CODES.OK).json({
+      // Check for rate limit errors in the status
+      const isRateLimitError = status.error != null &&
+        (status.error.includes('rate limit') || status.error.includes('API rate limit exceeded'));
+
+      const responseData = {
         [REPO_RESPONSE_FIELDS.MESSAGE]: ((): string => {
+          if (isRateLimitError) {
+            return 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.';
+          }
           const statusKey = `STATUS_${status.status.toUpperCase()}` as keyof typeof REPO_MESSAGES;
           return REPO_MESSAGES[statusKey] ?? REPO_MESSAGES.STATUS_NOT_FOUND;
         })(),
@@ -782,8 +789,15 @@ export class RepoController {
         [REPO_RESPONSE_FIELDS.CURRENT_STEP]: status.currentStep,
         [REPO_RESPONSE_FIELDS.TOTAL_STEPS]: status.totalSteps,
         ...(status.error != null && { [REPO_RESPONSE_FIELDS.ERROR]: status.error }),
+        ...(isRateLimitError && {
+          rateLimitError: true,
+          waitTime: '10-30 minutes',
+          documentation: 'This error occurs when GitHub API rate limits are exceeded. Wait 10-30 minutes before retrying.'
+        }),
         [REPO_RESPONSE_FIELDS.TIMESTAMP]: new Date().toISOString(),
-      });
+      };
+
+      res.status(REPO_STATUS_CODES.OK).json(responseData);
     } catch (error) {
       logWithContext.api(REPO_LOG_MESSAGES.GET_COLLECTION_STATUS_ERROR, req.path, false, {
         [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
