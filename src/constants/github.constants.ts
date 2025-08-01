@@ -15,13 +15,13 @@ export const GITHUB_CONSTANTS = {
   // User Agent
   USER_AGENT: 'github-insight-engine/1.0.0',
 
-  // Request Configuration
-  INITIAL_TIMEOUT: 120000,
-  INITIAL_RETRIES: 8,
-  INITIAL_RETRY_AFTER: 3,
-  VALIDATION_TIMEOUT: 60000,
-  VALIDATION_RETRIES: 5,
-  DEFAULT_MAX_RETRIES: 5,
+  // Request Configuration - Direct and fast
+  INITIAL_TIMEOUT: 30000, // 30 seconds - direct requests only
+  INITIAL_RETRIES: 0, // No retries - direct execution
+  INITIAL_RETRY_AFTER: 0,
+  VALIDATION_TIMEOUT: 15000, // 15 seconds - fast validation
+  VALIDATION_RETRIES: 0, // No retries - direct validation
+  DEFAULT_MAX_RETRIES: 0, // No retries anywhere
 
   // Headers
   OAUTH_SCOPES_HEADER: 'x-oauth-scopes',
@@ -47,17 +47,17 @@ export const GITHUB_CONSTANTS = {
   SECURITY_EVENTS_SCOPE: 'security_events',
   REPO_STATUS_SCOPE: 'repo:status',
 
-  // Rate Limiting - Optimized for faster execution
-  RATE_LIMIT_THRESHOLD: 50, // Reduced from 100 to be more conservative
+  // Rate Limiting - Disabled for direct execution
+  RATE_LIMIT_THRESHOLD: 0, // No threshold - execute directly
   RATE_LIMIT_STATUS_CODE: 403,
-  RATE_LIMIT_WAIT_TIME_MAX: 30000, // Reduced from 60000 to 30 seconds max
-  RATE_LIMIT_WAIT_TIME_DEFAULT: 5000, // Reduced from 60000 to 5 seconds default
+  RATE_LIMIT_WAIT_TIME_MAX: 0, // No waiting
+  RATE_LIMIT_WAIT_TIME_DEFAULT: 0, // No waiting
   RATE_LIMIT_RESET_DEFAULT: '0',
-  RATE_LIMIT_BACKOFF_MULTIPLIER: 1.5, // Exponential backoff multiplier
-  RATE_LIMIT_MAX_BACKOFF: 30000, // Maximum backoff time in ms
-  RATE_LIMIT_MIN_BACKOFF: 1000, // Minimum backoff time in ms
+  RATE_LIMIT_BACKOFF_MULTIPLIER: 1, // No backoff
+  RATE_LIMIT_MAX_BACKOFF: 0, // No backoff
+  RATE_LIMIT_MIN_BACKOFF: 0, // No backoff
 
-  // Rate Limit Error Messages - Enhanced detection patterns
+  // Rate Limit Error Messages - Simplified detection
   RATE_LIMIT_ERROR_MESSAGE: 'rate limit',
   API_RATE_LIMIT_ERROR_MESSAGE: 'API rate limit',
   RATE_LIMIT_EXCEEDED_PATTERN: 'rate limit exceeded',
@@ -82,7 +82,7 @@ export const GITHUB_CONSTANTS = {
   WORKFLOW_RUNS_LIMIT: 100, // GitHub GraphQL max limit
   ORGANIZATIONS_PER_PAGE: 100,
 
-  // Infrastructure Error Handling - For HTTP errors like 502, 503, 504
+  // Infrastructure Error Handling - Removed for direct execution
   INFRASTRUCTURE_ERROR_CODES: [500, 502, 503, 504] as const,
   INFRASTRUCTURE_ERROR_PATTERNS: [
     'bad gateway',
@@ -95,17 +95,17 @@ export const GITHUB_CONSTANTS = {
     '500 internal server error',
   ] as const,
 
-  // Infrastructure Error Retry Configuration - Longer delays for infrastructure issues
-  INFRASTRUCTURE_ERROR_MAX_RETRIES: 5, // More retries for infrastructure issues  
-  INFRASTRUCTURE_ERROR_BASE_DELAY: 30000, // 30 seconds base delay (reduced for faster recovery)
-  INFRASTRUCTURE_ERROR_MAX_DELAY: 180000, // 3 minutes maximum delay
-  INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER: 1.8, // Moderate backoff for infrastructure
-  INFRASTRUCTURE_ERROR_JITTER_FACTOR: 0.2, // Add more jitter to avoid thundering herd
+  // Infrastructure Error Retry Configuration - Disabled
+  INFRASTRUCTURE_ERROR_MAX_RETRIES: 0, // No retries
+  INFRASTRUCTURE_ERROR_BASE_DELAY: 0, // No delay
+  INFRASTRUCTURE_ERROR_MAX_DELAY: 0, // No delay
+  INFRASTRUCTURE_ERROR_BACKOFF_MULTIPLIER: 1, // No backoff
+  INFRASTRUCTURE_ERROR_JITTER_FACTOR: 0, // No jitter
 
-  // Circuit Breaker Configuration
-  CIRCUIT_BREAKER_FAILURE_THRESHOLD: 3, // Failures before opening circuit
-  CIRCUIT_BREAKER_TIMEOUT: 300000, // 5 minutes timeout before half-open
-  CIRCUIT_BREAKER_SUCCESS_THRESHOLD: 2, // Successes needed to close circuit
+  // Circuit Breaker Configuration - Disabled
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: 999999, // Effectively disabled
+  CIRCUIT_BREAKER_TIMEOUT: 0, // No timeout
+  CIRCUIT_BREAKER_SUCCESS_THRESHOLD: 1, // Immediate reset
 
   // Status Values
   SUCCESS_STATUS: 'success',

@@ -18,6 +18,17 @@ export interface GitHubCommit {
   changedFiles: number;
 }
 
+export interface GitHubPullRequest {
+  author: {
+    login: string;
+  };
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+  state: string;
+  merged: boolean;
+}
+
 export interface GitHubLicense {
   name: string;
   spdxId: string;
@@ -210,6 +221,7 @@ export interface GitHubRepo {
   diskUsage: number;
   owner: GitHubOwner;
   userId?: string;
+  recentPullRequests: GitHubPullRequest[];
 }
 
 export interface UserProfile {
@@ -508,6 +520,18 @@ export interface GitHubGraphQLRepositoryNode {
     login: string;
     type: string;
     avatarUrl: string;
+  };
+  recentPullRequests: {
+    nodes: Array<{
+      author: {
+        login: string;
+      };
+      title: string;
+      createdAt: string;
+      updatedAt: string;
+      state: string;
+      merged: boolean;
+    }>;
   };
 }
 

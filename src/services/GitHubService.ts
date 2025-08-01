@@ -18,7 +18,6 @@ import { GitHubConfig } from '@/config/github';
 import logger from '@/utils/logger';
 import {
   GITHUB_CONSTANTS,
-  GITHUB_NETWORK_ERRORS,
   GITHUB_SERVICE_ERROR_MESSAGES,
   GITHUB_SERVICE_LOG_ERROR_MESSAGES,
   GITHUB_MESSAGES,
@@ -206,6 +205,23 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     diskUsage: node.diskUsage ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
     owner: node.owner,
     userId: undefined,
+    recentPullRequests: node.recentPullRequests?.nodes?.map((pr: {
+      author: { login: string };
+      title: string;
+      createdAt: string;
+      updatedAt: string;
+      state: string;
+      merged: boolean;
+    }) => ({
+      author: {
+        login: pr.author?.login ?? '',
+      },
+      title: pr.title,
+      createdAt: new Date(pr.createdAt),
+      updatedAt: new Date(pr.updatedAt),
+      state: pr.state,
+      merged: pr.merged,
+    })) ?? [],
   };
 }
 
@@ -225,11 +241,15 @@ export class GitHubService {
     return service;
   }
 
-  public async getUserOrganizations(): Promise<string[]> {
+  public async getUserOrganizations(cursor?: string): Promise<string[]> {
     const query = `
-      query {
+      query($cursor: String) {
         viewer {
-          organizations(first: ${GITHUB_CONSTANTS.ORGANIZATIONS_LIMIT}) {
+          organizations(first: ${GITHUB_CONSTANTS.ORGANIZATIONS_LIMIT}, after: $cursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               login
             }
@@ -239,26 +259,135 @@ export class GitHubService {
     `;
 
     try {
-      const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(query);
+      const variables =
+        cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING ? { cursor } : {};
+      const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(query, variables);
 
       const organizations =
         (
           response as {
-            viewer?: { organizations?: { nodes?: { login: string }[] } };
+            viewer?: {
+              organizations?: {
+                nodes?: { login: string }[];
+                pageInfo?: { hasNextPage: boolean; endCursor: string };
+              }
+            };
           }
         )?.viewer?.organizations?.nodes ?? [];
+
+      const pageInfo = (
+        response as {
+          viewer?: {
+            organizations?: {
+              pageInfo?: { hasNextPage: boolean; endCursor: string };
+            }
+          };
+        }
+      )?.viewer?.organizations?.pageInfo;
+
       const orgNames = organizations.map((org: { login: string }) => org.login);
 
-      logger.info(GITHUB_MESSAGES.ORGANIZATIONS_RETRIEVED, { count: orgNames.length });
+      // Handle pagination for organizations
+      if (pageInfo?.hasNextPage === true) {
+        const nextOrgs = await this.getUserOrganizations(pageInfo.endCursor);
+        orgNames.push(...nextOrgs);
+      }
+
+      logger.info(GITHUB_MESSAGES.ORGANIZATIONS_RETRIEVED, {
+        count: orgNames.length,
+        hasMore: pageInfo?.hasNextPage,
+        method: 'graphql_paginated',
+      });
+
+      // REST API verification - ensure we get ALL organizations
+      try {
+        const restOrgs = await this.getUserOrganizationsRestFallback();
+
+        // Check if GraphQL missed any organizations
+        const missedOrgs = restOrgs.filter(restOrg => !orgNames.includes(restOrg));
+
+        if (missedOrgs.length > 0) {
+          logger.warn('GraphQL missed some organizations, using REST API data', {
+            graphqlCount: orgNames.length,
+            restCount: restOrgs.length,
+            missedOrgs,
+            fallbackToRest: true,
+          });
+
+          // Return REST API results as they are more complete
+          return restOrgs;
+        }
+
+        // GraphQL results are complete
+        return orgNames;
+      } catch (restError) {
+        logger.warn('REST API verification failed, using GraphQL results', {
+          graphqlCount: orgNames.length,
+          restError: (restError as Error).message,
+          fallbackFailed: true,
+        });
+
+        return orgNames;
+      }
+    } catch (error) {
+      logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_ORGANIZATIONS, {
+        error: (error as Error).message,
+        method: 'graphql',
+        attemptingRestFallback: true,
+      });
+
+      // REST API fallback when GraphQL fails completely
+      try {
+        logger.info('GraphQL failed, using REST API fallback for organizations', {
+          reason: 'GraphQL failed',
+          fallbackMethod: 'rest_api',
+        });
+
+        const orgs = await this.getUserOrganizationsRestFallback();
+
+        logger.info('REST API fallback successful for organizations', {
+          count: orgs.length,
+          method: 'rest_fallback',
+        });
+
+        return orgs;
+      } catch (restError) {
+        logger.error('Both GraphQL and REST failed for organizations', {
+          graphqlError: (error as Error).message,
+          restError: (restError as Error).message,
+          nonBlocking: true,
+        });
+
+        // Return empty array as last resort - non-blocking error handling
+        return [];
+      }
+    }
+  }
+
+  /**
+   * REST API fallback for getUserOrganizations to ensure completeness
+   */
+  private async getUserOrganizationsRestFallback(): Promise<string[]> {
+    try {
+      const response = await this.githubConfig.executeRestRequest('GET /user/orgs', {
+        per_page: 100, // GitHub REST API max per page
+      });
+
+      const orgs = (response as unknown as Array<{ login: string }>) ?? [];
+      const orgNames = orgs.map(org => org.login);
+
+      logger.debug('REST API organizations retrieved', {
+        count: orgNames.length,
+        organizations: orgNames,
+        method: 'rest_api',
+      });
 
       return orgNames;
-    } catch (_error: unknown) {
-      logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_ORGANIZATIONS, {
-        error: (_error as Error).message,
+    } catch (error) {
+      logger.error('REST API fallback failed for organizations', {
+        error: (error as Error).message,
       });
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.ORGANIZATION_RETRIEVAL_FAILED}${(_error as Error).message}`
-      );
+      throw error;
     }
   }
 
@@ -331,12 +460,15 @@ export class GitHubService {
       });
 
       return userProfile;
-    } catch (_error: unknown) {
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_USER_PROFILE_REST_API, {
-        error: (_error as Error).message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
+
+      // Instead of throwing, rethrow to let caller decide how to handle
       throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.PROFILE_RETRIEVAL_FAILED}${(_error as Error).message}`
+        `${GITHUB_SERVICE_ERROR_MESSAGES.PROFILE_RETRIEVAL_FAILED}${(error as Error).message}`
       );
     }
   }
@@ -419,6 +551,18 @@ export class GitHubService {
                   }
                 }
               }
+              recentPullRequests: pullRequests(first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+                nodes {
+                  author {
+                    login
+                  }
+                  title
+                  createdAt
+                  updatedAt
+                  state
+                  merged
+                }
+              }
               owner {
                 login
                 avatarUrl
@@ -429,59 +573,231 @@ export class GitHubService {
       }
     `;
 
-    try {
-      const variables =
-        cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING ? { cursor } : {};
-      const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
-        query,
-        variables
-      );
+    // Simple retry for recoverable errors (502, 503, 504)
+    const maxRetries = 2;
 
-      const repositories =
-        (response as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.nodes ?? [];
-      const pageInfo = (response as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories
-        ?.pageInfo;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const variables =
+          cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING ? { cursor } : {};
+        const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
+          query,
+          variables
+        );
 
-      const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) =>
-        toGitHubRepo(node)
-      );
+        const repositories =
+          (response as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories?.nodes ?? [];
+        const pageInfo = (response as GitHubGraphQLRepositoriesResponse)?.viewer?.repositories
+          ?.pageInfo;
 
-      if (pageInfo?.hasNextPage === true) {
-        const nextRepos = await this.getUserRepos(pageInfo.endCursor);
-        repos.push(...nextRepos);
-      }
+        const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) =>
+          toGitHubRepo(node)
+        );
 
-      logger.info(GITHUB_MESSAGES.USER_REPOSITORIES_RETRIEVED, {
-        count: repos.length,
-        hasMore: pageInfo?.hasNextPage,
-      });
+        if (pageInfo?.hasNextPage === true) {
+          const nextRepos = await this.getUserRepos(pageInfo.endCursor);
+          repos.push(...nextRepos);
+        }
 
-      return repos;
-    } catch (_error: unknown) {
-      const error = _error as Error;
-
-      // Check if this is an infrastructure error with fallback message
-      if (error.message.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
-        logger.warn('GitHub API infrastructure issues detected, returning empty repository list', {
-          error: error.message,
-          fallbackMode: true,
+        logger.info(GITHUB_MESSAGES.USER_REPOSITORIES_RETRIEVED, {
+          count: repos.length,
+          hasMore: pageInfo?.hasNextPage,
+          method: 'graphql',
+          attempt: attempt + 1,
         });
 
-        // Return empty array instead of throwing for degraded mode operation
-        return [];
-      }
+        return repos;
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        const isRecoverableError = this.isRecoverableError(errorMessage);
 
-      logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_USER_REPOSITORIES, {
-        error: error.message,
+        if (isRecoverableError && attempt < maxRetries) {
+          logger.warn(`Recoverable error on attempt ${attempt + 1}, retrying...`, {
+            error: errorMessage,
+            attempt: attempt + 1,
+            maxRetries,
+            willRetry: true,
+          });
+
+          // Wait before retry (simple backoff: 1s, 2s)
+          await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 1000));
+          continue;
+        }
+
+        logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_USER_REPOSITORIES, {
+          error: errorMessage,
+          method: 'graphql',
+          attempt: attempt + 1,
+          isRecoverableError,
+          attemptingRestFallback: true,
+        });
+
+        // REST API fallback when GraphQL fails (502, 500, etc.)
+        try {
+          logger.info('Attempting REST API fallback for user repositories', {
+            reason: 'GraphQL failed after retries',
+            fallbackMethod: 'rest_api',
+          });
+
+          const repos = await this.getUserReposRestFallback();
+
+          logger.info('REST API fallback successful for user repositories', {
+            count: repos.length,
+            method: 'rest_fallback',
+          });
+
+          return repos;
+        } catch (restError) {
+          logger.error('REST API fallback also failed for user repositories', {
+            graphqlError: errorMessage,
+            restError: (restError as Error).message,
+            nonBlocking: true,
+          });
+
+          // Return empty array as last resort - non-blocking error handling
+          return [];
+        }
+      }
+    }
+
+    // This should never be reached, but TypeScript requires it
+    return [];
+  }
+
+  /**
+   * REST API fallback for getUserRepos when GraphQL fails
+   */
+  private async getUserReposRestFallback(page = 1, allRepos: GitHubRepo[] = []): Promise<GitHubRepo[]> {
+    try {
+      // Use REST API to get repositories
+      const response = await this.githubConfig.executeRestRequest('GET /user/repos', {
+        type: 'all', // all repositories (public, private, forks)
+        sort: 'pushed',
+        direction: 'desc',
+        per_page: 100,
+        page,
       });
 
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.REPOSITORY_RETRIEVAL_FAILED}${error.message}`
-      );
+      const repos = (response as unknown as unknown[]) ?? [];
+
+      // Convert REST response to GitHubRepo format (basic version)
+      const convertedRepos: GitHubRepo[] = repos.map((repo: unknown) => {
+        const repoData = repo as Record<string, unknown>;
+        const owner = repoData.owner as Record<string, unknown>;
+        const license = repoData.license as Record<string, unknown> | null;
+
+        return {
+          nameWithOwner: String(repoData.full_name ?? ''),
+          name: String(repoData.name ?? ''),
+          description: String(repoData.description ?? ''),
+          isPrivate: Boolean(repoData.private),
+          isArchived: Boolean(repoData.archived),
+          isFork: Boolean(repoData.fork),
+          isTemplate: Boolean(repoData.is_template),
+          stargazerCount: Number(repoData.stargazers_count ?? 0),
+          forkCount: Number(repoData.forks_count ?? 0),
+          watchersCount: Number(repoData.watchers_count ?? 0),
+          subscriberCount: Number(repoData.subscribers_count ?? 0),
+          networkCount: Number(repoData.network_count ?? 0),
+          openIssuesCount: Number(repoData.open_issues_count ?? 0),
+          primaryLanguage: String(repoData.language ?? ''),
+          languages: {
+            totalSize: 0,
+            nodes: repoData.language != null && repoData.language !== '' ? [{ name: String(repoData.language), size: 0, percentage: 0 }] : [],
+          },
+          topics: Array.isArray(repoData.topics) ? repoData.topics.map(t => String(t)) : [],
+          pushedAt: new Date(String(repoData.pushed_at)),
+          updatedAt: new Date(String(repoData.updated_at)),
+          createdAt: new Date(String(repoData.created_at)),
+          homepageUrl: String(repoData.homepage ?? ''),
+          size: Number(repoData.size ?? 0),
+          defaultBranchRef: String(repoData.default_branch ?? ''),
+          license: license ? {
+            name: String(license.name ?? ''),
+            spdxId: String(license.spdx_id ?? ''),
+            url: String(license.url ?? ''),
+          } : null,
+          hasIssuesEnabled: Boolean(repoData.has_issues),
+          hasProjectsEnabled: Boolean(repoData.has_projects),
+          hasWikiEnabled: Boolean(repoData.has_wiki),
+          hasPages: Boolean(repoData.has_pages),
+          hasDownloads: Boolean(repoData.has_downloads),
+          hasDiscussions: false, // Not available in REST API
+          vulnerabilityAlertsEnabled: false, // Not available in REST API
+          securityPolicyEnabled: false, // Not available in REST API
+          codeOfConductEnabled: false, // Not available in REST API
+          contributingGuidelinesEnabled: false, // Not available in REST API
+          readmeEnabled: false, // Not available in REST API
+          deployments: { totalCount: 0 },
+          environments: { totalCount: 0 },
+          commits: {
+            totalCount: 0,
+            recent: [],
+          },
+          releases: {
+            totalCount: 0,
+            latestRelease: null,
+          },
+          issues: {
+            totalCount: Number(repoData.open_issues_count ?? 0),
+            openCount: Number(repoData.open_issues_count ?? 0),
+            closedCount: 0,
+          },
+          pullRequests: {
+            totalCount: 0,
+            openCount: 0,
+            closedCount: 0,
+            mergedCount: 0,
+          },
+          branchProtectionRules: { totalCount: 0 },
+          collaborators: { totalCount: 0 },
+          diskUsage: Number(repoData.size ?? 0),
+          owner: {
+            login: String(owner?.login ?? ''),
+            type: String(owner?.type ?? ''),
+            avatarUrl: String(owner?.avatar_url ?? ''),
+          },
+          recentPullRequests: [], // REST API doesn't provide PR details in repo list
+        };
+      });
+
+      allRepos.push(...convertedRepos);
+
+      // Check if there are more pages (GitHub REST API returns up to 100 per page)
+      if (repos.length === 100) {
+        return await this.getUserReposRestFallback(page + 1, allRepos);
+      }
+
+      return allRepos;
+    } catch (error) {
+      logger.error('REST API fallback failed for user repositories', {
+        page,
+        error: (error as Error).message,
+      });
+      throw error;
     }
   }
 
+  /**
+   * Check if an error is recoverable and worth retrying
+   */
+  private isRecoverableError(errorMessage: string): boolean {
+    const recoverablePatterns = [
+      '502 Bad Gateway',
+      '503 Service Unavailable',
+      '504 Gateway Timeout',
+      'timeout',
+      'ECONNRESET',
+      'ETIMEDOUT',
+    ];
+
+    return recoverablePatterns.some(pattern =>
+      errorMessage.toLowerCase().includes(pattern.toLowerCase())
+    );
+  }
+
   public async getOrgRepos(orgName: string, cursor?: string): Promise<GitHubRepo[]> {
+    // Enhanced GraphQL query with better context for organization repositories
     const query = `
       query($orgName: String!, $cursor: String) {
         organization(login: $orgName) {
@@ -540,7 +856,7 @@ export class GitHubService {
               commits: defaultBranchRef {
                 target {
                   ... on Commit {
-                    history(first: 10) {
+                    history(first: 15) {
                       totalCount
                       nodes {
                         oid
@@ -559,6 +875,25 @@ export class GitHubService {
                   }
                 }
               }
+              recentPullRequests: pullRequests(first: 25, orderBy: {field: UPDATED_AT, direction: DESC}) {
+                nodes {
+                  author {
+                    login
+                  }
+                  title
+                  createdAt
+                  updatedAt
+                  state
+                  merged
+                }
+              }
+              collaborators(first: 20) {
+                nodes {
+                  login
+                  name
+                }
+                totalCount
+              }
               owner {
                 login
                 avatarUrl
@@ -574,6 +909,7 @@ export class GitHubService {
         orgName && cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING
           ? { orgName, cursor }
           : { orgName };
+      
       const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
         query,
         variables
@@ -585,10 +921,21 @@ export class GitHubService {
       const pageInfo = (response as GitHubGraphQLOrganizationRepositoriesResponse)?.organization
         ?.repositories?.pageInfo;
 
-      const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) =>
-        toGitHubRepo(node)
-      );
+      // Enhanced conversion with better context handling
+      const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => {
+        const convertedRepo = toGitHubRepo(node);
+        
+        // Enhanced collaborators context (keeping existing structure)
+        if (node.collaborators?.totalCount != null) {
+          convertedRepo.collaborators = {
+            totalCount: node.collaborators.totalCount,
+          };
+        }
+        
+        return convertedRepo;
+      });
 
+      // Recursive pagination with context preservation
       if (pageInfo?.hasNextPage === true) {
         const nextRepos = await this.getOrgRepos(orgName, pageInfo.endCursor);
         repos.push(...nextRepos);
@@ -598,32 +945,19 @@ export class GitHubService {
         orgName,
         count: repos.length,
         hasMore: pageInfo?.hasNextPage,
+        method: 'graphql_enhanced',
+        contextEnhanced: true,
       });
 
       return repos;
-    } catch (_error: unknown) {
-      const error = _error as Error;
-
-      // Check if this is an infrastructure error with fallback message
-      if (error.message.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
-        logger.warn('GitHub API infrastructure issues detected, returning empty organization repository list', {
-          orgName,
-          error: error.message,
-          fallbackMode: true,
-        });
-
-        // Return empty array instead of throwing for degraded mode operation
-        return [];
-      }
-
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_ORG_REPOSITORIES, {
         orgName,
-        error: error.message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
-
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.ORG_REPOSITORY_RETRIEVAL_FAILED}${error.message}`
-      );
+      
+      return [];
     }
   }
 
@@ -678,41 +1012,26 @@ export class GitHubService {
       });
 
       return actionsData;
-    } catch (_error: unknown) {
-      const error = _error as Error;
-
-      if (
-        error.message.includes(GITHUB_NETWORK_ERRORS.TIMEOUT) ||
-        error.message.includes(GITHUB_NETWORK_ERRORS.CONNECT_TIMEOUT_ERROR) ||
-        error.message.includes(GITHUB_NETWORK_ERRORS.ECONNRESET) ||
-        error.message.includes(GITHUB_NETWORK_ERRORS.ENOTFOUND)
-      ) {
-        logger.warn('Timeout during GitHub Actions retrieval, returning default data', {
-          owner,
-          repo,
-          error: error.message,
-        });
-
-        return {
-          workflowsCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          lastRunStatus: GITHUB_CONSTANTS.UNKNOWN_STATUS,
-          workflows: [],
-          runs: {
-            totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            successful: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            failed: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            successRate: GITHUB_CONSTANTS.DEFAULT_PERCENTAGE,
-          },
-        };
-      }
-
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_GITHUB_ACTIONS, {
         owner,
         repo,
-        error: error.message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
 
-      throw error;
+      // Return default data instead of throwing - non-blocking error handling
+      return {
+        workflowsCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        lastRunStatus: GITHUB_CONSTANTS.UNKNOWN_STATUS,
+        workflows: [],
+        runs: {
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          successful: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          failed: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          successRate: GITHUB_CONSTANTS.DEFAULT_PERCENTAGE,
+        },
+      };
     }
   }
 
@@ -787,43 +1106,34 @@ export class GitHubService {
       });
 
       return securityData;
-    } catch (_error: unknown) {
-      if (
-        typeof _error === 'object' &&
-        _error &&
-        'status' in _error &&
-        ((_error as { status: number }).status === GITHUB_CONSTANTS.FORBIDDEN_STATUS ||
-          (_error as { status: number }).status === GITHUB_CONSTANTS.NOT_FOUND_STATUS)
-      ) {
-        return {
-          dependabotAlerts: {
-            totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            open: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            fixed: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            dismissed: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          },
-          secretScanning: {
-            totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            resolved: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          },
-          codeScanning: {
-            totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            open: GITHUB_CONSTANTS.DEFAULT_COUNT,
-            fixed: GITHUB_CONSTANTS.DEFAULT_COUNT,
-          },
-          hasSecurityPolicy: GITHUB_CONSTANTS.DEFAULT_FALSE,
-          hasVulnerabilityAlertsEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE,
-        };
-      }
-
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_SECURITY_DATA, {
         owner,
         repo,
-        error: (_error as Error).message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.SECURITY_RETRIEVAL_FAILED}${(_error as Error).message}`
-      );
+
+      // Return default data instead of throwing - non-blocking error handling
+      return {
+        dependabotAlerts: {
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          open: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          fixed: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          dismissed: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        },
+        secretScanning: {
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          resolved: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        },
+        codeScanning: {
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          open: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          fixed: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        },
+        hasSecurityPolicy: GITHUB_CONSTANTS.DEFAULT_FALSE,
+        hasVulnerabilityAlertsEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE,
+      };
     }
   }
 
@@ -853,24 +1163,19 @@ export class GitHubService {
       });
 
       return packagesData;
-    } catch (_error: unknown) {
-      if (
-        typeof _error === 'object' &&
-        _error &&
-        'status' in _error &&
-        (_error as { status: number }).status === GITHUB_CONSTANTS.NOT_FOUND_STATUS
-      ) {
-        return { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, types: [] };
-      }
-
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_PACKAGES, {
         owner,
         repo,
-        error: (_error as Error).message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.PACKAGE_RETRIEVAL_FAILED}${(_error as Error).message}`
-      );
+
+      // Return default data instead of throwing - non-blocking error handling
+      return {
+        totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+        types: []
+      };
     }
   }
 
@@ -918,24 +1223,16 @@ export class GitHubService {
       });
 
       return branchProtectionData;
-    } catch (_error: unknown) {
-      if (
-        typeof _error === 'object' &&
-        _error &&
-        'status' in _error &&
-        (_error as { status: number }).status === GITHUB_CONSTANTS.NOT_FOUND_STATUS
-      ) {
-        return { rules: [] };
-      }
-
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_BRANCH_PROTECTION, {
         owner,
         repo,
-        error: (_error as Error).message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.BRANCH_PROTECTION_RETRIEVAL_FAILED}${(_error as Error).message}`
-      );
+
+      // Return default data instead of throwing - non-blocking error handling
+      return { rules: [] };
     }
   }
 
@@ -968,32 +1265,24 @@ export class GitHubService {
       });
 
       return communityData;
-    } catch (_error: unknown) {
-      if (
-        typeof _error === 'object' &&
-        _error &&
-        'status' in _error &&
-        (_error as { status: number }).status === GITHUB_CONSTANTS.NOT_FOUND_STATUS
-      ) {
-        return {
-          healthPercentage: GITHUB_CONSTANTS.DEFAULT_PERCENTAGE,
-          hasReadme: GITHUB_CONSTANTS.DEFAULT_FALSE,
-          hasLicense: GITHUB_CONSTANTS.DEFAULT_FALSE,
-          hasContributing: GITHUB_CONSTANTS.DEFAULT_FALSE,
-          hasCodeOfConduct: GITHUB_CONSTANTS.DEFAULT_FALSE,
-          hasIssueTemplate: GITHUB_CONSTANTS.DEFAULT_FALSE,
-          hasPullRequestTemplate: GITHUB_CONSTANTS.DEFAULT_FALSE,
-        };
-      }
-
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_COMMUNITY_HEALTH, {
         owner,
         repo,
-        error: (_error as Error).message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
-      throw new Error(
-        `${GITHUB_SERVICE_ERROR_MESSAGES.COMMUNITY_HEALTH_RETRIEVAL_FAILED}${(_error as Error).message}`
-      );
+
+      // Return default data instead of throwing - non-blocking error handling
+      return {
+        healthPercentage: GITHUB_CONSTANTS.DEFAULT_PERCENTAGE,
+        hasReadme: GITHUB_CONSTANTS.DEFAULT_FALSE,
+        hasLicense: GITHUB_CONSTANTS.DEFAULT_FALSE,
+        hasContributing: GITHUB_CONSTANTS.DEFAULT_FALSE,
+        hasCodeOfConduct: GITHUB_CONSTANTS.DEFAULT_FALSE,
+        hasIssueTemplate: GITHUB_CONSTANTS.DEFAULT_FALSE,
+        hasPullRequestTemplate: GITHUB_CONSTANTS.DEFAULT_FALSE,
+      };
     }
   }
 
@@ -1047,13 +1336,15 @@ export class GitHubService {
       });
 
       return trafficData;
-    } catch (_error: unknown) {
+    } catch (error) {
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_TRAFFIC, {
         owner,
         repo,
-        error: (_error as Error).message,
+        error: (error as Error).message,
+        nonBlocking: true,
       });
 
+      // Return default data instead of throwing - non-blocking error handling
       return {
         views: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
         clones: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
@@ -1065,74 +1356,89 @@ export class GitHubService {
   public async enrichWithDevOpsData(repo: GitHubRepo): Promise<GitHubRepo> {
     const [owner, repoName] = repo.nameWithOwner.split('/');
 
-    try {
-      logger.info(GITHUB_MESSAGES.STARTING_DEVOPS_ENRICHMENT, {
+    logger.info(GITHUB_MESSAGES.STARTING_DEVOPS_ENRICHMENT, {
+      nameWithOwner: repo.nameWithOwner,
+    });
+
+    // Use Promise.allSettled to prevent any single failure from blocking all enrichment
+    const [githubActions, security, packages, branchProtection, community, traffic] =
+      await Promise.allSettled([
+        this.getGitHubActionsData(owner, repoName),
+        this.getSecurityData(owner, repoName),
+        this.getPackagesData(owner, repoName),
+        this.getBranchProtectionData(
+          owner,
+          repoName,
+          repo.defaultBranchRef ?? GITHUB_CONSTANTS.DEFAULT_BRANCH
+        ),
+        this.getCommunityHealthData(owner, repoName),
+        this.getTrafficData(owner, repoName),
+      ]);
+
+    const enrichedRepo: GitHubRepo = {
+      ...repo,
+      githubActions:
+        githubActions.status === 'fulfilled' && isValidGitHubActions(githubActions.value)
+          ? githubActions.value
+          : undefined,
+      security:
+        security.status === 'fulfilled' && isValidGitHubSecurity(security.value)
+          ? security.value
+          : undefined,
+      packages:
+        packages.status === 'fulfilled' && isValidGitHubPackages(packages.value)
+          ? packages.value
+          : undefined,
+      branchProtection:
+        branchProtection.status === 'fulfilled' &&
+          isValidGitHubBranchProtection(branchProtection.value)
+          ? branchProtection.value
+          : undefined,
+      community:
+        community.status === 'fulfilled' && isValidGitHubCommunity(community.value)
+          ? community.value
+          : undefined,
+      traffic:
+        traffic.status === 'fulfilled' && isValidGitHubTraffic(traffic.value)
+          ? traffic.value
+          : undefined,
+    };
+
+    // Log any failed enrichments for debugging but don't block execution
+    const failedEnrichments = [
+      { name: 'githubActions', result: githubActions },
+      { name: 'security', result: security },
+      { name: 'packages', result: packages },
+      { name: 'branchProtection', result: branchProtection },
+      { name: 'community', result: community },
+      { name: 'traffic', result: traffic },
+    ].filter(({ result }) => result.status === 'rejected');
+
+    if (failedEnrichments.length > 0) {
+      logger.warn('Some DevOps enrichments failed but execution continues', {
         nameWithOwner: repo.nameWithOwner,
+        failedCount: failedEnrichments.length,
+        totalCount: 6,
+        failedTypes: failedEnrichments.map(({ name }) => name),
+        nonBlocking: true,
       });
-
-      const [githubActions, security, packages, branchProtection, community, traffic] =
-        await Promise.allSettled([
-          this.getGitHubActionsData(owner, repoName),
-          this.getSecurityData(owner, repoName),
-          this.getPackagesData(owner, repoName),
-          this.getBranchProtectionData(
-            owner,
-            repoName,
-            repo.defaultBranchRef ?? GITHUB_CONSTANTS.DEFAULT_BRANCH
-          ),
-          this.getCommunityHealthData(owner, repoName),
-          this.getTrafficData(owner, repoName),
-        ]);
-
-      const enrichedRepo: GitHubRepo = {
-        ...repo,
-        githubActions:
-          githubActions.status === 'fulfilled' && isValidGitHubActions(githubActions.value)
-            ? githubActions.value
-            : undefined,
-        security:
-          security.status === 'fulfilled' && isValidGitHubSecurity(security.value)
-            ? security.value
-            : undefined,
-        packages:
-          packages.status === 'fulfilled' && isValidGitHubPackages(packages.value)
-            ? packages.value
-            : undefined,
-        branchProtection:
-          branchProtection.status === 'fulfilled' &&
-            isValidGitHubBranchProtection(branchProtection.value)
-            ? branchProtection.value
-            : undefined,
-        community:
-          community.status === 'fulfilled' && isValidGitHubCommunity(community.value)
-            ? community.value
-            : undefined,
-        traffic:
-          traffic.status === 'fulfilled' && isValidGitHubTraffic(traffic.value)
-            ? traffic.value
-            : undefined,
-      };
-
-      logger.info(GITHUB_MESSAGES.DEVOPS_ENRICHMENT_COMPLETED, {
-        nameWithOwner: repo.nameWithOwner,
-        enrichedFields: Object.keys({
-          githubActions: enrichedRepo.githubActions,
-          security: enrichedRepo.security,
-          packages: enrichedRepo.packages,
-          branchProtection: enrichedRepo.branchProtection,
-          community: enrichedRepo.community,
-          traffic: enrichedRepo.traffic,
-        }).filter(key => Boolean(enrichedRepo[key as keyof GitHubRepo])),
-      });
-
-      return enrichedRepo;
-    } catch (_error: unknown) {
-      logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_DURING_DEVOPS_ENRICHMENT, {
-        nameWithOwner: repo.nameWithOwner,
-        error: (_error as Error).message,
-      });
-      return repo;
     }
+
+    logger.info(GITHUB_MESSAGES.DEVOPS_ENRICHMENT_COMPLETED, {
+      nameWithOwner: repo.nameWithOwner,
+      enrichedFields: Object.keys({
+        githubActions: enrichedRepo.githubActions,
+        security: enrichedRepo.security,
+        packages: enrichedRepo.packages,
+        branchProtection: enrichedRepo.branchProtection,
+        community: enrichedRepo.community,
+        traffic: enrichedRepo.traffic,
+      }).filter(key => Boolean(enrichedRepo[key as keyof GitHubRepo])),
+      successfulEnrichments: 6 - failedEnrichments.length,
+      totalEnrichments: 6,
+    });
+
+    return enrichedRepo;
   }
 
   public sanitizeDescription(description: string): string {

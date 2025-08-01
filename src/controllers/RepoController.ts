@@ -12,7 +12,6 @@ import {
   REPO_STATUS_VALUES,
   REPO_STATUS_CODES,
   REPO_CONSTANTS,
-  GITHUB_MESSAGES,
 } from '@/constants';
 
 const collectionStatusMap = new Map<
@@ -94,8 +93,54 @@ export class RepoController {
         estimatedCompletion: new Date(Date.now() + 3 * 60 * 1000),
       });
 
-      // Get user data to obtain proper user ID
-      const { savedUser } = await UserController.collectUserDataInternal(githubToken);
+      // Get user data to obtain proper user ID - with non-blocking error handling
+      let savedUser;
+      try {
+        const result = await UserController.collectUserDataInternal(githubToken);
+        savedUser = result.savedUser;
+      } catch (error) {
+        logWithContext.api('user_data_collection_failed_continue', 'background', false, {
+          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+          [REPO_RESPONSE_FIELDS.ERROR]: String(error),
+          nonBlocking: true,
+          message: 'User data collection failed but repository collection continues',
+        });
+
+        // Try to find existing user in database or create minimal user entry
+        try {
+          const existingUser = await UserModel.findByLogin(username);
+          if (existingUser) {
+            savedUser = existingUser;
+            logWithContext.api('existing_user_found_fallback', 'background', true, {
+              [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+              userId: existingUser.id,
+              nonBlocking: true,
+            });
+          } else {
+            // Create minimal user entry to continue with repository collection
+            const githubService = await GitHubService.create(githubToken);
+            const basicProfile = await githubService.getUserProfile();
+            savedUser = await UserModel.upsert(basicProfile);
+
+            logWithContext.api('minimal_user_created_fallback', 'background', true, {
+              [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+              userId: savedUser.id,
+              nonBlocking: true,
+            });
+          }
+        } catch (fallbackError) {
+          logWithContext.api('user_fallback_failed', 'background', false, {
+            [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+            [REPO_RESPONSE_FIELDS.ERROR]: String(fallbackError),
+            originalError: String(error),
+            nonBlocking: true,
+            message: 'All user data collection attempts failed, aborting repository collection',
+          });
+
+          // If we can't get any user data, we can't proceed with repository collection
+          throw new Error(`Cannot proceed with repository collection: ${String(fallbackError)}`);
+        }
+      }
 
       const { enrichedRepositories, organizations } = await this.collectRepositoriesInternal(
         githubToken,
@@ -155,166 +200,193 @@ export class RepoController {
   static async collectRepositoriesInternal(
     githubToken: string,
     username: string
-  ): Promise<{ enrichedRepositories: GitHubRepo[]; organizations: string[]; degradedMode?: boolean }> {
+  ): Promise<{ enrichedRepositories: GitHubRepo[]; organizations: string[] }> {
     const githubService = await GitHubService.create(githubToken);
-    let degradedMode = false;
 
-    // Try to get user repositories with fallback to empty array
-    let allRepositories: GitHubRepo[] = [];
+    // STEP 1: Get user profile context first for detailed requests
+    let userProfile: import('@/types').UserProfile | undefined;
     try {
-      allRepositories = await githubService.getUserRepos();
+      userProfile = await githubService.getUserProfile();
 
-      if (allRepositories.length === 0) {
-        logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_OPERATION, 'internal', true, {
-          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
-          reason: 'Empty user repositories response',
-        });
-        degradedMode = true;
-      }
-    } catch (error: unknown) {
-      const errorMessage = String(error);
-
-      if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
-        logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
-          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
-          reason: 'GitHub infrastructure issues',
-          error: errorMessage,
-        });
-        degradedMode = true;
-        allRepositories = []; // Continue with empty array
-      } else {
-        logWithContext.api(REPO_LOG_MESSAGES.GET_USER_REPOSITORIES_ERROR, 'internal', false, {
-          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
-          [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
-        });
-        throw error; // Re-throw non-infrastructure errors
-      }
+      logWithContext.api('user_profile_context_retrieved', 'internal', true, {
+        [REPO_RESPONSE_FIELDS.USERNAME]: username,
+        login: userProfile.login,
+        publicRepos: userProfile.public_repos,
+        organizationsCount: userProfile.organizations?.totalCount ?? 0,
+      });
+    } catch (error) {
+      logWithContext.api('user_profile_context_failed', 'internal', false, {
+        [REPO_RESPONSE_FIELDS.USERNAME]: username,
+        [REPO_RESPONSE_FIELDS.ERROR]: String(error),
+        nonBlocking: true,
+      });
     }
 
-    // Try to get organizations with fallback
-    let organizations: string[] = [];
-    try {
-      organizations = await githubService.getUserOrganizations();
-    } catch (error: unknown) {
-      const errorMessage = String(error);
+    // STEP 2: Get ALL organizations with verification (GraphQL + REST fallback)
+    const organizations = await githubService.getUserOrganizations();
 
-      if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
-        logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
-          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
-          reason: 'Cannot fetch organizations due to infrastructure issues',
-          error: errorMessage,
-        });
-        degradedMode = true;
-        organizations = []; // Continue with empty array
-      } else {
-        logWithContext.api(REPO_LOG_MESSAGES.GET_ORG_REPOS_ERROR, 'internal', false, {
-          [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
-          [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
-        });
-        // Don't throw, just continue without organizations
-        organizations = [];
-        degradedMode = true;
-      }
-    }
+    logWithContext.api('organizations_discovery_completed', 'internal', true, {
+      [REPO_RESPONSE_FIELDS.USERNAME]: username,
+      organizationsCount: organizations.length,
+      organizations,
+      source: 'verified_complete',
+    });
 
-    const userFullName = process.env.GITHUB_FULL_NAME ?? '';
+    // STEP 3: Get user repositories with context-aware requests
+    const allRepositories = await githubService.getUserRepos();
 
-    // Process organization repositories with enhanced error handling
+    logWithContext.api('user_repositories_discovery_completed', 'internal', true, {
+      [REPO_RESPONSE_FIELDS.USERNAME]: username,
+      userRepositoriesCount: allRepositories.length,
+      source: allRepositories.length > 0 ? 'api_successful' : 'fallback_or_empty',
+    });
+
+    // STEP 4: Process organization repositories with user context
+    const userFullName = userProfile?.name ?? process.env.GITHUB_FULL_NAME ?? '';
+    let totalOrgReposProcessed = 0;
+    let totalOrgReposFiltered = 0;
+
     for (const orgName of organizations) {
-      try {
-        const orgRepos = await githubService.getOrgRepos(orgName);
+      logWithContext.api('organization_processing_started', 'internal', true, {
+        [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
+        [REPO_RESPONSE_FIELDS.USERNAME]: username,
+        organizationIndex: organizations.indexOf(orgName) + 1,
+        totalOrganizations: organizations.length,
+      });
 
-        if (orgRepos.length === 0) {
-          logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_OPERATION, 'internal', true, {
-            [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
-            reason: 'Empty organization repositories response',
-          });
-          degradedMode = true;
-        }
+      const orgRepos = await githubService.getOrgRepos(orgName);
+      totalOrgReposProcessed += orgRepos.length;
 
-        const userOrgRepos = orgRepos.filter(repo => {
-          const isOwner = repo.owner.login === username;
+      // STRICT filtering with enhanced context from user profile
+      const userOrgRepos = orgRepos.filter(repo => {
+        // 1. Check if user is the owner of the repository
+        const isOwner = repo.owner.login === username;
 
-          const hasCommits = repo.commits.recent.some(commit => {
-            const commitAuthorLogin = commit.author.login;
-            const commitAuthorName = commit.author.name;
+        // 2. Check if user has recent commits in this repository
+        const hasCommits = repo.commits.recent.some(commit => {
+          const commitAuthorLogin = commit.author.login;
+          const commitAuthorName = commit.author.name;
 
-            return (
-              commitAuthorLogin === username ||
-              (userFullName !== '' && commitAuthorName === userFullName)
-            );
-          });
-
-          const repoName = repo.name.toLowerCase();
-          const repoDescription = (repo.description ?? '').toLowerCase();
-          const usernameLower = username.toLowerCase();
-          const fullNameLower = userFullName.toLowerCase();
-
-          const hasMentionInName =
-            repoName.includes(usernameLower) ||
-            (userFullName !== '' && repoName.includes(fullNameLower));
-          const hasMentionInDescription =
-            repoDescription.includes(usernameLower) ||
-            (userFullName !== '' && repoDescription.includes(fullNameLower));
-
-          return isOwner || hasCommits || hasMentionInName || hasMentionInDescription;
+          return Boolean(
+            commitAuthorLogin === username ||
+            (userFullName !== '' && commitAuthorName === userFullName) ||
+            (userProfile?.name != null && userProfile.name !== '' && commitAuthorName === userProfile.name)
+          );
         });
-        allRepositories = [...allRepositories, ...userOrgRepos];
-      } catch (error: unknown) {
-        const errorMessage = String(error);
 
-        if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
-          logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
-            [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
-            reason: 'Infrastructure issues fetching organization repositories',
-            error: errorMessage,
-          });
-          degradedMode = true;
-        } else {
-          logWithContext.api(REPO_LOG_MESSAGES.GET_ORG_REPOS_ERROR, 'internal', false, {
-            [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
-            [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
-          });
-          degradedMode = true;
-        }
-      }
+        // 3. Check if user has recent Pull Requests in this repository
+        const hasPullRequests = repo.recentPullRequests.some(pr => {
+          return pr.author.login === username;
+        });
+
+        // 4. Check if repository name mentions the user (username/fullname in repository name)
+        const repoName = repo.name.toLowerCase();
+        const repoNameWithOwner = repo.nameWithOwner.toLowerCase();
+        const usernameLower = username.toLowerCase();
+        const fullNameLower = userFullName.toLowerCase();
+        const profileNameLower = (userProfile?.name ?? '').toLowerCase();
+
+        const hasMentionInName =
+          repoName.includes(usernameLower) ||
+          repoNameWithOwner.includes(usernameLower) ||
+          (userFullName !== '' && repoName.includes(fullNameLower)) ||
+          (userFullName !== '' && repoNameWithOwner.includes(fullNameLower)) ||
+          (profileNameLower !== '' && repoName.includes(profileNameLower)) ||
+          (profileNameLower !== '' && repoNameWithOwner.includes(profileNameLower));
+
+        // STRICT: Only include if user has actually contributed or is mentioned
+        // Include repositories where user: owns, has commits, has PRs, or is mentioned in name
+        const hasActualContribution = isOwner || hasCommits || hasPullRequests || hasMentionInName;
+
+        return hasActualContribution;
+      });
+
+      totalOrgReposFiltered += userOrgRepos.length;
+
+      logWithContext.api('organization_repositories_filtered', 'internal', true, {
+        [REPO_RESPONSE_FIELDS.ORG_NAME]: orgName,
+        totalOrgRepos: orgRepos.length,
+        filteredUserRepos: userOrgRepos.length,
+        filterRatio: orgRepos.length > 0 ? Math.round((userOrgRepos.length / orgRepos.length) * 100) : 0,
+        [REPO_RESPONSE_FIELDS.USERNAME]: username,
+        filterCriteria: 'strict_contribution_with_context',
+        userContext: {
+          hasProfileName: Boolean(userProfile?.name != null && userProfile.name !== ''),
+          hasFullName: Boolean(userFullName !== ''),
+        },
+      });
+
+      allRepositories.push(...userOrgRepos);
     }
 
-    // Enrich repositories with enhanced error handling
-    const enrichedRepositories = await Promise.all(
+    // STEP 5: Log comprehensive discovery summary
+    logWithContext.api('repository_discovery_summary', 'internal', true, {
+      [REPO_RESPONSE_FIELDS.USERNAME]: username,
+      userRepositories: allRepositories.length - totalOrgReposFiltered,
+      organizationRepositories: totalOrgReposFiltered,
+      totalRepositories: allRepositories.length,
+      organizationsProcessed: organizations.length,
+      totalOrgReposProcessed,
+      totalOrgReposFiltered,
+      discoveryComplete: true,
+    });
+
+    // STEP 6: Enrich repositories with DevOps data using Promise.allSettled to prevent blocking
+    const enrichmentResults = await Promise.allSettled(
       allRepositories.map(async repo => {
         try {
           return await githubService.enrichWithDevOpsData(repo);
-        } catch (error: unknown) {
-          const errorMessage = String(error);
+        } catch (error) {
+          logWithContext.api(REPO_LOG_MESSAGES.ENRICH_REPO_ERROR, 'internal', false, {
+            [REPO_RESPONSE_FIELDS.REPO]: repo.nameWithOwner,
+            [REPO_RESPONSE_FIELDS.ERROR]: String(error),
+            nonBlocking: true,
+          });
 
-          if (errorMessage.includes(GITHUB_MESSAGES.INFRASTRUCTURE_ERROR_FALLBACK)) {
-            logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_OPERATION, 'internal', true, {
-              [REPO_RESPONSE_FIELDS.REPO]: repo.nameWithOwner,
-              reason: 'Cannot enrich repository due to infrastructure issues',
-            });
-            degradedMode = true;
-          } else {
-            logWithContext.api(REPO_LOG_MESSAGES.ENRICH_REPO_ERROR, 'internal', false, {
-              [REPO_RESPONSE_FIELDS.REPO]: repo.nameWithOwner,
-              [REPO_RESPONSE_FIELDS.ERROR]: errorMessage,
-            });
-          }
-          return repo; // Return non-enriched repo
+          // Return non-enriched repo on error - continue processing
+          return repo;
         }
       })
     );
 
-    if (degradedMode) {
-      logWithContext.api(REPO_LOG_MESSAGES.DEGRADED_MODE_ENABLED, 'internal', true, {
+    // Extract successful results and log any failures
+    const enrichedRepositories: GitHubRepo[] = [];
+    let failedEnrichments = 0;
+
+    enrichmentResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        enrichedRepositories.push(result.value);
+      } else {
+        failedEnrichments++;
+        logWithContext.api(REPO_LOG_MESSAGES.ENRICH_REPO_ERROR, 'internal', false, {
+          [REPO_RESPONSE_FIELDS.REPO]: allRepositories[index]?.nameWithOwner ?? 'unknown',
+          [REPO_RESPONSE_FIELDS.ERROR]: String(result.reason),
+          nonBlocking: true,
+        });
+
+        // Still include the non-enriched repository
+        enrichedRepositories.push(allRepositories[index]);
+      }
+    });
+
+    if (failedEnrichments > 0) {
+      logWithContext.api('repository_enrichment_partial_failure', 'internal', true, {
         [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
-        repositoriesFound: enrichedRepositories.length,
-        organizationsChecked: organizations.length,
-        finalStatus: 'degraded_mode_completed',
+        successfulEnrichments: enrichedRepositories.length - failedEnrichments,
+        failedEnrichments,
+        totalRepositories: allRepositories.length,
+        nonBlocking: true,
       });
     }
 
-    return { enrichedRepositories, organizations, degradedMode };
+    logWithContext.api(REPO_LOG_MESSAGES.REPOSITORIES_ENRICHED_SUCCESS, 'internal', true, {
+      [REPO_RESPONSE_FIELDS.TARGET_USERNAME]: username,
+      [REPO_RESPONSE_FIELDS.REPOSITORIES_COUNT]: enrichedRepositories.length,
+      successfulEnrichments: enrichedRepositories.length - failedEnrichments,
+      failedEnrichments,
+    });
+
+    return { enrichedRepositories, organizations };
   }
 
   static getUserRepositories = asyncHandler(async (req: Request, res: Response): Promise<void> => {
