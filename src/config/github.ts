@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 
-import { GitHubTokenValidationResult, RateLimitInfo } from '@/types';
+import { GitHubTokenValidationResult, RateLimitInfo, GitHubRateLimitError } from '@/types';
 import logger from '@/utils/logger';
 import { GITHUB_CONSTANTS, GITHUB_MESSAGES, ERROR_CONSTANTS } from '@/constants';
 
@@ -9,7 +9,7 @@ export class GitHubConfig {
   private token: string | null = null;
   private rateLimitInfo: RateLimitInfo | null = null;
 
-  public async initialize(githubToken: string): Promise<void> {
+  public async initialize(githubToken: string): Promise<{ success: boolean; error?: string; isRateLimitError?: boolean }> {
     this.token = githubToken;
     this.octokit = new Octokit({
       auth: githubToken,
@@ -24,20 +24,67 @@ export class GitHubConfig {
     try {
       const validation = await this.validateToken();
       if (!validation.valid) {
-        throw new Error(
-          `${GITHUB_MESSAGES.INVALID_TOKEN_PREFIX}${validation.error ?? GITHUB_MESSAGES.UNKNOWN_ERROR}`
-        );
+        // Handle rate limit errors specifically - return error state instead of throwing
+        if (validation.isRateLimitError === true) {
+          logger.warn('GitHub API rate limit exceeded during initialization', {
+            error: validation.error,
+            rateLimitError: true,
+            gracefulDegradation: true,
+          });
+          return {
+            success: false,
+            error: validation.error ?? GITHUB_MESSAGES.RATE_LIMIT_INITIALIZATION_ERROR,
+            isRateLimitError: true,
+          };
+        }
+
+        // Handle other validation errors - return error state instead of throwing
+        const errorMessage = `${GITHUB_MESSAGES.INVALID_TOKEN_PREFIX}${validation.error ?? GITHUB_MESSAGES.UNKNOWN_ERROR}`;
+        logger.error('GitHub token validation failed during initialization', {
+          error: errorMessage,
+          gracefulDegradation: true,
+        });
+        return {
+          success: false,
+          error: errorMessage,
+          isRateLimitError: false,
+        };
       }
 
       logger.info(GITHUB_MESSAGES.INITIALIZATION_SUCCESS, {
         username: validation.username,
         scopes: validation.scopes,
       });
+      
+      return { success: true };
     } catch (error) {
-      logger.error('GitHub configuration initialization failed', {
-        error: (error as Error).message,
+      // Handle any unexpected errors gracefully
+      const errorMessage = error instanceof Error ? error.message : 'Unknown initialization error';
+      const isRateLimitError = error instanceof GitHubRateLimitError || 
+        (error instanceof Error && this.isRateLimitError(error));
+
+      if (isRateLimitError) {
+        logger.warn('GitHub API rate limit exceeded during initialization (caught)', {
+          error: errorMessage,
+          rateLimitError: true,
+          gracefulDegradation: true,
+        });
+        return {
+          success: false,
+          error: GITHUB_MESSAGES.RATE_LIMIT_INITIALIZATION_ERROR,
+          isRateLimitError: true,
+        };
+      }
+
+      logger.error('GitHub configuration initialization failed (caught)', {
+        error: errorMessage,
+        gracefulDegradation: true,
       });
-      throw error;
+      return {
+        success: false,
+        error: errorMessage,
+        isRateLimitError: false,
+      };
     }
   }
 
@@ -98,7 +145,7 @@ export class GitHubConfig {
       if (this.isRateLimitError(_error)) {
         return {
           valid: false,
-          error: GITHUB_MESSAGES.RATE_LIMIT_EXCEEDED_DETAILED,
+          error: GITHUB_MESSAGES.RATE_LIMIT_SIMPLE_MESSAGE,
           isRateLimitError: true,
         };
       }

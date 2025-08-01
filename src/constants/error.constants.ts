@@ -236,6 +236,8 @@ export const GITHUB_SERVICE_ERROR_MESSAGES = {
   RATE_LIMIT_USER_SPECIFIC: 'GitHub API rate limit exceeded for this user account',
   RATE_LIMIT_SUPPORT_MESSAGE:
     'If you reach out to GitHub Support for help, please include the request ID and timestamp from the error message.',
+  RATE_LIMIT_INITIALIZATION_ERROR: 'GitHub API rate limit exceeded during initialization. Please wait 10-30 minutes before trying again.',
+  RATE_LIMIT_SIMPLE_MESSAGE: 'Rate limit exceeded. Please wait 10-30 minutes and try again.',
 } as const;
 
 // GitHub Service Log Error Messages

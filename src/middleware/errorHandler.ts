@@ -15,6 +15,7 @@ import {
   GITHUB_CONSTANTS,
   GITHUB_MESSAGES,
 } from '@/constants';
+import { GitHubRateLimitError } from '@/types';
 
 interface HTTPErrorResponse {
   status: number;
@@ -142,9 +143,9 @@ export class ExternalServiceError extends Error implements APIError {
     this.name = 'ExternalServiceError';
     this.details = originalError
       ? {
-          originalMessage: originalError.message,
-          stack: originalError.stack,
-        }
+        originalMessage: originalError.message,
+        stack: originalError.stack,
+      }
       : undefined;
     Object.setPrototypeOf(this, ExternalServiceError.prototype);
   }
@@ -161,15 +162,20 @@ export class DatabaseError extends Error implements APIError {
     this.name = 'DatabaseError';
     this.details = originalError
       ? {
-          originalMessage: originalError.message,
-          stack: originalError.stack,
-        }
+        originalMessage: originalError.message,
+        stack: originalError.stack,
+      }
       : undefined;
     Object.setPrototypeOf(this, DatabaseError.prototype);
   }
 }
 
 const classifyError = (_error: Error): APIError => {
+  // Handle GitHubRateLimitError specifically
+  if (_error instanceof GitHubRateLimitError) {
+    return new RateLimitError(_error.message, _error.resetTime);
+  }
+
   if (_error instanceof ZodError) {
     return new ValidationError(ERROR_HANDLER_MESSAGES.DATA_VALIDATION_ERROR, {
       validationErrors: _error.errors.map((err: ZodIssue) => ({
@@ -332,7 +338,7 @@ export const errorHandler: ErrorRequestHandler = (
 
   if (
     (classifiedError.statusCode ?? ERROR_HANDLER_UTILS.DEFAULT_STATUS_CODE) >=
-      ERROR_HANDLER_UTILS.SERVER_ERROR_MIN ||
+    ERROR_HANDLER_UTILS.SERVER_ERROR_MIN ||
     classifiedError.isOperational === false
   ) {
     logger.error(ERROR_HANDLER_MESSAGES.CRITICAL_SERVER_ERROR, logData);
@@ -403,11 +409,27 @@ export const setupGlobalErrorHandlers = (): void => {
   process.on(
     'unhandledRejection',
     (reason: unknown, promise: Promise<Record<string, unknown>>): void => {
-      logger.error(ERROR_HANDLER_MESSAGES.UNHANDLED_PROMISE_REJECTION, {
-        reason: (reason as Error)?.message ?? reason,
-        stack: (reason as Error)?.stack,
-        promise: promise.toString(),
-      });
+      const isGitHubRateLimitError = reason instanceof GitHubRateLimitError ||
+        (reason instanceof Error &&
+          (reason.name === 'GitHubRateLimitError' ||
+            reason.message.includes('rate limit') ||
+            reason.message.includes('API rate limit exceeded')));
+
+      if (isGitHubRateLimitError) {
+        // Handle GitHub rate limit errors gracefully - don't crash the app
+        logger.warn(ERROR_HANDLER_MESSAGES.UNHANDLED_PROMISE_REJECTION, {
+          reason: (reason as Error)?.message ?? reason,
+          rateLimitError: true,
+          gracefullyHandled: true,
+          promise: promise.toString(),
+        });
+      } else {
+        logger.error(ERROR_HANDLER_MESSAGES.UNHANDLED_PROMISE_REJECTION, {
+          reason: (reason as Error)?.message ?? reason,
+          stack: (reason as Error)?.stack,
+          promise: promise.toString(),
+        });
+      }
     }
   );
 
