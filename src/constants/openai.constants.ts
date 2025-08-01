@@ -68,8 +68,8 @@ export const OPENAI_CONSTANTS = {
   },
   REPOSITORY_LIMITS: {
     MAX_REPOSITORIES: 200,
-    TOP_REPOSITORIES: 10,
-    FALLBACK_REPOSITORIES: 5,
+    TOP_REPOSITORIES: 200, 
+    FALLBACK_REPOSITORIES: 50,
   },
   TIME_CONSTANTS: {
     THIRTY_DAYS_MS: 30 * 24 * 60 * 60 * 1000,
@@ -97,6 +97,13 @@ STATISTICS:
 - Languages: {totalLanguages}
 - Lines of code: {totalLinesOfCode}
 - Active projects: {activeProjects}
+
+{repositoryBreakdown}
+
+IMPORTANT: Use the repository breakdown above to calculate accurate qualityByOrganization scores:
+- "personal": Average quality of {personalRepos} personal repositories
+- "organization": Average quality of {organizationRepos} organization repositories  
+- "school": Average quality of {schoolRepos} school/educational repositories
 
 TOP REPOSITORIES:
 {topRepositories}

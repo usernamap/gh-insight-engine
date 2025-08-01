@@ -358,10 +358,10 @@ export const requireOwnership = (paramName = AUTH_CONSTANTS.DEFAULT_PARAM_NAME) 
         debug:
           process.env.NODE_ENV === 'development'
             ? {
-                requestedUsername,
-                authenticatedUsername,
-                areEqual: requestedUsername === authenticatedUsername,
-              }
+              requestedUsername,
+              authenticatedUsername,
+              areEqual: requestedUsername === authenticatedUsername,
+            }
             : undefined,
       });
       return;

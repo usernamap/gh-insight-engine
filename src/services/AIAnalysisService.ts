@@ -63,6 +63,11 @@ export interface AIAnalysisInput {
     totalLanguages: number;
     totalLinesOfCode: number;
     activeProjects: number;
+    repositoryBreakdown: {
+      personal: number;
+      organization: number;
+      school: number;
+    };
   };
 }
 
@@ -228,6 +233,9 @@ export class AIAnalysisService {
       return new Date(repo.pushedAt as string) > thirtyDaysAgo;
     }).length;
 
+    // Categorize repositories by type (personal, organization, school)
+    const repositoryCategories = this.categorizeRepositories(repositories);
+
     return {
       userProfile: {
         login: userData.login as string,
@@ -268,8 +276,74 @@ export class AIAnalysisService {
           .size,
         totalLinesOfCode,
         activeProjects,
+        repositoryBreakdown: {
+          personal: repositoryCategories.personal,
+          organization: repositoryCategories.organization,
+          school: repositoryCategories.school,
+        },
       },
     };
+  }
+
+  /**
+   * Categorizes repositories into personal, organization, and school types
+   */
+  private static categorizeRepositories(repositories: { [key: string]: unknown }[]): {
+    personal: number;
+    organization: number;
+    school: number;
+  } {
+    const userLogin = repositories.length > 0 ? (repositories[0].nameWithOwner as string)?.split('/')[0] : '';
+
+    const categorization = {
+      personal: 0,
+      organization: 0,
+      school: 0,
+    };
+
+    repositories.forEach(repo => {
+      if (repo.owner != null && typeof repo.owner === 'object') {
+        const owner = repo.owner as { type?: string; login?: string; name?: string };
+        const ownerName = (owner.name ?? owner.login ?? '').toLowerCase();
+
+        // Personal repositories (user owns them)
+        if (owner.type === 'User' || owner.login === userLogin) {
+          categorization.personal++;
+        }
+        // School/Educational repositories
+        else if (
+          owner.type === 'Organization' &&
+          (ownerName.includes('school') ||
+            ownerName.includes('university') ||
+            ownerName.includes('college') ||
+            ownerName.includes('edu') ||
+            ownerName.includes('academy') ||
+            ownerName.includes('institute') ||
+            ownerName.includes('epitech') ||
+            ownerName.includes('42') ||
+            ownerName.includes('formation') ||
+            ownerName.includes('apprentissage') ||
+            ownerName.includes('student') ||
+            ownerName.includes('promo') ||
+            ownerName.includes('web') && ownerName.includes('academie'))
+        ) {
+          categorization.school++;
+        }
+        // Organization repositories
+        else if (owner.type === 'Organization') {
+          categorization.organization++;
+        }
+        // Default to personal if unclear
+        else {
+          categorization.personal++;
+        }
+      } else {
+        // Default to personal if no owner info
+        categorization.personal++;
+      }
+    });
+
+    return categorization;
   }
 
   private static extractLanguages(languages: unknown): Record<string, number> {
@@ -342,7 +416,7 @@ export class AIAnalysisService {
   private static buildAnalysisPrompt(input: AIAnalysisInput): string {
     const yearsOfActivity = Math.floor(
       (Date.now() - input.userProfile.createdAt.getTime()) /
-        OPENAI_CONSTANTS.TIME_CONSTANTS.ONE_YEAR_MS
+      OPENAI_CONSTANTS.TIME_CONSTANTS.ONE_YEAR_MS
     );
 
     const topRepositories = input.repositories
@@ -373,7 +447,16 @@ export class AIAnalysisService {
       .replace('{totalLanguages}', input.statistics.totalLanguages.toString())
       .replace('{totalLinesOfCode}', input.statistics.totalLinesOfCode.toString())
       .replace('{activeProjects}', input.statistics.activeProjects.toString())
+      .replace('{personalRepos}', input.statistics.repositoryBreakdown.personal.toString())
+      .replace('{organizationRepos}', input.statistics.repositoryBreakdown.organization.toString())
+      .replace('{schoolRepos}', input.statistics.repositoryBreakdown.school.toString())
       .replace('{topRepositories}', topRepositories)
+      .replace('{repositoryBreakdown}', 
+        `REPOSITORY BREAKDOWN:\n` +
+        `- Personal repositories: ${input.statistics.repositoryBreakdown.personal}\n` +
+        `- Organization repositories: ${input.statistics.repositoryBreakdown.organization}\n` +
+        `- School/Educational repositories: ${input.statistics.repositoryBreakdown.school}\n`
+      )
       .replace(/{maxQuality}/g, OPENAI_CONSTANTS.SCORE_LIMITS.MAX_QUALITY.toString())
       .replace('{maxOverallHealth}', OPENAI_CONSTANTS.SCORE_LIMITS.MAX_OVERALL_HEALTH.toString())
       .replace('{maxVulnerabilities}', OPENAI_CONSTANTS.SCORE_LIMITS.MAX_VULNERABILITIES.toString())
@@ -450,7 +533,7 @@ export class AIAnalysisService {
           Math.max(
             OPENAI_CONSTANTS.SCORE_LIMITS.MIN_QUALITY,
             aiResult.qualityByOrganization?.personal ??
-              OPENAI_CONSTANTS.ORGANIZATION_DEFAULTS.PERSONAL
+            OPENAI_CONSTANTS.ORGANIZATION_DEFAULTS.PERSONAL
           )
         ),
         organization: Math.min(
@@ -458,7 +541,7 @@ export class AIAnalysisService {
           Math.max(
             OPENAI_CONSTANTS.SCORE_LIMITS.MIN_QUALITY,
             aiResult.qualityByOrganization?.organization ??
-              OPENAI_CONSTANTS.ORGANIZATION_DEFAULTS.ORGANIZATION
+            OPENAI_CONSTANTS.ORGANIZATION_DEFAULTS.ORGANIZATION
           )
         ),
         school: Math.min(
@@ -471,8 +554,7 @@ export class AIAnalysisService {
       },
 
       repositoryScores:
-        aiResult.repositoryScores?.slice(0, OPENAI_CONSTANTS.REPOSITORY_LIMITS.TOP_REPOSITORIES) ??
-        [],
+        aiResult.repositoryScores ?? [],
 
       insights: {
         summary:
@@ -522,14 +604,14 @@ export class AIAnalysisService {
       OPENAI_CONSTANTS.SCORE_LIMITS.MAX_QUALITY,
       Math.round(
         avgStarsPerRepo * OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.STARS_MULTIPLIER +
-          input.statistics.activeProjects *
-            OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.ACTIVE_PROJECTS_MULTIPLIER +
-          input.statistics.totalLanguages *
-            OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.LANGUAGES_MULTIPLIER +
-          Math.min(
-            OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.MAX_FOLLOWERS_BONUS,
-            input.userProfile.followers
-          )
+        input.statistics.activeProjects *
+        OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.ACTIVE_PROJECTS_MULTIPLIER +
+        input.statistics.totalLanguages *
+        OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.LANGUAGES_MULTIPLIER +
+        Math.min(
+          OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.MAX_FOLLOWERS_BONUS,
+          input.userProfile.followers
+        )
       )
     );
 
@@ -557,7 +639,7 @@ export class AIAnalysisService {
 
       estimatedVulnerabilities: Math.round(
         input.statistics.totalRepositories *
-          OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.VULNERABILITIES_COEFFICIENT
+        OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.VULNERABILITIES_COEFFICIENT
       ),
       estimatedBugs: Math.round(
         input.statistics.totalRepositories * OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.BUGS_COEFFICIENT
@@ -578,7 +660,6 @@ export class AIAnalysisService {
       },
 
       repositoryScores: input.repositories
-        .slice(0, OPENAI_CONSTANTS.REPOSITORY_LIMITS.FALLBACK_REPOSITORIES)
         .map(repo => ({
           name: repo.name,
           qualityScore: Math.min(
@@ -586,9 +667,9 @@ export class AIAnalysisService {
             Math.max(
               OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.REPO_MIN_SCORE,
               repo.stargazerCount * OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.REPO_QUALITY_MULTIPLIER +
-                (repo.description !== null && repo.description !== undefined
-                  ? OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.DESCRIPTION_BONUS
-                  : 0)
+              (repo.description !== null && repo.description !== undefined
+                ? OPENAI_CONSTANTS.FALLBACK_COEFFICIENTS.DESCRIPTION_BONUS
+                : 0)
             )
           ),
           recommendation: AI_ANALYSIS_DEFAULT_INSIGHTS.RECOMMENDATIONS.IMPROVE_DOCUMENTATION,
