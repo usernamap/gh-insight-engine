@@ -1,5 +1,6 @@
 import {
   GitHubRepo,
+  GitHubLanguage,
   GitHubRestCodeScanningAlert,
   GitHubRestCommunityProfile,
   GitHubRestDependabotAlert,
@@ -92,11 +93,18 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     languages: {
       totalSize: node.languages?.totalSize ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
       nodes:
-        node.languages?.edges?.map(edge => ({
-          name: edge.node.name,
-          size: edge.size,
-          percentage: GITHUB_CONSTANTS.DEFAULT_PERCENTAGE,
-        })) ?? [],
+        node.languages?.edges?.map(edge => {
+          const totalSize = node.languages?.totalSize ?? GITHUB_CONSTANTS.DEFAULT_COUNT;
+          const percentage = totalSize > 0 
+            ? Math.round((edge.size / totalSize) * 100 * 100) / 100 // Round to 2 decimal places
+            : GITHUB_CONSTANTS.DEFAULT_PERCENTAGE;
+          
+          return {
+            name: edge.node.name,
+            size: edge.size,
+            percentage,
+          };
+        }) ?? [],
     },
     topics: node.repositoryTopics?.nodes?.map(t => t.topic.name) ?? [],
     pushedAt: new Date(node.pushedAt),
@@ -494,7 +502,7 @@ export class GitHubService {
               forkCount
               watchers { totalCount }
               primaryLanguage { name }
-              languages(first: 10) {
+              languages(first: ${GITHUB_CONSTANTS.LANGUAGES_LIMIT}) {
                 totalSize
                 edges {
                   size
@@ -680,86 +688,96 @@ export class GitHubService {
 
       const repos = (response as unknown as unknown[]) ?? [];
 
-      // Convert REST response to GitHubRepo format (basic version)
-      const convertedRepos: GitHubRepo[] = repos.map((repo: unknown) => {
-        const repoData = repo as Record<string, unknown>;
-        const owner = repoData.owner as Record<string, unknown>;
-        const license = repoData.license as Record<string, unknown> | null;
+      // Convert REST response to GitHubRepo format (enhanced version with full languages)
+      const convertedRepos: GitHubRepo[] = await Promise.all(
+        repos.map(async (repo: unknown) => {
+          const repoData = repo as Record<string, unknown>;
+          const owner = repoData.owner as Record<string, unknown>;
+          const license = repoData.license as Record<string, unknown> | null;
 
-        return {
-          nameWithOwner: String(repoData.full_name ?? ''),
-          name: String(repoData.name ?? ''),
-          description: String(repoData.description ?? ''),
-          isPrivate: Boolean(repoData.private),
-          isArchived: Boolean(repoData.archived),
-          isFork: Boolean(repoData.fork),
-          isTemplate: Boolean(repoData.is_template),
-          stargazerCount: Number(repoData.stargazers_count ?? 0),
-          forkCount: Number(repoData.forks_count ?? 0),
-          watchersCount: Number(repoData.watchers_count ?? 0),
-          subscriberCount: Number(repoData.subscribers_count ?? 0),
-          networkCount: Number(repoData.network_count ?? 0),
-          openIssuesCount: Number(repoData.open_issues_count ?? 0),
-          primaryLanguage: String(repoData.language ?? ''),
-          languages: {
-            totalSize: 0,
-            nodes: repoData.language != null && repoData.language !== '' ? [{ name: String(repoData.language), size: 0, percentage: 0 }] : [],
-          },
-          topics: Array.isArray(repoData.topics) ? repoData.topics.map(t => String(t)) : [],
-          pushedAt: new Date(String(repoData.pushed_at)),
-          updatedAt: new Date(String(repoData.updated_at)),
-          createdAt: new Date(String(repoData.created_at)),
-          homepageUrl: String(repoData.homepage ?? ''),
-          size: Number(repoData.size ?? 0),
-          defaultBranchRef: String(repoData.default_branch ?? ''),
-          license: license ? {
-            name: String(license.name ?? ''),
-            spdxId: String(license.spdx_id ?? ''),
-            url: String(license.url ?? ''),
-          } : null,
-          hasIssuesEnabled: Boolean(repoData.has_issues),
-          hasProjectsEnabled: Boolean(repoData.has_projects),
-          hasWikiEnabled: Boolean(repoData.has_wiki),
-          hasPages: Boolean(repoData.has_pages),
-          hasDownloads: Boolean(repoData.has_downloads),
-          hasDiscussions: false, // Not available in REST API
-          vulnerabilityAlertsEnabled: false, // Not available in REST API
-          securityPolicyEnabled: false, // Not available in REST API
-          codeOfConductEnabled: false, // Not available in REST API
-          contributingGuidelinesEnabled: false, // Not available in REST API
-          readmeEnabled: false, // Not available in REST API
-          deployments: { totalCount: 0 },
-          environments: { totalCount: 0 },
-          commits: {
-            totalCount: 0,
-            recent: [],
-          },
-          releases: {
-            totalCount: 0,
-            latestRelease: null,
-          },
-          issues: {
-            totalCount: Number(repoData.open_issues_count ?? 0),
-            openCount: Number(repoData.open_issues_count ?? 0),
-            closedCount: 0,
-          },
-          pullRequests: {
-            totalCount: 0,
-            openCount: 0,
-            closedCount: 0,
-            mergedCount: 0,
-          },
-          branchProtectionRules: { totalCount: 0 },
-          collaborators: { totalCount: 0 },
-          diskUsage: Number(repoData.size ?? 0),
-          owner: {
-            login: String(owner?.login ?? ''),
-            type: String(owner?.type ?? ''),
-            avatarUrl: String(owner?.avatar_url ?? ''),
-          },
-          recentPullRequests: [], // REST API doesn't provide PR details in repo list
-        };
-      });
+          // Get complete language data for this repository
+          const completeLanguages = await this.getRepositoryLanguages(
+            String(owner.login ?? ''),
+            String(repoData.name ?? '')
+          );
+
+          const totalSize = completeLanguages.reduce((sum, lang) => sum + lang.size, 0);
+
+          return {
+            nameWithOwner: String(repoData.full_name ?? ''),
+            name: String(repoData.name ?? ''),
+            description: String(repoData.description ?? ''),
+            isPrivate: Boolean(repoData.private),
+            isArchived: Boolean(repoData.archived),
+            isFork: Boolean(repoData.fork),
+            isTemplate: Boolean(repoData.is_template),
+            stargazerCount: Number(repoData.stargazers_count ?? 0),
+            forkCount: Number(repoData.forks_count ?? 0),
+            watchersCount: Number(repoData.watchers_count ?? 0),
+            subscriberCount: Number(repoData.subscribers_count ?? 0),
+            networkCount: Number(repoData.network_count ?? 0),
+            openIssuesCount: Number(repoData.open_issues_count ?? 0),
+            primaryLanguage: completeLanguages.length > 0 ? completeLanguages[0].name : String(repoData.language ?? ''),
+            languages: {
+              totalSize,
+              nodes: completeLanguages,
+            },
+            topics: Array.isArray(repoData.topics) ? repoData.topics.map(t => String(t)) : [],
+            pushedAt: new Date(String(repoData.pushed_at)),
+            updatedAt: new Date(String(repoData.updated_at)),
+            createdAt: new Date(String(repoData.created_at)),
+            homepageUrl: String(repoData.homepage ?? ''),
+            size: Number(repoData.size ?? 0),
+            defaultBranchRef: String(repoData.default_branch ?? ''),
+            license: license ? {
+              name: String(license.name ?? ''),
+              spdxId: String(license.spdx_id ?? ''),
+              url: String(license.url ?? ''),
+            } : null,
+            hasIssuesEnabled: Boolean(repoData.has_issues),
+            hasProjectsEnabled: Boolean(repoData.has_projects),
+            hasWikiEnabled: Boolean(repoData.has_wiki),
+            hasPages: Boolean(repoData.has_pages),
+            hasDownloads: Boolean(repoData.has_downloads),
+            hasDiscussions: false, // Not available in REST API
+            vulnerabilityAlertsEnabled: false, // Not available in REST API
+            securityPolicyEnabled: false, // Not available in REST API
+            codeOfConductEnabled: false, // Not available in REST API
+            contributingGuidelinesEnabled: false, // Not available in REST API
+            readmeEnabled: false, // Not available in REST API
+            deployments: { totalCount: 0 },
+            environments: { totalCount: 0 },
+            commits: {
+              totalCount: 0,
+              recent: [],
+            },
+            releases: {
+              totalCount: 0,
+              latestRelease: null,
+            },
+            issues: {
+              totalCount: Number(repoData.open_issues_count ?? 0),
+              openCount: Number(repoData.open_issues_count ?? 0),
+              closedCount: 0,
+            },
+            pullRequests: {
+              totalCount: 0,
+              openCount: 0,
+              closedCount: 0,
+              mergedCount: 0,
+            },
+            branchProtectionRules: { totalCount: 0 },
+            collaborators: { totalCount: 0 },
+            diskUsage: Number(repoData.size ?? 0),
+            owner: {
+              login: String(owner?.login ?? ''),
+              type: String(owner?.type ?? ''),
+              avatarUrl: String(owner?.avatar_url ?? ''),
+            },
+            recentPullRequests: [], // REST API doesn't provide PR details in repo list
+          };
+        })
+      );
 
       allRepos.push(...convertedRepos);
 
@@ -796,6 +814,60 @@ export class GitHubService {
     );
   }
 
+  /**
+   * Retrieve all languages for a repository using GitHub REST API
+   * @param owner Repository owner
+   * @param repo Repository name
+   * @returns Promise<GitHubLanguage[]> - All languages with sizes and calculated percentages
+   */
+  public async getRepositoryLanguages(owner: string, repo: string): Promise<GitHubLanguage[]> {
+    try {
+      const response = await this.githubConfig.executeRestRequest(`GET /repos/${owner}/${repo}/languages`);
+
+      if (response == null || typeof response !== 'object') {
+        logger.warn('Invalid language response from GitHub API', {
+          owner,
+          repo,
+          response: typeof response,
+        });
+        return [];
+      }
+
+      const languageData = response as Record<string, number>;
+      const totalSize = Object.values(languageData).reduce((sum, size) => sum + size, 0);
+
+      if (totalSize === 0) {
+        return [];
+      }
+
+      const languages: GitHubLanguage[] = Object.entries(languageData).map(([name, size]) => ({
+        name,
+        size,
+        percentage: Math.round((size / totalSize) * 100 * 100) / 100, // Round to 2 decimal places
+      }));
+
+      // Sort by size (descending)
+      languages.sort((a, b) => b.size - a.size);
+
+      logger.debug('Retrieved repository languages', {
+        owner,
+        repo,
+        languageCount: languages.length,
+        totalSize,
+        languages: languages.map(l => `${l.name}: ${l.percentage}%`),
+      });
+
+      return languages;
+    } catch (error) {
+      logger.error('Failed to retrieve repository languages', {
+        owner,
+        repo,
+        error: (error as Error).message,
+      });
+      return [];
+    }
+  }
+
   public async getOrgRepos(orgName: string, cursor?: string): Promise<GitHubRepo[]> {
     // Enhanced GraphQL query with better context for organization repositories
     const query = `
@@ -818,7 +890,7 @@ export class GitHubService {
               forkCount
               watchers { totalCount }
               primaryLanguage { name }
-              languages(first: 10) {
+              languages(first: ${GITHUB_CONSTANTS.LANGUAGES_LIMIT}) {
                 totalSize
                 edges {
                   size
@@ -909,7 +981,7 @@ export class GitHubService {
         orgName && cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING
           ? { orgName, cursor }
           : { orgName };
-      
+
       const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
         query,
         variables
@@ -924,14 +996,14 @@ export class GitHubService {
       // Enhanced conversion with better context handling
       const repos: GitHubRepo[] = repositories.map((node: GitHubGraphQLRepositoryNode) => {
         const convertedRepo = toGitHubRepo(node);
-        
+
         // Enhanced collaborators context (keeping existing structure)
         if (node.collaborators?.totalCount != null) {
           convertedRepo.collaborators = {
             totalCount: node.collaborators.totalCount,
           };
         }
-        
+
         return convertedRepo;
       });
 
@@ -956,7 +1028,7 @@ export class GitHubService {
         error: (error as Error).message,
         nonBlocking: true,
       });
-      
+
       return [];
     }
   }

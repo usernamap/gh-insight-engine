@@ -10,7 +10,7 @@ info:
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
     **Automatic Scheduling**: Built-in scheduling service with automatic token management
-  version: 0.1.110
+  version: 0.1.111
   contact:
     name: Github
     url: https://github.com/octocat/gh-insight-engine
@@ -1395,18 +1395,33 @@ components:
           nullable: true
         languages:
           type: object
+          description: Programming languages used in the repository with comprehensive statistics
           properties:
             totalSize:
               type: integer
+              description: Total size of all language code in bytes
+              example: 1548392
             nodes:
               type: array
+              description: Complete list of all programming languages detected by GitHub API
               items:
                 type: object
                 properties:
                   name:
                     type: string
+                    description: Programming language name
+                    example: "TypeScript"
                   size:
                     type: integer
+                    description: Size of code in this language (bytes)
+                    example: 856214
+                  percentage:
+                    type: number
+                    format: float
+                    description: Percentage of total codebase in this language (calculated with 2 decimal precision)
+                    example: 55.31
+                    minimum: 0
+                    maximum: 100
         topics:
           type: array
           items:
