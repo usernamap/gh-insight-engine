@@ -76,7 +76,7 @@
     "@types/mongoose": "^5.11.96",
     "@types/node-cron": "^3.0.11",
     "@types/uuid": "^10.0.0",
-    "axios": "^1.10.0",
+    "axios": "^1.12.1",
     "bcryptjs": "^3.0.2",
     "chalk": "^5.4.1",
     "compression": "^1.8.1",
