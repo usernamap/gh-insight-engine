@@ -106,7 +106,7 @@ export class RepoController {
         });
 
         try {
-          const existingUser = await UserModel.findByLogin(username);
+          const existingUser = await UserModel.findByLogin(String(username));
           if (existingUser) {
             savedUser = existingUser;
             logWithContext.api('existing_user_found_fallback', 'background', true, {
@@ -380,7 +380,7 @@ export class RepoController {
     });
 
     try {
-      const userData = await UserModel.findByLogin(username);
+      const userData = await UserModel.findByLogin(String(username));
 
       if (userData == null) {
         throw createError.notFound(REPO_MESSAGES.NO_DATA_FOUND);
@@ -645,7 +645,7 @@ export class RepoController {
       });
 
       try {
-        const userData = await UserModel.findByLogin(username);
+        const userData = await UserModel.findByLogin(String(username));
 
         if (userData == null) {
           throw createError.notFound(REPO_MESSAGES.NO_DATA_FOUND);

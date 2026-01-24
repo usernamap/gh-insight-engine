@@ -21,7 +21,7 @@ export class SummaryController {
     });
 
     try {
-      const userData = await UserModel.findByLogin(username);
+      const userData = await UserModel.findByLogin(String(username));
       if (userData == null) {
         throw createError.notFound(
           'No data found for this user. Use POST /users/{username} to collect data.'
@@ -204,11 +204,11 @@ export class SummaryController {
         100,
         Math.round(
           averageStarsPerRepo * 20 +
-            (repositories.filter(r => r.description != null && r.description.length > 10).length /
-              repositories.length) *
-              30 +
-            (repositories.filter(r => r.homepageUrl != null).length / repositories.length) * 20 +
-            (repositories.filter(r => r.readmeEnabled != null).length / repositories.length) * 30
+          (repositories.filter(r => r.description != null && r.description.length > 10).length /
+            repositories.length) *
+          30 +
+          (repositories.filter(r => r.homepageUrl != null).length / repositories.length) * 20 +
+          (repositories.filter(r => r.readmeEnabled != null).length / repositories.length) * 30
         )
       );
 
@@ -372,7 +372,7 @@ export class SummaryController {
         technologyExpertise: {
           overallExpertiseScore: Math.round(
             primaryLanguages.reduce((sum, lang) => sum + lang.proficiencyLevel, 0) /
-              primaryLanguages.length
+            primaryLanguages.length
           ),
 
           frontendExpertise: {
@@ -384,14 +384,14 @@ export class SummaryController {
                   )
                 )
                 .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                Math.max(
-                  1,
-                  primaryLanguages.filter(l =>
-                    ['JavaScript', 'TypeScript', 'React', 'Vue', 'Angular', 'CSS', 'HTML'].includes(
-                      l.name
-                    )
-                  ).length
-                )
+              Math.max(
+                1,
+                primaryLanguages.filter(l =>
+                  ['JavaScript', 'TypeScript', 'React', 'Vue', 'Angular', 'CSS', 'HTML'].includes(
+                    l.name
+                  )
+                ).length
+              )
             ),
             dominantTechnologies: primaryLanguages
               .filter(l =>
@@ -413,12 +413,12 @@ export class SummaryController {
                   ['Node.js', 'Python', 'Java', 'PHP', 'Go', 'Rust', 'C#'].includes(l.name)
                 )
                 .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                Math.max(
-                  1,
-                  primaryLanguages.filter(l =>
-                    ['Node.js', 'Python', 'Java', 'PHP', 'Go', 'Rust', 'C#'].includes(l.name)
-                  ).length
-                )
+              Math.max(
+                1,
+                primaryLanguages.filter(l =>
+                  ['Node.js', 'Python', 'Java', 'PHP', 'Go', 'Rust', 'C#'].includes(l.name)
+                ).length
+              )
             ),
             dominantTechnologies: primaryLanguages
               .filter(l =>
@@ -439,12 +439,12 @@ export class SummaryController {
                     ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name)
                   )
                   .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                  Math.max(
-                    1,
-                    primaryLanguages.filter(l =>
-                      ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name)
-                    ).length
-                  )
+                Math.max(
+                  1,
+                  primaryLanguages.filter(l =>
+                    ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name)
+                  ).length
+                )
               ) || 30,
             dominantTechnologies: primaryLanguages
               .filter(l => ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name))
@@ -473,11 +473,11 @@ export class SummaryController {
                 primaryLanguages
                   .filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
                   .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                  Math.max(
-                    1,
-                    primaryLanguages.filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
-                      .length
-                  )
+                Math.max(
+                  1,
+                  primaryLanguages.filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
+                    .length
+                )
               ) || 40,
             dominantTechnologies: primaryLanguages
               .filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
@@ -604,13 +604,13 @@ export class SummaryController {
           starsMilestones:
             totalStars > 0
               ? [
-                  {
-                    type: 'First Star',
-                    value: 1,
-                    achievedAt: new Date(),
-                    significance: totalStars > 10 ? 'Significant' : 'Minor',
-                  },
-                ]
+                {
+                  type: 'First Star',
+                  value: 1,
+                  achievedAt: new Date(),
+                  significance: totalStars > 10 ? 'Significant' : 'Minor',
+                },
+              ]
               : [],
           featuredProjects: repositories
             .sort((a, b) => b.stargazerCount - a.stargazerCount)
@@ -759,13 +759,13 @@ export class SummaryController {
                 95,
                 Math.round(
                   primaryLanguages.reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                    primaryLanguages.length
+                  primaryLanguages.length
                 )
               ),
               rank:
                 primaryLanguages.reduce((sum, l) => sum + l.proficiencyLevel, 0) /
                   primaryLanguages.length >
-                70
+                  70
                   ? 'Above Average'
                   : 'Average',
             },
@@ -784,7 +784,7 @@ export class SummaryController {
               metrics: {
                 avgSkillLevel: Math.round(
                   primaryLanguages.reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-                    primaryLanguages.length
+                  primaryLanguages.length
                 ),
                 avgContributions: repositories.length,
               },
@@ -863,7 +863,7 @@ export class SummaryController {
           },
           averageScore: Math.round(
             primaryLanguages.reduce((sum, l) => sum + l.proficiencyLevel, 0) /
-              Math.max(1, primaryLanguages.length)
+            Math.max(1, primaryLanguages.length)
           ),
           topRepositories: repositories
             .sort((a, b) => b.stargazerCount - a.stargazerCount)
@@ -873,9 +873,9 @@ export class SummaryController {
               description: repo.description ?? 'No description',
               category:
                 organizationBreakdown.personal > 0 &&
-                repo.owner != null &&
-                typeof repo.owner === 'object' &&
-                (repo.owner as { type?: string }).type === 'User'
+                  repo.owner != null &&
+                  typeof repo.owner === 'object' &&
+                  (repo.owner as { type?: string }).type === 'User'
                   ? 'Personal'
                   : 'Organization',
               stars: repo.stargazerCount,

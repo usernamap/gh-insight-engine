@@ -94,13 +94,13 @@ export class UserController {
     });
 
     try {
-      const userData = await UserModel.findByLogin(username);
+      const userData = await UserModel.findByLogin(String(username));
 
       if (userData == null) {
         throw createError.notFound(USER_MESSAGES.USER_NOT_FOUND_COLLECT);
       }
 
-      const aiAnalysis = await AIAnalysisModel.findLatestByUsername(username);
+      const aiAnalysis = await AIAnalysisModel.findLatestByUsername(String(username));
       const repositoriesCount = await RepositoryModel.findByUserId(userData.id, { limit: 1 });
 
       const responseData = {
@@ -168,7 +168,7 @@ export class UserController {
     });
 
     try {
-      const userData = await UserModel.findByLogin(username);
+      const userData = await UserModel.findByLogin(String(username));
 
       if (userData == null) {
         throw createError.notFound(USER_MESSAGES.USER_NOT_FOUND_COLLECT);

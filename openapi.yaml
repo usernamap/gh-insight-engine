@@ -2834,28 +2834,7 @@ components:
           type: string
           description: Error stack trace (development only)
 
-    RateLimitErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-          example: "RATE_LIMIT_ERROR"
-        message:
-          type: string
-          example: "GitHub API rate limit exceeded. Please wait 10-30 minutes and try again."
-        rateLimitError:
-          type: boolean
-          example: true
-        waitTime:
-          type: string
-          example: "10-30 minutes"
-        documentation:
-          type: string
-          example: "This error occurs when GitHub API rate limits are exceeded. Wait 10-30 minutes before retrying."
-        timestamp:
-          type: string
-          format: date-time
-          example: "2025-08-01T18:29:37.000Z"
+
 
     RepositoryDeletionResponse:
       type: object

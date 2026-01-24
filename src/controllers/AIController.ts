@@ -19,7 +19,7 @@ import {
 
 export class AIController {
   static async performAIAnalysisInternal(username: string): Promise<AIAnalysisResult> {
-    return await AIAnalysisService.analyzeUser(username);
+    return await AIAnalysisService.analyzeUser(String(username));
   }
 
   /**
@@ -104,7 +104,7 @@ export class AIController {
     });
 
     try {
-      const existingAnalysis = await AIAnalysisService.getExistingAnalysis(username);
+      const existingAnalysis = await AIAnalysisService.getExistingAnalysis(String(username));
 
       if (existingAnalysis == null) {
         throw createError.notFound(AI_MESSAGES.NO_ANALYSIS_FOUND);
@@ -239,7 +239,7 @@ export class AIController {
     });
 
     try {
-      const deletedCount = await AIAnalysisService.deleteAllUserAnalyses(username);
+      const deletedCount = await AIAnalysisService.deleteAllUserAnalyses(String(username));
       if (deletedCount === 0) {
         throw createError.notFound(AI_MESSAGES.NO_ANALYSIS_FOUND);
       }
