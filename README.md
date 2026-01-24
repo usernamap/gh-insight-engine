@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![rest api](https://img.shields.io/badge/Rest_API-green.svg)](https://github.lucas-blanchard.com)
 
+
 > **The most powerful GitHub analytics API ever built** - Fetch, analyze, visualize, and optimize your development journey with comprehensive insights powered by AI.
 
 ## 🚀 Features
