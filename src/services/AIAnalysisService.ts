@@ -390,7 +390,7 @@ export class AIAnalysisService {
             content: prompt,
           },
         ],
-        max_tokens: config.max_tokens,
+        max_completion_tokens: config.max_completion_tokens,
         temperature: config.temperature,
       });
 
@@ -451,7 +451,7 @@ export class AIAnalysisService {
       .replace('{organizationRepos}', input.statistics.repositoryBreakdown.organization.toString())
       .replace('{schoolRepos}', input.statistics.repositoryBreakdown.school.toString())
       .replace('{topRepositories}', topRepositories)
-      .replace('{repositoryBreakdown}', 
+      .replace('{repositoryBreakdown}',
         `REPOSITORY BREAKDOWN:\n` +
         `- Personal repositories: ${input.statistics.repositoryBreakdown.personal}\n` +
         `- Organization repositories: ${input.statistics.repositoryBreakdown.organization}\n` +

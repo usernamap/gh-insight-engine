@@ -18,6 +18,14 @@ export interface GitHubCommit {
   changedFiles: number;
 }
 
+/**
+ * Monthly commit count for time-series visualization
+ */
+export interface CommitHistoryEntry {
+  date: string;   // "YYYY-MM" format
+  count: number;
+}
+
 export interface GitHubPullRequest {
   author: {
     login: string;
@@ -185,6 +193,7 @@ export interface GitHubRepo {
   commits: {
     totalCount: number;
     recent: GitHubCommit[];
+    history: CommitHistoryEntry[];
   };
   releases: {
     totalCount: number;

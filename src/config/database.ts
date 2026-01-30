@@ -122,8 +122,7 @@ export class DatabaseConfig {
 
     try {
       if (
-        this.mongooseConnection != null &&
-        this.mongooseConnection.readyState === DATABASE_CONFIG.MONGOOSE_READY_STATE
+        this.mongooseConnection?.readyState === DATABASE_CONFIG.MONGOOSE_READY_STATE
       ) {
         health.mongoose = true;
       }

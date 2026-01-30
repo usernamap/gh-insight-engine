@@ -47,15 +47,17 @@ export const GITHUB_CONSTANTS = {
   SECURITY_EVENTS_SCOPE: 'security_events',
   REPO_STATUS_SCOPE: 'repo:status',
 
-  // Rate Limiting - Disabled for direct execution
-  RATE_LIMIT_THRESHOLD: 0, // No threshold - execute directly
+  // Rate Limiting - Production configuration
+  RATE_LIMIT_THRESHOLD: 100, // Reserve 100 requests as buffer
   RATE_LIMIT_STATUS_CODE: 403,
-  RATE_LIMIT_WAIT_TIME_MAX: 0, // No waiting
-  RATE_LIMIT_WAIT_TIME_DEFAULT: 0, // No waiting
-  RATE_LIMIT_RESET_DEFAULT: '0',
-  RATE_LIMIT_BACKOFF_MULTIPLIER: 1, // No backoff
-  RATE_LIMIT_MAX_BACKOFF: 0, // No backoff
-  RATE_LIMIT_MIN_BACKOFF: 0, // No backoff
+  MAX_CONCURRENT_REQUESTS: 3, // Max simultaneous API calls
+  MIN_REQUEST_INTERVAL_MS: 200, // 5 requests/second max
+  MAX_RETRIES: 5, // Max retry attempts
+  INITIAL_BACKOFF_MS: 1000, // Start at 1 second
+  MAX_BACKOFF_MS: 16000, // Cap at 16 seconds
+  BACKOFF_MULTIPLIER: 2, // Double each retry
+  JITTER_FACTOR: 0.1, // ±10% randomness
+  MAX_QUEUE_SIZE: 1000, // Max pending requests
 
   // Rate Limit Error Messages - Simplified detection
   RATE_LIMIT_ERROR_MESSAGE: 'rate limit',

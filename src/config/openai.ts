@@ -40,10 +40,10 @@ class OpenAIConfig {
     return this.client != null && this.apiKey.length > 0;
   }
 
-  public getDefaultConfig(): { model: string; max_tokens: number; temperature: number } {
+  public getDefaultConfig(): { model: string; max_completion_tokens: number; temperature: number } {
     return {
       model: this.model,
-      max_tokens: this.maxTokens,
+      max_completion_tokens: this.maxTokens,
       temperature: this.temperature,
     };
   }
@@ -57,7 +57,7 @@ class OpenAIConfig {
       const response = await this.client.chat.completions.create({
         model: this.model,
         messages: [{ role: OPENAI_CONSTANTS.ROLES.USER, content: OPENAI_CONSTANTS.TEST_MESSAGE }],
-        max_tokens: OPENAI_CONSTANTS.TEST_MAX_TOKENS,
+        max_completion_tokens: OPENAI_CONSTANTS.TEST_MAX_TOKENS,
       });
 
       logger.info(MESSAGES_CONSTANTS.OPENAI.TEST_CONNECTION_SUCCESSFUL, {

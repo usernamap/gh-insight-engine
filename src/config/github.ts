@@ -2,12 +2,28 @@ import { Octokit } from '@octokit/rest';
 
 import { GitHubTokenValidationResult, RateLimitInfo, GitHubRateLimitError } from '@/types';
 import logger from '@/utils/logger';
+import { RateLimitHandler } from '@/utils/rate-limit-handler';
 import { GITHUB_CONSTANTS, GITHUB_MESSAGES, ERROR_CONSTANTS } from '@/constants';
 
 export class GitHubConfig {
   private octokit: Octokit | null = null;
   private token: string | null = null;
   private rateLimitInfo: RateLimitInfo | null = null;
+  private rateLimitHandler: RateLimitHandler;
+
+  constructor() {
+    this.rateLimitHandler = new RateLimitHandler({
+      maxConcurrent: GITHUB_CONSTANTS.MAX_CONCURRENT_REQUESTS,
+      minIntervalMs: GITHUB_CONSTANTS.MIN_REQUEST_INTERVAL_MS,
+      threshold: GITHUB_CONSTANTS.RATE_LIMIT_THRESHOLD,
+      maxRetries: GITHUB_CONSTANTS.MAX_RETRIES,
+      initialBackoffMs: GITHUB_CONSTANTS.INITIAL_BACKOFF_MS,
+      maxBackoffMs: GITHUB_CONSTANTS.MAX_BACKOFF_MS,
+      backoffMultiplier: GITHUB_CONSTANTS.BACKOFF_MULTIPLIER,
+      jitterFactor: GITHUB_CONSTANTS.JITTER_FACTOR,
+      maxQueueSize: GITHUB_CONSTANTS.MAX_QUEUE_SIZE,
+    });
+  }
 
   public async initialize(githubToken: string): Promise<{ success: boolean; error?: string; isRateLimitError?: boolean }> {
     this.token = githubToken;
@@ -55,12 +71,12 @@ export class GitHubConfig {
         username: validation.username,
         scopes: validation.scopes,
       });
-      
+
       return { success: true };
     } catch (error) {
       // Handle any unexpected errors gracefully
       const errorMessage = error instanceof Error ? error.message : 'Unknown initialization error';
-      const isRateLimitError = error instanceof GitHubRateLimitError || 
+      const isRateLimitError = error instanceof GitHubRateLimitError ||
         (error instanceof Error && this.isRateLimitError(error));
 
       if (isRateLimitError) {
@@ -219,23 +235,31 @@ export class GitHubConfig {
       throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
     }
 
-    try {
-      const response = await this.octokit.graphql<T>(query, variables);
+    return this.rateLimitHandler.execute(
+      async () => {
+        try {
+          const response = await this.octokit?.graphql<T>(query, variables);
+          if (!response) {
+            throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
+          }
 
-      logger.debug(GITHUB_MESSAGES.DEBUG_GRAPHQL_ERROR, {
-        success: true,
-        query: `${query.substring(0, 100)}...`,
-      });
+          logger.debug(GITHUB_MESSAGES.DEBUG_GRAPHQL_ERROR, {
+            success: true,
+            query: `${query.substring(0, 100)}...`,
+          });
 
-      return response;
-    } catch (_error: unknown) {
-      logger.error(GITHUB_MESSAGES.DEBUG_GRAPHQL_ERROR, {
-        error: (_error as Error).message,
-        query: `${query.substring(0, 100)}...`,
-      });
+          return response;
+        } catch (_error: unknown) {
+          logger.error(GITHUB_MESSAGES.DEBUG_GRAPHQL_ERROR, {
+            error: (_error as Error).message,
+            query: `${query.substring(0, 100)}...`,
+          });
 
-      throw _error;
-    }
+          throw _error;
+        }
+      },
+      { priority: 'normal' }
+    );
   }
 
   public async executeRestRequest<T = Record<string, unknown>>(
@@ -246,22 +270,54 @@ export class GitHubConfig {
       throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
     }
 
-    try {
-      const response = await this.octokit.request(endpoint, options as Record<string, unknown>);
+    return this.rateLimitHandler.execute(
+      async () => {
+        try {
+          const response = await this.octokit?.request(endpoint, options as Record<string, unknown>);
+          if (!response) {
+            throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
+          }
 
-      logger.debug(GITHUB_MESSAGES.REST_REQUEST_SUCCESS, {
-        endpoint,
-        success: true,
-      });
+          // Update rate limit info from response headers
+          if (response.headers !== undefined && response.headers !== null) {
+            this.rateLimitHandler.updateFromHeaders(response.headers as Record<string, string>);
+            this.updateRateLimitFromHeaders(response.headers as Record<string, string | undefined>);
+          }
 
-      return response.data;
-    } catch (_error: unknown) {
-      logger.error(GITHUB_MESSAGES.REST_REQUEST_FAILED, {
-        endpoint,
-        error: (_error as Error).message,
-      });
+          logger.debug(GITHUB_MESSAGES.REST_REQUEST_SUCCESS, {
+            endpoint,
+            success: true,
+          });
 
-      throw _error;
+          return response.data;
+        } catch (_error: unknown) {
+          logger.error(GITHUB_MESSAGES.REST_REQUEST_FAILED, {
+            endpoint,
+            error: (_error as Error).message,
+          });
+
+          throw _error;
+        }
+      },
+      { priority: 'normal' }
+    );
+  }
+
+  private updateRateLimitFromHeaders(headers: Record<string, string | undefined>): void {
+    const remaining = headers['x-ratelimit-remaining'];
+    const reset = headers['x-ratelimit-reset'];
+    const limit = headers['x-ratelimit-limit'];
+    const used = headers['x-ratelimit-used'];
+
+    if (remaining !== undefined && remaining !== '' &&
+      reset !== undefined && reset !== '' &&
+      limit !== undefined && limit !== '') {
+      this.rateLimitInfo = {
+        remaining: parseInt(remaining, 10),
+        reset: parseInt(reset, 10),
+        limit: parseInt(limit, 10),
+        used: (used !== undefined && used !== '') ? parseInt(used, 10) : (parseInt(limit, 10) - parseInt(remaining, 10)),
+      };
     }
   }
 
@@ -300,3 +356,4 @@ export class GitHubConfig {
 
 export const githubConfig = new GitHubConfig();
 export default githubConfig;
+

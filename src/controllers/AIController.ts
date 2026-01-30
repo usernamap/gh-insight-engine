@@ -302,7 +302,7 @@ export class AIController {
             : AI_SERVICE_STATUS.UNAVAILABLE,
         configuration: {
           model: config.model,
-          maxTokens: config.max_tokens,
+          maxTokens: config.max_completion_tokens,
           temperature: config.temperature,
         },
         capabilities: {

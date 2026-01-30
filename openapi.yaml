@@ -10,7 +10,7 @@ info:
     **Data Flow**: Collect → Store → Analyze → Retrieve
     **Rate Limits**: Standard GitHub API rate limits apply during collection
     **Automatic Scheduling**: Built-in scheduling service with automatic token management
-  version: 0.1.120
+  version: 0.1.122
   contact:
     name: Github
     url: https://github.com/octocat/gh-insight-engine
@@ -1459,6 +1459,21 @@ components:
           properties:
             totalCount:
               type: integer
+            history:
+              type: array
+              description: Monthly commit count aggregation for time-series visualization
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    pattern: '^\d{4}-\d{2}$'
+                    description: Month in YYYY-MM format
+                    example: "2025-11"
+                  count:
+                    type: integer
+                    description: Number of commits in this month
+                    example: 45
         issues:
           type: object
           properties:

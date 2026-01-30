@@ -14,6 +14,7 @@ import {
   GraphQLResponse,
   UserProfile,
   GitHubCommit,
+  CommitHistoryEntry,
 } from '@/types';
 
 import { GitHubConfig } from '@/config/github';
@@ -73,6 +74,25 @@ interface GitHubOrgResponse {
   name?: string;
   description?: string;
   avatar_url: string;
+}
+
+/**
+ * Aggregate commits by month for time-series visualization
+ * @param commits Array of commits with committedDate
+ * @returns Array of monthly counts sorted chronologically
+ */
+function aggregateCommitsByMonth(commits: GitHubCommit[]): CommitHistoryEntry[] {
+  const monthlyMap = new Map<string, number>();
+
+  for (const commit of commits) {
+    const date = new Date(commit.committedDate);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + 1);
+  }
+
+  return Array.from(monthlyMap.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
@@ -155,8 +175,25 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
               changedFiles: commit.changedFiles,
             }))
             : [],
+          history: Array.isArray(node.defaultBranchRef.target.history.nodes)
+            ? aggregateCommitsByMonth(
+              node.defaultBranchRef.target.history.nodes.map(commit => ({
+                oid: commit.oid,
+                message: commit.message,
+                committedDate: new Date(commit.committedDate),
+                author: {
+                  name: commit.author.name,
+                  email: commit.author.email,
+                  login: commit.author.user?.login ?? null,
+                },
+                additions: commit.additions,
+                deletions: commit.deletions,
+                changedFiles: commit.changedFiles,
+              }))
+            )
+            : [],
         }
-        : { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, recent: [] },
+        : { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT, recent: [], history: [] },
 
     releases: {
       totalCount: node.releases?.totalCount ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
@@ -247,7 +284,7 @@ export class GitHubService {
   static async create(token: string): Promise<GitHubService> {
     const service = new GitHubService(token);
     const initResult = await service.githubConfig.initialize(token);
-    
+
     if (!initResult.success) {
       if (initResult.isRateLimitError === true) {
         throw new Error(`GitHub API rate limit exceeded: ${initResult.error ?? 'Please wait 10-30 minutes and try again.'}`);
@@ -255,7 +292,7 @@ export class GitHubService {
         throw new Error(`GitHub initialization failed: ${initResult.error ?? 'Unknown error'}`);
       }
     }
-    
+
     return service;
   }
 
@@ -571,9 +608,9 @@ export class GitHubService {
               pullRequestsClosed: pullRequests(states: [CLOSED]) { totalCount }
               pullRequestsMerged: pullRequests(states: [MERGED]) { totalCount }
               pullRequestsTotal: pullRequests { totalCount }
-              releases { 
+              releases(first: 1) { 
                 totalCount
-                nodes(first: 1) {
+                nodes {
                   name
                   tagName
                   publishedAt
@@ -582,29 +619,6 @@ export class GitHubService {
               }
               deployments { totalCount }
               environments { totalCount }
-              defaultBranchRef {
-                name
-                target {
-                  ... on Commit {
-                    history(first: 10) {
-                      totalCount
-                      nodes {
-                        oid
-                        message
-                        committedDate
-                        author {
-                          name
-                          email
-                          user { login }
-                        }
-                        additions
-                        deletions
-                        changedFiles
-                      }
-                    }
-                  }
-                }
-              }
               recentPullRequests: pullRequests(first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
                 nodes {
                   author {
@@ -795,6 +809,7 @@ export class GitHubService {
             commits: {
               totalCount: 0,
               recent: [],
+              history: [],
             },
             releases: {
               totalCount: 0,
@@ -940,6 +955,7 @@ export class GitHubService {
           repo.commits = {
             totalCount: allCommits.length,
             recent: allCommits,
+            history: aggregateCommitsByMonth(allCommits),
           };
 
           logger.info('Successfully enriched repository with all commits', {
@@ -982,6 +998,30 @@ export class GitHubService {
                     changedFiles: Array.isArray(filesArray) ? filesArray.length : 0,
                   };
                 }),
+                history: aggregateCommitsByMonth(
+                  commitsArray.map(commit => {
+                    const commitObj = commit.commit as Record<string, unknown> | undefined;
+                    const authorObj = commitObj?.author as Record<string, unknown> | undefined;
+                    const committerObj = commitObj?.committer as Record<string, unknown> | undefined;
+                    const githubAuthor = commit.author as Record<string, unknown> | undefined;
+                    const statsObj = commit.stats as Record<string, unknown> | undefined;
+                    const filesArray = commit.files as unknown[] | undefined;
+
+                    return {
+                      oid: String(commit.sha ?? ''),
+                      message: String(commitObj?.message ?? ''),
+                      committedDate: new Date(String(committerObj?.date ?? new Date())),
+                      author: {
+                        name: String(authorObj?.name ?? ''),
+                        email: String(authorObj?.email ?? ''),
+                        login: githubAuthor?.login != null ? String(githubAuthor.login) : null,
+                      },
+                      additions: Number(statsObj?.additions ?? 0),
+                      deletions: Number(statsObj?.deletions ?? 0),
+                      changedFiles: Array.isArray(filesArray) ? filesArray.length : 0,
+                    };
+                  })
+                ),
               };
 
               logger.info('Used REST API fallback for commits', {
@@ -1026,6 +1066,28 @@ export class GitHubService {
                   changedFiles: 0, // REST API doesn't provide this in commit list
                 };
               }),
+              history: aggregateCommitsByMonth(
+                commitsArray.slice(0, 10).map(commit => {
+                  const commitObj = commit.commit as Record<string, unknown> | undefined;
+                  const authorObj = commitObj?.author as Record<string, unknown> | undefined;
+                  const committerObj = commitObj?.committer as Record<string, unknown> | undefined;
+                  const githubAuthor = commit.author as Record<string, unknown> | undefined;
+
+                  return {
+                    oid: String(commit.sha ?? ''),
+                    message: String(commitObj?.message ?? ''),
+                    committedDate: new Date(String(committerObj?.date ?? new Date())),
+                    author: {
+                      name: String(authorObj?.name ?? ''),
+                      email: String(authorObj?.email ?? ''),
+                      login: githubAuthor?.login != null ? String(githubAuthor.login) : null,
+                    },
+                    additions: 0,
+                    deletions: 0,
+                    changedFiles: 0,
+                  };
+                })
+              ),
             };
           }
         }
@@ -1193,9 +1255,9 @@ export class GitHubService {
               pullRequestsClosed: pullRequests(states: [CLOSED]) { totalCount }
               pullRequestsMerged: pullRequests(states: [MERGED]) { totalCount }
               pullRequestsTotal: pullRequests { totalCount }
-              releases { 
+              releases(first: 1) { 
                 totalCount
-                nodes(first: 1) {
+                nodes {
                   name
                   tagName
                   publishedAt
@@ -1395,12 +1457,28 @@ export class GitHubService {
         endpoints.map(endpoint => this.githubConfig.executeRestRequest(endpoint))
       );
 
+      // Helper to extract status from rejected promise
+      const getEndpointStatus = (result: PromiseSettledResult<unknown>): 'ok' | 'disabled' | 'no_permission' | 'error' => {
+        if (result.status === 'fulfilled') return 'ok';
+        const reason = String(result.reason).toLowerCase();
+        if (reason.includes('disabled') || reason.includes('not enabled')) return 'disabled';
+        if (reason.includes('not authorized') || reason.includes('forbidden') || reason.includes('must have')) return 'no_permission';
+        if (reason.includes('no analysis found') || reason.includes('no default branch')) return 'disabled';
+        return 'error';
+      };
+
+      const dependabotStatus = getEndpointStatus(responses[0]);
+      const secretScanningStatus = getEndpointStatus(responses[1]);
+      const codeScanningStatus = getEndpointStatus(responses[2]);
+
       const dependabotAlerts = responses[0].status === 'fulfilled' ? responses[0].value : [];
       const secretAlerts = responses[1].status === 'fulfilled' ? responses[1].value : [];
       const codeAlerts = responses[2].status === 'fulfilled' ? responses[2].value : [];
 
       const securityData = {
+        status: 'ok' as const,
         dependabotAlerts: {
+          status: dependabotStatus,
           totalCount: dependabotAlerts.length ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           open: Array.isArray(dependabotAlerts)
             ? dependabotAlerts.filter(
@@ -1420,6 +1498,7 @@ export class GitHubService {
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         secretScanning: {
+          status: secretScanningStatus,
           totalCount: secretAlerts.length ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           resolved: Array.isArray(secretAlerts)
             ? secretAlerts.filter(
@@ -1429,6 +1508,7 @@ export class GitHubService {
             : GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         codeScanning: {
+          status: codeScanningStatus,
           totalCount: codeAlerts.length ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           open: Array.isArray(codeAlerts)
             ? codeAlerts.filter(
@@ -1463,17 +1543,21 @@ export class GitHubService {
       });
 
       return {
+        status: 'error' as const,
         dependabotAlerts: {
+          status: 'error' as const,
           totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
           open: GITHUB_CONSTANTS.DEFAULT_COUNT,
           fixed: GITHUB_CONSTANTS.DEFAULT_COUNT,
           dismissed: GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         secretScanning: {
+          status: 'error' as const,
           totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
           resolved: GITHUB_CONSTANTS.DEFAULT_COUNT,
         },
         codeScanning: {
+          status: 'error' as const,
           totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
           open: GITHUB_CONSTANTS.DEFAULT_COUNT,
           fixed: GITHUB_CONSTANTS.DEFAULT_COUNT,
@@ -1485,32 +1569,63 @@ export class GitHubService {
   }
 
   public async getPackagesData(owner: string, repo: string): Promise<Record<string, unknown>> {
-    try {
-      const response = await this.githubConfig.executeRestRequest(`GET /users/${owner}/packages`);
-      const packages = (response as unknown as GitHubRestPackage[]) ?? [];
+    // GitHub Packages API requires package_type parameter
+    const packageTypes = ['npm', 'maven', 'rubygems', 'docker', 'nuget', 'container'] as const;
+    const allPackages: GitHubRestPackage[] = [];
 
-      const repoPackages = packages.filter(
+    try {
+      for (const packageType of packageTypes) {
+        try {
+          const response = await this.githubConfig.executeRestRequest(
+            `GET /users/${owner}/packages?package_type=${packageType}&per_page=100`
+          );
+          const packages = (response as unknown as GitHubRestPackage[]) ?? [];
+          allPackages.push(...packages);
+        } catch (typeError) {
+          // Silently continue - no packages of this type or no permission
+          logger.debug('No packages found or no access for package type', {
+            owner,
+            packageType,
+            error: (typeError as Error).message,
+          });
+        }
+      }
+
+      const repoPackages = allPackages.filter(
         (pkg: GitHubRestPackage) => pkg.repository?.name === repo || pkg.name.includes(repo)
       );
 
-      const packageTypes = [
+      const packageTypeSet = [
         ...new Set(repoPackages.map((pkg: GitHubRestPackage) => pkg.package_type)),
       ];
 
       const packagesData = {
+        status: 'ok',
         totalCount: repoPackages.length,
-        types: packageTypes,
+        types: packageTypeSet,
       };
 
       logger.debug(GITHUB_MESSAGES.PACKAGES_DATA_RETRIEVED, {
         owner,
         repo,
         count: packagesData.totalCount,
-        types: packageTypes,
+        types: packageTypeSet,
       });
 
       return packagesData;
     } catch (error) {
+      const errorMessage = (error as Error).message.toLowerCase();
+
+      // Transform known error states
+      if (errorMessage.includes('not authorized') || errorMessage.includes('forbidden')) {
+        logger.debug('No permission to access packages', { owner, repo });
+        return {
+          status: 'no_permission',
+          totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
+          types: [],
+        };
+      }
+
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_PACKAGES, {
         owner,
         repo,
@@ -1519,8 +1634,9 @@ export class GitHubService {
       });
 
       return {
+        status: 'error',
         totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT,
-        types: []
+        types: [],
       };
     }
   }
@@ -1568,8 +1684,28 @@ export class GitHubService {
         protected: true,
       });
 
-      return branchProtectionData;
+      return { status: 'protected', ...branchProtectionData };
     } catch (error) {
+      const errorMessage = (error as Error).message.toLowerCase();
+
+      // Branch not protected (404 or explicit message)
+      if (errorMessage.includes('branch not protected') || errorMessage.includes('not found')) {
+        logger.debug('Branch not protected', { owner, repo, branch: defaultBranch });
+        return { status: 'not_protected', rules: [] };
+      }
+
+      // Plan restriction (needs GitHub Pro/Team/Enterprise)
+      if (errorMessage.includes('upgrade to github pro') || errorMessage.includes('not available')) {
+        logger.debug('Branch protection requires paid plan', { owner, repo });
+        return { status: 'plan_restricted', rules: [] };
+      }
+
+      // No permission (403 - must have admin access)
+      if (errorMessage.includes('must have admin') || errorMessage.includes('forbidden')) {
+        logger.debug('No admin access for branch protection', { owner, repo });
+        return { status: 'no_permission', rules: [] };
+      }
+
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_BRANCH_PROTECTION, {
         owner,
         repo,
@@ -1577,7 +1713,7 @@ export class GitHubService {
         nonBlocking: true,
       });
 
-      return { rules: [] };
+      return { status: 'error', rules: [], error: (error as Error).message };
     }
   }
 
@@ -1661,6 +1797,7 @@ export class GitHubService {
       }
 
       const trafficData = {
+        status: 'ok' as const,
         views: {
           count: views.count ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
           uniques: views.uniques ?? GITHUB_CONSTANTS.DEFAULT_COUNT,
@@ -1681,6 +1818,19 @@ export class GitHubService {
 
       return trafficData;
     } catch (error) {
+      const errorMessage = (error as Error).message.toLowerCase();
+
+      // No push access (403) - requires push/write permission
+      if (errorMessage.includes('must have push access') || errorMessage.includes('forbidden')) {
+        logger.debug('No push access for traffic data', { owner, repo });
+        return {
+          status: 'no_permission' as const,
+          views: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
+          clones: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
+          popularPaths: [],
+        };
+      }
+
       logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_TRAFFIC, {
         owner,
         repo,
@@ -1689,6 +1839,7 @@ export class GitHubService {
       });
 
       return {
+        status: 'error' as const,
         views: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
         clones: { count: GITHUB_CONSTANTS.DEFAULT_COUNT, uniques: GITHUB_CONSTANTS.DEFAULT_COUNT },
         popularPaths: [],
