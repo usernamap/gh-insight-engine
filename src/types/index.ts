@@ -1,6 +1,7 @@
 export * from './analytics';
 export * from './github';
 export * from './insights';
+export * from './languages';
 export type {
   DeveloperSummary,
   EnrichedProfile,

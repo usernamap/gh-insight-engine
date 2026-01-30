@@ -1,8 +1,8 @@
 export const OPENAI_CONSTANTS = {
   MODEL: 'gpt-5-mini',
   MAX_TOKENS: 8192,
-  TEMPERATURE: 0.3,
-  TEST_MAX_TOKENS: 10,
+  TEMPERATURE: 1,
+  TEST_MAX_TOKENS: 8192,
   TEST_MESSAGE: 'Hello',
   ROLES: {
     USER: 'user',

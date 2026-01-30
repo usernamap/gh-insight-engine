@@ -6,6 +6,7 @@ import logger from '@/utils/logger';
 import { AuthenticatedUser } from '@/types';
 import { RepositoryModel } from '@/models';
 import { RepoController, UserController, AIController } from '@/controllers';
+import { getLanguageMetadataService } from '@/services/LanguageMetadataService';
 import {
   REFRESH_MESSAGES,
   REFRESH_STATUS_CODES,
@@ -355,6 +356,19 @@ export class RefreshController {
       try {
         logWithContext.api(REFRESH_LOG_IDS.STEP_AI_START, 'background', true, { username });
 
+        // 1. Classify languages first (used by downstream analysis potentially)
+        try {
+          await getLanguageMetadataService().collectAndClassifyLanguages(username);
+          logger.info('Language classification completed during refresh', { username });
+        } catch (langError) {
+          // Non-fatal, log and continue
+          logger.error('Language classification failed during refresh (continuing)', {
+            username,
+            error: String(langError)
+          });
+        }
+
+        // 2. Perform Developer Analysis
         await AIController.performAIAnalysisInternal(username);
 
         const aiStepDuration = Date.now() - aiStepStart;

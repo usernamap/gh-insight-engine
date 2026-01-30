@@ -8,6 +8,7 @@
  * Usage: npx tsx scripts/test-openai.ts
  */
 
+import 'dotenv/config';
 import OpenAIConfig from '../src/config/openai.js';
 import { OPENAI_CONSTANTS } from '../src/constants/openai.constants.js';
 
@@ -115,20 +116,30 @@ async function testOpenAI() {
             process.exit(1);
         }
 
+        const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        console.log(`${ANSI.dim}  - Random ID: ${randomId}${ANSI.reset}`);
+
         const response = await client.chat.completions.create({
             model: config.model,
             messages: [
-                { role: 'user', content: 'Say "test passed" in exactly 2 words.' }
+                { role: 'user', content: `Please repeat exactly this verification code: ${randomId}` }
             ],
-            max_completion_tokens: 10,
-            temperature: 0,
+            max_completion_tokens: 1000,
+            temperature: 1,
         });
+
+        console.log(`${ANSI.dim}  - Full Choice: ${JSON.stringify(response.choices[0], null, 2)}${ANSI.reset}`);
 
         const content = response.choices[0]?.message?.content ?? '';
         console.log(`${ANSI.dim}  - Response: "${content}"${ANSI.reset}`);
         console.log(`${ANSI.dim}  - Tokens used: ${response.usage?.total_tokens ?? 'N/A'}${ANSI.reset}`);
 
-        log(ANSI.green, 'PASS', 'Completion with max_completion_tokens works correctly');
+        if (content.includes(randomId)) {
+            log(ANSI.green, 'PASS', 'Completion returned correct random ID');
+        } else {
+            log(ANSI.red, 'FAIL', `Expected response to contain "${randomId}"`);
+            process.exit(1);
+        }
     } catch (error) {
         const errorMessage = (error as Error).message;
         log(ANSI.red, 'FAIL', `Completion failed: ${errorMessage}`);

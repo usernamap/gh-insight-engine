@@ -303,7 +303,7 @@ export class AIController {
         configuration: {
           model: config.model,
           maxTokens: config.max_completion_tokens,
-          temperature: config.temperature,
+          // Note: temperature not configurable for gpt-5-mini
         },
         capabilities: {
           qualityAnalysis: isAvailable === true,

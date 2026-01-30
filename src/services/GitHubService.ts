@@ -144,15 +144,14 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
     hasIssuesEnabled: node.hasIssuesEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
     hasProjectsEnabled: node.hasProjectsEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
     hasWikiEnabled: node.hasWikiEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    hasPages: node.hasPages ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    hasDownloads: node.hasDownloads ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    hasDiscussions: node.hasDiscussions ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    vulnerabilityAlertsEnabled: node.vulnerabilityAlertsEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    securityPolicyEnabled: node.securityPolicyEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    codeOfConductEnabled: node.codeOfConductEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    contributingGuidelinesEnabled:
-      node.contributingGuidelinesEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
-    readmeEnabled: node.readmeEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
+    hasPages: GITHUB_CONSTANTS.DEFAULT_FALSE, // Populated via REST fallback
+    hasDownloads: GITHUB_CONSTANTS.DEFAULT_FALSE, // Not available in GraphQL
+    hasDiscussions: node.hasDiscussionsEnabled ?? GITHUB_CONSTANTS.DEFAULT_FALSE,
+    vulnerabilityAlertsEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE, // Populated via REST fallback
+    securityPolicyEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE, // Not available in GraphQL
+    codeOfConductEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE, // Not available in GraphQL
+    contributingGuidelinesEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE, // Not available in GraphQL
+    readmeEnabled: GITHUB_CONSTANTS.DEFAULT_FALSE, // Not available in GraphQL
     deployments: node.deployments ?? { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT },
     environments: node.environments ?? { totalCount: GITHUB_CONSTANTS.DEFAULT_COUNT },
     commits:
@@ -593,14 +592,7 @@ export class GitHubService {
               hasIssuesEnabled
               hasProjectsEnabled
               hasWikiEnabled
-              hasPages
-              hasDownloads
-              hasDiscussions
-              vulnerabilityAlertsEnabled
-              securityPolicyEnabled
-              codeOfConductEnabled
-              contributingGuidelinesEnabled
-              readmeEnabled
+              hasDiscussionsEnabled
               issues(states: [OPEN]) { totalCount }
               issuesClosed: issues(states: [CLOSED]) { totalCount }
               issuesTotal: issues { totalCount }
@@ -1240,14 +1232,7 @@ export class GitHubService {
               hasIssuesEnabled
               hasProjectsEnabled
               hasWikiEnabled
-              hasPages
-              hasDownloads
-              hasDiscussions
-              vulnerabilityAlertsEnabled
-              securityPolicyEnabled
-              codeOfConductEnabled
-              contributingGuidelinesEnabled
-              readmeEnabled
+              hasDiscussionsEnabled
               issues(states: [OPEN]) { totalCount }
               issuesClosed: issues(states: [CLOSED]) { totalCount }
               issuesTotal: issues { totalCount }
@@ -2078,7 +2063,7 @@ export class GitHubService {
             owner,
             repoName,
             retrievedCount: allCommits.length,
-            maxAllowed: 50000,
+            maxAllowed: 500000,
           });
           break;
         }
