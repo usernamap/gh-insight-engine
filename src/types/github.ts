@@ -493,14 +493,7 @@ export interface GitHubGraphQLRepositoryNode {
   hasIssuesEnabled: boolean;
   hasProjectsEnabled: boolean;
   hasWikiEnabled: boolean;
-  hasPages: boolean;
-  hasDownloads: boolean;
-  hasDiscussions: boolean;
-  vulnerabilityAlertsEnabled: boolean;
-  securityPolicyEnabled: boolean;
-  codeOfConductEnabled: boolean;
-  contributingGuidelinesEnabled: boolean;
-  readmeEnabled: boolean;
+  hasDiscussionsEnabled?: boolean; // Valid GraphQL field (hasDiscussions is NOT valid)
   deployments: { totalCount: number };
   environments: { totalCount: number };
   releases: {

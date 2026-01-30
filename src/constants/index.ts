@@ -7,3 +7,4 @@ export * from './messages.constants';
 export * from './middleware.constants';
 export * from './openai.constants';
 export * from './routes.constants';
+export * from './languages.constants';

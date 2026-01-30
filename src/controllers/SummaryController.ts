@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { asyncHandler, createError } from '@/middleware';
 import { logWithContext } from '@/utils/logger';
 import { UserModel, RepositoryModel } from '@/models';
-import { AuthenticatedUser } from '@/types';
+import { AuthenticatedUser, LEGACY_CATEGORIES } from '@/types';
+import { getLanguageMetadataService } from '@/services/LanguageMetadataService';
 
 export class SummaryController {
   /**
@@ -290,12 +291,12 @@ export class SummaryController {
             webApplications: repositories.filter(
               r =>
                 r.primaryLanguage != null &&
-                ['JavaScript', 'TypeScript', 'React', 'Vue', 'Angular'].includes(r.primaryLanguage)
+                getLanguageMetadataService().isInCategory(r.primaryLanguage, LEGACY_CATEGORIES.FRONTEND)
             ).length,
             mobileApplications: repositories.filter(
               r =>
                 r.primaryLanguage != null &&
-                ['Swift', 'Kotlin', 'Java', 'React Native', 'Flutter'].includes(r.primaryLanguage)
+                getLanguageMetadataService().isInCategory(r.primaryLanguage, LEGACY_CATEGORIES.MOBILE)
             ).length,
             libraries: repositories.filter(
               r => r.topics.includes('library') || r.topics.includes('package')
@@ -379,29 +380,23 @@ export class SummaryController {
             score: Math.round(
               primaryLanguages
                 .filter(l =>
-                  ['JavaScript', 'TypeScript', 'React', 'Vue', 'Angular', 'CSS', 'HTML'].includes(
-                    l.name
-                  )
+                  getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.FRONTEND)
                 )
                 .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
               Math.max(
                 1,
                 primaryLanguages.filter(l =>
-                  ['JavaScript', 'TypeScript', 'React', 'Vue', 'Angular', 'CSS', 'HTML'].includes(
-                    l.name
-                  )
+                  getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.FRONTEND)
                 ).length
               )
             ),
             dominantTechnologies: primaryLanguages
               .filter(l =>
-                ['JavaScript', 'TypeScript', 'React', 'Vue', 'Angular', 'CSS', 'HTML'].includes(
-                  l.name
-                )
+                getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.FRONTEND)
               )
               .map(l => l.name),
             emergingInterests: emergingLanguages
-              .filter(l => ['Svelte', 'Next.js', 'Nuxt.js'].includes(l.name))
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.FRONTEND))
               .map(l => l.name),
             marketabilityScore: 90,
           },
@@ -410,23 +405,23 @@ export class SummaryController {
             score: Math.round(
               primaryLanguages
                 .filter(l =>
-                  ['Node.js', 'Python', 'Java', 'PHP', 'Go', 'Rust', 'C#'].includes(l.name)
+                  getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.BACKEND)
                 )
                 .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
               Math.max(
                 1,
                 primaryLanguages.filter(l =>
-                  ['Node.js', 'Python', 'Java', 'PHP', 'Go', 'Rust', 'C#'].includes(l.name)
+                  getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.BACKEND)
                 ).length
               )
             ),
             dominantTechnologies: primaryLanguages
               .filter(l =>
-                ['Node.js', 'Python', 'Java', 'PHP', 'Go', 'Rust', 'C#'].includes(l.name)
+                getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.BACKEND)
               )
               .map(l => l.name),
             emergingInterests: emergingLanguages
-              .filter(l => ['Go', 'Rust', 'Deno'].includes(l.name))
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.BACKEND))
               .map(l => l.name),
             marketabilityScore: 85,
           },
@@ -436,27 +431,30 @@ export class SummaryController {
               Math.round(
                 primaryLanguages
                   .filter(l =>
-                    ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name)
+                    getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.MOBILE)
                   )
                   .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
                 Math.max(
                   1,
                   primaryLanguages.filter(l =>
-                    ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name)
+                    getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.MOBILE)
                   ).length
                 )
               ) || 30,
             dominantTechnologies: primaryLanguages
-              .filter(l => ['Swift', 'Kotlin', 'Java', 'Flutter', 'React Native'].includes(l.name))
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.MOBILE))
               .map(l => l.name),
-            emergingInterests: ['React Native', 'Flutter'],
+            emergingInterests: emergingLanguages
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.MOBILE))
+              .map(l => l.name),
             marketabilityScore: 70,
           },
 
           devOpsExpertise: {
             score:
               repositories.filter(r =>
-                r.topics.some(topic => ['docker', 'kubernetes', 'ci-cd', 'devops'].includes(topic))
+                r.topics.some(topic => ['docker', 'kubernetes', 'ci-cd', 'devops', 'terraform', 'ansible'].includes(topic)) ||
+                getLanguageMetadataService().isInCategory(r.primaryLanguage, LEGACY_CATEGORIES.DEVOPS)
               ).length > 0
                 ? 60
                 : 30,
@@ -471,27 +469,32 @@ export class SummaryController {
             score:
               Math.round(
                 primaryLanguages
-                  .filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
+                  .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.DATA_SCIENCE))
                   .reduce((sum, l) => sum + l.proficiencyLevel, 0) /
                 Math.max(
                   1,
-                  primaryLanguages.filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
+                  primaryLanguages.filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.DATA_SCIENCE))
                     .length
                 )
               ) || 40,
             dominantTechnologies: primaryLanguages
-              .filter(l => ['Python', 'R', 'SQL', 'Scala'].includes(l.name))
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.DATA_SCIENCE))
               .map(l => l.name),
-            emergingInterests: ['GraphQL', 'PostgreSQL'],
+            emergingInterests: emergingLanguages
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.DATA_SCIENCE))
+              .map(l => l.name),
             marketabilityScore: 90,
           },
 
           aiMlExpertise: {
             score:
               repositories.filter(r =>
-                r.topics.some(topic => ['ai', 'ml', 'tensorflow', 'pytorch'].includes(topic))
+                r.topics.some(topic => ['ai', 'ml', 'tensorflow', 'pytorch', 'machine-learning', 'deep-learning'].includes(topic)) ||
+                getLanguageMetadataService().isInCategory(r.primaryLanguage, LEGACY_CATEGORIES.AI_ML)
               ).length * 20,
-            dominantTechnologies: [],
+            dominantTechnologies: primaryLanguages
+              .filter(l => getLanguageMetadataService().isInCategory(l.name, LEGACY_CATEGORIES.AI_ML))
+              .map(l => l.name),
             emergingInterests: ['TensorFlow', 'PyTorch'],
             marketabilityScore: 100,
           },

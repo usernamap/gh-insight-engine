@@ -391,7 +391,7 @@ export class AIAnalysisService {
           },
         ],
         max_completion_tokens: config.max_completion_tokens,
-        temperature: config.temperature,
+        // Note: temperature parameter removed - gpt-5-mini only supports default (1)
       });
 
       const content = response.choices[0]?.message?.content;

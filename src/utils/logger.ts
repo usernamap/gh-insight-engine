@@ -12,7 +12,50 @@ import {
 
 const logsDir = path.join(process.cwd(), LOGGER_CONSTANTS.DIRECTORIES.LOGS);
 
+const IGNORED_ERRORS = [
+  'Secret scanning is disabled on this repository',
+  'Upgrade to GitHub Pro or make this repository public to enable this feature',
+  'Code Security must be enabled for this repository',
+  'Dependabot alerts are disabled for this repository',
+  'Not Found - https://docs.github.com/rest/secret-scanning',
+  'Must have push access to repository',
+  'Git Repository is empty',
+  'Code scanning is not enabled for this repository',
+  'no analysis found',
+  'Branch not protected',
+  'Not Found - https://docs.github.com/rest/branches/branch-protection',
+];
+
+const downgradeErrorToWarn = winston.format((info) => {
+  if (info.level !== 'error') return info;
+
+  const isFalsePositive = IGNORED_ERRORS.some((str) => {
+    if (typeof info.message === 'string' && info.message.includes(str)) return true;
+    if (typeof info.error === 'string' && info.error.includes(str)) return true;
+    if (
+      typeof info.error === 'object' &&
+      info.error !== null &&
+      'message' in info.error
+    ) {
+      const err = info.error as { message: unknown };
+      if (typeof err.message === 'string' && err.message.includes(str)) return true;
+    }
+    if (typeof info['error'] === 'string' && info['error'].includes(str)) return true;
+
+    return false;
+  });
+
+  if (isFalsePositive) {
+    info.level = 'warn';
+    // Essential for Winston to respect the level change in transports
+    info[Symbol.for('level')] = 'warn';
+  }
+
+  return info;
+});
+
 const logFormat = winston.format.combine(
+  downgradeErrorToWarn(),
   winston.format.timestamp({ format: LOGGER_CONSTANTS.TIMESTAMP_FORMAT }),
   winston.format.errors({ stack: true }),
   winston.format.json()

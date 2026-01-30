@@ -25,7 +25,9 @@ const DEFAULT_CONFIG = {
     maxBackoffMs: 16000,
     backoffMultiplier: 2,
     jitterFactor: 0.1,
-    maxQueueSize: 1000,
+    maxQueueSize: 500000, // Increased to prevent queue overflow errors
+    waitOnFullQueue: true, // Backpressure: wait instead of throw
+    fullQueueWaitMs: 500, // How long to wait before retry when queue is full
 };
 
 // Header names
@@ -61,6 +63,8 @@ export interface RateLimitConfig {
     backoffMultiplier?: number;
     jitterFactor?: number;
     maxQueueSize?: number;
+    waitOnFullQueue?: boolean;
+    fullQueueWaitMs?: number;
 }
 
 export interface RequestOptions {
@@ -108,9 +112,17 @@ export class RateLimitHandler {
     ): Promise<T> {
         const priority = options.priority ?? 'normal';
 
-        // Check queue size to prevent memory issues
-        if (this.queue.size() >= this.config.maxQueueSize) {
-            throw new Error('Rate limit queue full - too many pending requests');
+        // Implement backpressure: wait for queue capacity instead of throwing
+        while (this.queue.size() >= this.config.maxQueueSize) {
+            if (this.config.waitOnFullQueue) {
+                logger.debug('Rate limit queue full, waiting for capacity', {
+                    queueSize: this.queue.size(),
+                    maxQueueSize: this.config.maxQueueSize,
+                });
+                await this.waitForQueueCapacity();
+            } else {
+                throw new Error('Rate limit queue full - too many pending requests');
+            }
         }
 
         return new Promise<T>((resolve, reject) => {
@@ -125,6 +137,14 @@ export class RateLimitHandler {
             this.queue.enqueue(request as QueuedRequest<unknown>, priority);
             this.processQueue();
         });
+    }
+
+    /**
+     * Wait for queue to have capacity (backpressure mechanism).
+     */
+    private async waitForQueueCapacity(): Promise<void> {
+        const waitTime = this.config.fullQueueWaitMs;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
     /**
