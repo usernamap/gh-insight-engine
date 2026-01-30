@@ -1,6 +1,5 @@
 echo "🔍 Pre-commit validation..."
-echo "📦 Updating version..."
-npm run version:bump
+
 echo "📋 OpenAPI validation..."
 npm run openapi:validate
 echo "📊 API coverage verification..."
