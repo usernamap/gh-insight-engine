@@ -1,6 +1,6 @@
 {
   "name": "gh-insight-engine",
-  "version": "0.1.124",
+  "version": "0.1.125",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,6 +23,7 @@
     "clean": "rm -rf dist coverage .nyc_output",
     "precommit": "npm run openapi:validate && npm run openapi:coverage && npm run lint && npm run typecheck",
     "prepare": "husky",
+    "audit:deps": "node scripts/audit-deps.cjs",
     "health": "curl -f http://localhost:3000/api/health || exit 1",
     "logs": "tail -f app.log",
     "openapi:lint": "spectral lint openapi.yaml --format stylish",
@@ -68,13 +69,11 @@
   "dependencies": {
     "@octokit/rest": "^22.0.0",
     "@prisma/client": "^6.12.0",
-    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
     "@types/node-cron": "^3.0.11",
-    "@types/uuid": "^10.0.0",
     "axios": "^1.10.0",
     "chalk": "^5.4.1",
     "compression": "^1.8.1",
