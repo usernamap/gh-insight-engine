@@ -1,5 +1,4 @@
 echo "🔍 Pre-commit validation..."
-
 echo "📋 OpenAPI validation..."
 npm run openapi:validate
 echo "📊 API coverage verification..."
