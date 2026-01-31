@@ -7,10 +7,10 @@
  */
 
 import {
-    LanguageCategoryAIService,
+    AIClassificationService,
     type LanguageInput,
     type LanguageClassificationResult,
-} from './LanguageCategoryAIService';
+} from './AIClassificationService';
 
 import {
     LanguageCategory,
@@ -579,7 +579,7 @@ export class LanguageMetadataService {
             languageCount: languages.length,
         });
 
-        return LanguageCategoryAIService.classifyLanguages(languages);
+        return AIClassificationService.classifyLanguages(languages);
     }
 
     /**
@@ -687,14 +687,14 @@ export class LanguageMetadataService {
      * Get AI classification cache status
      */
     public getAIClassificationCacheStatus(): { isValid: boolean; timestamp: Date | null } {
-        return LanguageCategoryAIService.getCacheStatus();
+        return AIClassificationService.getCacheStatus();
     }
 
     /**
      * Clear AI classification cache
      */
     public clearAIClassificationCache(): void {
-        LanguageCategoryAIService.clearCache();
+        AIClassificationService.clearCache();
     }
 }
 

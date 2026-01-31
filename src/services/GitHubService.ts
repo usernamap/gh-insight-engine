@@ -266,22 +266,13 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
 export class GitHubService {
   public githubConfig: GitHubConfig;
 
-  public constructor(_token?: string) {
+  public constructor() {
     this.githubConfig = new GitHubConfig();
-    if (_token != null && _token !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING) {
-      // Note: Constructor initialization is fire-and-forget for compatibility
-      // Use GitHubService.create() for proper error handling
-      void this.githubConfig.initialize(_token).catch((error) => {
-        logger.warn('GitHub initialization failed in constructor', {
-          error: error instanceof Error ? error.message : String(error),
-          token: _token != null ? `${_token.substring(0, 8)}***` : undefined,
-        });
-      });
-    }
+    // Token is handled via initialize() in create() method or manually
   }
 
   static async create(token: string): Promise<GitHubService> {
-    const service = new GitHubService(token);
+    const service = new GitHubService();
     const initResult = await service.githubConfig.initialize(token);
 
     if (!initResult.success) {
@@ -312,103 +303,131 @@ export class GitHubService {
       }
     `;
 
-    try {
-      const variables =
-        cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING ? { cursor } : {};
-      const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(query, variables);
+    const maxRetries = 3;
 
-      const organizations =
-        (
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const variables =
+          cursor != null && cursor !== GITHUB_CONSTANTS.DEFAULT_EMPTY_STRING ? { cursor } : {};
+        const response: GraphQLResponse = await this.githubConfig.executeGraphQLQuery(
+          query,
+          variables
+        );
+
+        const organizations =
+          (
+            response as {
+              viewer?: {
+                organizations?: {
+                  nodes?: { login: string }[];
+                  pageInfo?: { hasNextPage: boolean; endCursor: string };
+                };
+              };
+            }
+          )?.viewer?.organizations?.nodes ?? [];
+
+        const pageInfo = (
           response as {
             viewer?: {
               organizations?: {
-                nodes?: { login: string }[];
                 pageInfo?: { hasNextPage: boolean; endCursor: string };
-              }
+              };
             };
           }
-        )?.viewer?.organizations?.nodes ?? [];
+        )?.viewer?.organizations?.pageInfo;
 
-      const pageInfo = (
-        response as {
-          viewer?: {
-            organizations?: {
-              pageInfo?: { hasNextPage: boolean; endCursor: string };
-            }
-          };
+        const orgNames = organizations.map((org: { login: string }) => org.login);
+
+        if (pageInfo?.hasNextPage === true) {
+          const nextOrgs = await this.getUserOrganizations(pageInfo.endCursor);
+          orgNames.push(...nextOrgs);
         }
-      )?.viewer?.organizations?.pageInfo;
 
-      const orgNames = organizations.map((org: { login: string }) => org.login);
+        logger.info(GITHUB_MESSAGES.ORGANIZATIONS_RETRIEVED, {
+          count: orgNames.length,
+          hasMore: pageInfo?.hasNextPage,
+          method: 'graphql_paginated',
+        });
 
-      if (pageInfo?.hasNextPage === true) {
-        const nextOrgs = await this.getUserOrganizations(pageInfo.endCursor);
-        orgNames.push(...nextOrgs);
-      }
+        try {
+          const restOrgs = await this.getUserOrganizationsRestFallback();
 
-      logger.info(GITHUB_MESSAGES.ORGANIZATIONS_RETRIEVED, {
-        count: orgNames.length,
-        hasMore: pageInfo?.hasNextPage,
-        method: 'graphql_paginated',
-      });
+          const missedOrgs = restOrgs.filter((restOrg) => !orgNames.includes(restOrg));
 
-      try {
-        const restOrgs = await this.getUserOrganizationsRestFallback();
+          if (missedOrgs.length > 0) {
+            logger.warn('GraphQL missed some organizations, using REST API data', {
+              graphqlCount: orgNames.length,
+              restCount: restOrgs.length,
+              missedOrgs,
+              fallbackToRest: true,
+            });
 
-        const missedOrgs = restOrgs.filter(restOrg => !orgNames.includes(restOrg));
+            return restOrgs;
+          }
 
-        if (missedOrgs.length > 0) {
-          logger.warn('GraphQL missed some organizations, using REST API data', {
+          return orgNames;
+        } catch (restError) {
+          logger.warn('REST API verification failed, using GraphQL results', {
             graphqlCount: orgNames.length,
-            restCount: restOrgs.length,
-            missedOrgs,
-            fallbackToRest: true,
+            restError: (restError as Error).message,
+            fallbackFailed: true,
           });
 
-          return restOrgs;
+          return orgNames;
+        }
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        const isBadGateway =
+          errorMessage.includes('502') ||
+          errorMessage.includes('Bad Gateway') ||
+          errorMessage.includes('timeout');
+
+        if (isBadGateway && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          logger.warn(`GitHub 502/Timeout on attempt ${attempt + 1}, retrying in ${delay}ms...`, {
+            error: errorMessage,
+            attempt: attempt + 1,
+            maxRetries,
+            willRetry: true,
+          });
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
         }
 
-        return orgNames;
-      } catch (restError) {
-        logger.warn('REST API verification failed, using GraphQL results', {
-          graphqlCount: orgNames.length,
-          restError: (restError as Error).message,
-          fallbackFailed: true,
+        logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_ORGANIZATIONS, {
+          error: errorMessage,
+          method: 'graphql',
+          attempt: attempt + 1,
+          attemptingRestFallback: true,
         });
 
-        return orgNames;
-      }
-    } catch (error) {
-      logger.error(GITHUB_SERVICE_LOG_ERROR_MESSAGES.ERROR_RETRIEVING_ORGANIZATIONS, {
-        error: (error as Error).message,
-        method: 'graphql',
-        attemptingRestFallback: true,
-      });
+        try {
+          logger.info('GraphQL failed, using REST API fallback for organizations', {
+            reason: 'GraphQL failed',
+            fallbackMethod: 'rest_api',
+          });
 
-      try {
-        logger.info('GraphQL failed, using REST API fallback for organizations', {
-          reason: 'GraphQL failed',
-          fallbackMethod: 'rest_api',
-        });
+          const orgs = await this.getUserOrganizationsRestFallback();
 
-        const orgs = await this.getUserOrganizationsRestFallback();
+          logger.info('REST API fallback successful for organizations', {
+            count: orgs.length,
+            method: 'rest_fallback',
+          });
 
-        logger.info('REST API fallback successful for organizations', {
-          count: orgs.length,
-          method: 'rest_fallback',
-        });
+          return orgs;
+        } catch (restError) {
+          logger.error('Both GraphQL and REST failed for organizations', {
+            graphqlError: errorMessage,
+            restError: (restError as Error).message,
+            nonBlocking: true,
+          });
 
-        return orgs;
-      } catch (restError) {
-        logger.error('Both GraphQL and REST failed for organizations', {
-          graphqlError: (error as Error).message,
-          restError: (restError as Error).message,
-          nonBlocking: true,
-        });
-
-        return [];
+          return [];
+        }
       }
     }
+
+    return [];
   }
 
   /**
@@ -418,7 +437,7 @@ export class GitHubService {
     try {
       const response = await this.githubConfig.executeRestRequest('GET /user/orgs', {
         per_page: 100,
-      });
+      }, { logErrorAsWarn: true });
 
       const orgs = (response as unknown as Array<{ login: string }>) ?? [];
       const orgNames = orgs.map(org => org.login);
@@ -565,7 +584,7 @@ export class GitHubService {
                 name
                 target {
                   ... on Commit {
-                    history(first: 10) {
+                    history(first: 3) {
                       totalCount
                       nodes {
                         oid
@@ -611,7 +630,7 @@ export class GitHubService {
               }
               deployments { totalCount }
               environments { totalCount }
-              recentPullRequests: pullRequests(first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+              recentPullRequests: pullRequests(first: 10, orderBy: {field: UPDATED_AT, direction: DESC}) {
                 nodes {
                   author {
                     login
@@ -735,7 +754,7 @@ export class GitHubService {
         direction: 'desc',
         per_page: 100,
         page,
-      });
+      }, { logErrorAsWarn: true });
 
       const repos = (response as unknown as unknown[]) ?? [];
 

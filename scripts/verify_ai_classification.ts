@@ -9,7 +9,10 @@ const __dirname = path.dirname(__filename);
 // Load env from root
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import { LanguageCategoryAIService, type LanguageInput } from '@/services/LanguageCategoryAIService';
+interface LanguageInput {
+    name: string;
+    bytes: number;
+}
 
 async function verifyAIClassification() {
     console.log('🚀 Starting AI Classification Verification...');
@@ -29,7 +32,10 @@ async function verifyAIClassification() {
     console.log(`Input: ${languages.length} languages`);
 
     try {
-        const result = await LanguageCategoryAIService.classifyLanguages(languages);
+        // Dynamic import to ensure env is loaded BEFORE the service initializes
+        const { AIClassificationService } = await import('../src/services/AIClassificationService.js');
+
+        const result = await AIClassificationService.classifyLanguages(languages);
         console.log('\n✅ Classification Success!');
         console.log('Categories found:', result.categories.length);
         console.log('Mapped languages:', result.languageToCategories.length);
@@ -39,6 +45,7 @@ async function verifyAIClassification() {
 
     } catch (error) {
         console.error('\n❌ Classification Failed:', error);
+        console.error(error);
         process.exit(1);
     }
 }

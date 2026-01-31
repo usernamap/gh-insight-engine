@@ -74,15 +74,15 @@ export const GITHUB_CONSTANTS = {
     'API rate limit exceeded for user',
   ] as const,
 
-  // Pagination Limits - Respect GitHub GraphQL API limits
-  ORGANIZATIONS_LIMIT: 100, // GitHub GraphQL max limit
-  USER_REPOSITORIES_LIMIT: 100, // GitHub GraphQL max limit
-  ORG_REPOSITORIES_LIMIT: 100, // GitHub GraphQL max limit
-  LANGUAGES_LIMIT: 100, // GitHub GraphQL max limit
-  TOPICS_LIMIT: 100, // GitHub GraphQL max limit
-  COMMITS_LIMIT: 100, // GitHub GraphQL max limit
-  WORKFLOW_RUNS_LIMIT: 100, // GitHub GraphQL max limit
-  ORGANIZATIONS_PER_PAGE: 100,
+  // Pagination Limits - Reduced to avoid Resource limits exceeded / 502 errors
+  ORGANIZATIONS_LIMIT: 50, // Reduced from 100
+  USER_REPOSITORIES_LIMIT: 50, // Reduced from 100
+  ORG_REPOSITORIES_LIMIT: 50, // Reduced from 100
+  LANGUAGES_LIMIT: 8, // Reduced from 100
+  TOPICS_LIMIT: 20, // Reduced from 100
+  COMMITS_LIMIT: 10, // Reduced from 100
+  WORKFLOW_RUNS_LIMIT: 10, // Reduced from 100
+  ORGANIZATIONS_PER_PAGE: 50,
 
   // Infrastructure Error Handling - Removed for direct execution
   INFRASTRUCTURE_ERROR_CODES: [500, 502, 503, 504] as const,

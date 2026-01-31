@@ -111,6 +111,12 @@ export interface AIAnalysisResult {
     confidenceScore: number;
     analysisVersion: string;
   };
+
+  technologies?: {
+    categories: Record<string, string[]>;
+    raw_sources: Record<string, string[]>;
+    ignored_items: string[];
+  };
 }
 
 export class AIAnalysisService {
