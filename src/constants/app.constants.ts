@@ -236,6 +236,7 @@ export const APP_INITIALIZATION = {
   REDIRECT_STATUS_CODE: 301,
   DEFAULT_ENVIRONMENT: 'development',
   ENVIRONMENT_KEY: 'env',
+  TRUST_PROXY: 1,
 } as const;
 
 // Browser detection constants
