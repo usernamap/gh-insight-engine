@@ -489,6 +489,21 @@ export interface GitHubGraphQLRepositoryNode {
       history?: GitHubGraphQLCommitHistory;
     };
   } | null;
+  mainBranch?: {
+    target?: {
+      history?: GitHubGraphQLCommitHistory;
+    };
+  };
+  devBranch?: {
+    target?: {
+      history?: GitHubGraphQLCommitHistory;
+    };
+  };
+  developBranch?: {
+    target?: {
+      history?: GitHubGraphQLCommitHistory;
+    };
+  };
   licenseInfo: GitHubGraphQLLicense | null;
   hasIssuesEnabled: boolean;
   hasProjectsEnabled: boolean;
