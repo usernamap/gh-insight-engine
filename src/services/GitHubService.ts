@@ -589,92 +589,6 @@ export class GitHubService {
               diskUsage
               defaultBranchRef {
                 name
-                target {
-                  ... on Commit {
-                    history(first: 3) {
-                      totalCount
-                      nodes {
-                        oid
-                        message
-                        committedDate
-                        author {
-                          name
-                          email
-                          user { login }
-                        }
-                        additions
-                        deletions
-                        changedFiles
-                      }
-                    }
-                  }
-                }
-              }
-              mainBranch: ref(qualifiedName: "refs/heads/main") {
-                target {
-                  ... on Commit {
-                    history(first: 3) {
-                      totalCount
-                      nodes {
-                        oid
-                        message
-                        committedDate
-                        author {
-                          name
-                          email
-                          user { login }
-                        }
-                        additions
-                        deletions
-                        changedFiles
-                      }
-                    }
-                  }
-                }
-              }
-              devBranch: ref(qualifiedName: "refs/heads/dev") {
-                target {
-                  ... on Commit {
-                    history(first: 3) {
-                      totalCount
-                      nodes {
-                        oid
-                        message
-                        committedDate
-                        author {
-                          name
-                          email
-                          user { login }
-                        }
-                        additions
-                        deletions
-                        changedFiles
-                      }
-                    }
-                  }
-                }
-              }
-              developBranch: ref(qualifiedName: "refs/heads/develop") {
-                target {
-                  ... on Commit {
-                    history(first: 3) {
-                      totalCount
-                      nodes {
-                        oid
-                        message
-                        committedDate
-                        author {
-                          name
-                          email
-                          user { login }
-                        }
-                        additions
-                        deletions
-                        changedFiles
-                      }
-                    }
-                  }
-                }
               }
               licenseInfo {
                 name
@@ -1131,18 +1045,68 @@ export class GitHubService {
                   logger.warn('GraphQL history fetch failed with 502, attempting REST fallback for count', { repo: repo.nameWithOwner });
                   try {
                     // REST fallback: Get commit count via efficient Link header method
-                    // We use per_page=1 to be as light as possible
-                    // const commitsUrl = `GET /repos/${owner}/${repoName}/commits`;
-                    // const commitsResponse = await this.githubConfig.executeRestRequest(commitsUrl, { sha: selectedBranchName, per_page: 1 });
-                    // Note: executeRestRequest returns data, we need response headers for Link.
-                    // But the 'enrichRepositoryData' earlier helper `getCountFromLinkHeader` works on PromiseSettledResult.
-                    // Ideally, we'd access headers. GitHubConfig.executeRestRequest returns 'data' by default.
-                    // We used to have raw access or rate limit headers.
-                    // Let's use a specialized request if possible, or just accept we might not get the count if GraphQL fails 3 times.
-                    // Actually, the user WANTS the count.
-                    // Let's try to get it from the 'enrichRepositoryData' context if possible, or re-implement a robust REST call.
-                    // For now, simpler: just throw and log.
-                  } catch { /* ignore */ }
+                    // We use per_page=1 to be as light as possible.
+                    // Accessing octokit directly to get headers.
+                    const octokit = this.githubConfig.getOctokit();
+                    if (octokit) {
+                      const restRes = await octokit.request('GET /repos/{owner}/{repo}/commits', {
+                        owner,
+                        repo: repoName,
+                        sha: selectedBranchName,
+                        per_page: 1
+                      });
+
+                      let totalCount = 0;
+                      const linkHeader = restRes.headers.link;
+
+                      if (linkHeader != null) {
+                        const match = linkHeader.match(/page=(\d+)>; rel="last"/);
+                        if (match) {
+                          totalCount = parseInt(match[1], 10);
+                        }
+                      }
+
+                      // If no Link header (and we have data), it means result set fits in one page (<= 1)
+                      if (totalCount === 0 && Array.isArray(restRes.data)) {
+                        totalCount = restRes.data.length;
+                      }
+
+                      // Local type for REST commit response
+                      interface RestCommit {
+                        sha: string;
+                        commit: {
+                          message: string;
+                          committer: { date?: string } | null;
+                          author: { name?: string; email?: string } | null;
+                        };
+                        author: { login: string } | null;
+                      }
+
+                      // Map REST result to HistoryResponse format
+                      // Note: additions/deletions are not available in list view, set to 0
+                      historyData = {
+                        totalCount,
+                        nodes: Array.isArray(restRes.data) ? (restRes.data as unknown as RestCommit[]).map((c) => ({
+                          oid: c.sha,
+                          message: c.commit.message,
+                          committedDate: c.commit.committer?.date ?? new Date().toISOString(),
+                          author: {
+                            name: c.commit.author?.name ?? 'Unknown',
+                            email: c.commit.author?.email ?? '',
+                            user: c.author?.login != null ? { login: c.author.login } : undefined
+                          },
+                          additions: 0,
+                          deletions: 0,
+                          changedFiles: 0
+                        })) : []
+                      };
+
+                      logger.info('REST fallback successful', { repo: repo.nameWithOwner, count: totalCount });
+                      break; // Success, exit retry loop
+                    }
+                  } catch (restErr) {
+                    logger.warn('REST fallback also failed', { error: String(restErr) });
+                  }
                 }
                 throw err;
               }
