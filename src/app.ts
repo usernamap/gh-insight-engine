@@ -17,6 +17,10 @@ import {
 export const createApp = async (): Promise<express.Application> => {
   const app = express();
 
+  // Trust the reverse proxy (e.g. Nginx, Load Balancer) to correctly identify users
+  // and prevent validation errors with express-rate-limit
+  app.set('trust proxy', APP_INITIALIZATION.TRUST_PROXY);
+
   logger.info(APP_INITIALIZATION_MESSAGES.INITIALIZING_APPLICATION, {
     nodeEnv: process.env.NODE_ENV,
     port: process.env.PORT,
