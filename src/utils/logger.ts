@@ -24,6 +24,7 @@ const IGNORED_ERRORS = [
   'no analysis found',
   'Branch not protected',
   'Not Found - https://docs.github.com/rest/branches/branch-protection',
+  'You are not authorized to perform this operation.',
 ];
 
 const downgradeErrorToWarn = winston.format((info) => {

@@ -36,6 +36,7 @@ export class AIAnalysisModel {
           repositoryScores: analysisResult.repositoryScores as unknown as Prisma.InputJsonValue,
           insights: analysisResult.insights as unknown as Prisma.InputJsonValue,
           metadata: analysisResult.metadata as unknown as Prisma.InputJsonValue,
+          technologies: analysisResult.technologies as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -115,6 +116,7 @@ export class AIAnalysisModel {
           repositoryScores: analysisResult.repositoryScores as unknown as Prisma.InputJsonValue,
           insights: analysisResult.insights as unknown as Prisma.InputJsonValue,
           metadata: analysisResult.metadata as unknown as Prisma.InputJsonValue,
+          technologies: analysisResult.technologies as unknown as Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
       });
@@ -333,6 +335,11 @@ export class AIAnalysisModel {
         recommendations: string[];
         careerAdvice: string[];
       },
+      technologies: (prismaAnalysis.technologies as unknown as {
+        categories: Record<string, string[]>;
+        raw_sources: Record<string, string[]>;
+        ignored_items: string[];
+      } | null) ?? undefined,
       metadata: prismaAnalysis.metadata as unknown as {
         analysisDate: Date;
         model: string;

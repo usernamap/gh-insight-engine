@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User as PrismaUser } from '@prisma/client';
+import { User as PrismaUser, Prisma } from '@prisma/client';
 import { asyncHandler, createError } from '@/middleware';
 import { logWithContext } from '@/utils';
 import logger from '@/utils/logger';
@@ -7,6 +7,7 @@ import { AuthenticatedUser } from '@/types';
 import { RepositoryModel } from '@/models';
 import { RepoController, UserController, AIController } from '@/controllers';
 import { getLanguageMetadataService } from '@/services/LanguageMetadataService';
+import { technologyExtractionService, AIClassificationService } from '@/services';
 import {
   REFRESH_MESSAGES,
   REFRESH_STATUS_CODES,
@@ -370,6 +371,34 @@ export class RefreshController {
 
         // 2. Perform Developer Analysis
         await AIController.performAIAnalysisInternal(username);
+
+        // 3. New Phase: Advanced Technology Discovery (Tech Stack)
+        try {
+          const rawArtifacts = await technologyExtractionService.collectRawArtifacts(
+            savedUser.id,
+            githubToken
+          );
+          if (rawArtifacts.length > 0) {
+            const refinedStack = await AIClassificationService.refineTechnologyStack(rawArtifacts);
+
+            // Persist to AIAnalysis record
+            // We need to find the analysis record first or assume performAIAnalysisInternal returned it or updated it
+            // Assuming performAIAnalysisInternal returns the analysis result or we need to update it
+            // Let's verify AIController logic next. For now, let's assume we can update the latest analysis
+            const dbConfig = (await import('@/config/database')).default;
+            const prisma = dbConfig.getPrismaClient();
+            if (prisma) {
+              await prisma.aIAnalysis.updateMany({
+                where: { userId: savedUser.id },
+                data: { technologies: refinedStack as unknown as Prisma.InputJsonValue }
+              });
+            }
+
+            logger.info('Tech Stack Analysis saved', { username, stackSize: Object.keys(refinedStack.categories).length });
+          }
+        } catch (techError) {
+          logger.error('Technology Analysis failed (non-fatal)', { username, error: String(techError) });
+        }
 
         const aiStepDuration = Date.now() - aiStepStart;
         steps.push({

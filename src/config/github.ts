@@ -232,7 +232,20 @@ export class GitHubConfig {
     variables: Record<string, unknown> = {}
   ): Promise<T> {
     if (!this.octokit) {
-      throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
+      if (this.token !== null && this.token !== '') {
+        logger.warn('GitHub client lost initialization (GraphQL), attempting self-healing re-initialization');
+        this.octokit = new Octokit({
+          auth: this.token,
+          userAgent: GITHUB_CONSTANTS.USER_AGENT,
+          request: {
+            timeout: GITHUB_CONSTANTS.INITIAL_TIMEOUT,
+            retries: GITHUB_CONSTANTS.INITIAL_RETRIES,
+            retryAfter: GITHUB_CONSTANTS.INITIAL_RETRY_AFTER,
+          },
+        });
+      } else {
+        throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
+      }
     }
 
     return this.rateLimitHandler.execute(
@@ -264,10 +277,24 @@ export class GitHubConfig {
 
   public async executeRestRequest<T = Record<string, unknown>>(
     endpoint: string,
-    options: unknown = {}
+    options: unknown = {},
+    requestOptions: { logErrorAsWarn?: boolean } = {}
   ): Promise<T> {
     if (!this.octokit) {
-      throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
+      if (this.token !== null && this.token !== '') {
+        logger.warn('GitHub client lost initialization, attempting self-healing re-initialization');
+        this.octokit = new Octokit({
+          auth: this.token,
+          userAgent: GITHUB_CONSTANTS.USER_AGENT,
+          request: {
+            timeout: GITHUB_CONSTANTS.INITIAL_TIMEOUT,
+            retries: GITHUB_CONSTANTS.INITIAL_RETRIES,
+            retryAfter: GITHUB_CONSTANTS.INITIAL_RETRY_AFTER,
+          },
+        });
+      } else {
+        throw new Error(GITHUB_MESSAGES.CLIENT_NOT_INITIALIZED);
+      }
     }
 
     return this.rateLimitHandler.execute(
@@ -291,10 +318,18 @@ export class GitHubConfig {
 
           return response.data;
         } catch (_error: unknown) {
-          logger.error(GITHUB_MESSAGES.REST_REQUEST_FAILED, {
-            endpoint,
-            error: (_error as Error).message,
-          });
+          if (requestOptions.logErrorAsWarn === true) {
+            logger.warn(GITHUB_MESSAGES.REST_REQUEST_FAILED, {
+              endpoint,
+              error: (_error as Error).message,
+              severity: 'handled_warning'
+            });
+          } else {
+            logger.error(GITHUB_MESSAGES.REST_REQUEST_FAILED, {
+              endpoint,
+              error: (_error as Error).message,
+            });
+          }
 
           throw _error;
         }
