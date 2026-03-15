@@ -59,3 +59,4 @@ api_data_github.md
 .env.production.local
 
 /docs/index.html
+.gemini/
