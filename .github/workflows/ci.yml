@@ -144,6 +144,9 @@ jobs:
       
     - name: Run npm audit
       run: npm audit --audit-level=moderate
+
+    - name: Run npm audit (mcp)
+      run: npm audit --prefix mcp --package-lock-only --audit-level=moderate
       
     - name: Run GitHub Security Advisories check
       run: |
