@@ -1,0 +1,22 @@
+{
+  "name": "GitHub Insight Engine API",
+  "short_name": "GH Insight",
+  "description": "GitHub Insight Engine REST API Documentation",
+  "start_url": "/docs/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png?v=20260922",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png?v=20260922",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

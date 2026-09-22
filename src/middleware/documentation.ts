@@ -140,7 +140,7 @@ const swaggerUIOptions = {
     }
   `,
   customSiteTitle: DOCUMENTATION_CONSTANTS.SWAGGER_TITLE,
-  customfavIcon: '/favicon.ico',
+  customfavIcon: '/favicon.ico" />\n  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20260922" />\n  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon-precomposed.png?v=20260922" />\n  <meta name="apple-mobile-web-app-title" content="GH Insight" />\n  <meta name="apple-mobile-web-app-capable" content="yes" />\n  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n  <link rel="manifest" href="/manifest.json',
   swaggerOptions: {
     docExpansion: 'list',
     filter: true,
