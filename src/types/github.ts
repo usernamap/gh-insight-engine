@@ -200,7 +200,7 @@ export interface GitHubRepo {
     latestRelease: {
       name: string;
       tagName: string;
-      publishedAt: Date;
+      publishedAt: Date | null;
       isLatest: boolean;
     } | null;
   };
