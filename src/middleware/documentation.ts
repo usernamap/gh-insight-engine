@@ -94,6 +94,7 @@ const swaggerUIOptions = {
     .swagger-ui .info .title { color: #0969da; }
   `,
   customSiteTitle: DOCUMENTATION_CONSTANTS.SWAGGER_TITLE,
+  customfavIcon: '/favicon.ico',
   swaggerOptions: {
     docExpansion: 'list',
     filter: true,
