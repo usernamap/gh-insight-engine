@@ -90,8 +90,54 @@ const generateOpenAPISpec = (): Record<string, unknown> => {
 
 const swaggerUIOptions = {
   customCss: `
-    .swagger-ui .topbar { display: none; }
-    .swagger-ui .info .title { color: #0969da; }
+    .swagger-ui .topbar {
+      background-color: #0d1117;
+      border-bottom: 1px solid #30363d;
+      padding: 10px 0;
+    }
+    .swagger-ui .topbar .topbar-wrapper {
+      display: flex;
+      align-items: center;
+    }
+    .swagger-ui .topbar .topbar-wrapper .link {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+    .swagger-ui .topbar .topbar-wrapper .link img {
+      content: url('/api-logo.svg');
+      height: 38px;
+      width: 38px;
+    }
+    .swagger-ui .topbar .topbar-wrapper .link span {
+      display: none;
+    }
+    .swagger-ui .topbar .topbar-wrapper .link::after {
+      content: 'GitHub Insight Engine API';
+      color: #f0f6fc;
+      font-size: 16px;
+      font-weight: 600;
+      margin-left: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .swagger-ui .info {
+      margin: 24px 0 16px 0;
+    }
+    .swagger-ui .info .title {
+      color: #0969da;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .swagger-ui .info .title::before {
+      content: '';
+      display: inline-block;
+      width: 44px;
+      height: 44px;
+      background: url('/api-logo.svg') no-repeat center center;
+      background-size: contain;
+      flex-shrink: 0;
+    }
   `,
   customSiteTitle: DOCUMENTATION_CONSTANTS.SWAGGER_TITLE,
   customfavIcon: '/favicon.ico',

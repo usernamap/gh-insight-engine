@@ -1,7 +1,11 @@
 User-agent: *
+Allow: /docs
+Allow: /documentation
 Allow: /api/docs
 Disallow: /api/
 
 User-agent: Googlebot
+Allow: /docs
+Allow: /documentation
 Allow: /api/docs
 Disallow: /api/
