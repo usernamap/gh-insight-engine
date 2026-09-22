@@ -209,7 +209,7 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
             name: node.releases.nodes[0].name,
             tagName: node.releases.nodes[0].tagName,
             publishedAt: (() => {
-              const rawDate = node.releases.nodes[0].publishedAt || node.releases.nodes[0].createdAt;
+              const rawDate = node.releases.nodes[0].publishedAt;
               if (!rawDate) return null;
               const parsed = new Date(rawDate);
               return !isNaN(parsed.getTime()) ? parsed : null;
