@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import databaseConfig from '@/config/database';
 import logger from '@/utils/logger';
@@ -34,6 +35,8 @@ export const createApp = async (): Promise<express.Application> => {
     schedulingService.start();
     logger.info(APP_INITIALIZATION_MESSAGES.SCHEDULING_INITIALIZED);
     setupAllMiddlewares(app);
+
+    app.use(express.static(path.join(process.cwd(), 'public')));
 
     app.use((req, res, next) => {
       const userAgent = req.get(BROWSER_DETECTION.HEADERS.USER_AGENT) ?? EMPTY_STRING;
