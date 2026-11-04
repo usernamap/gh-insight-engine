@@ -31,7 +31,7 @@ jobs:
       run: npm run db:generate
       
     - name: Cache node_modules
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -56,7 +56,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -102,7 +102,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -133,7 +133,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -180,7 +180,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -213,7 +213,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -248,7 +248,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -283,7 +283,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -327,7 +327,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -378,7 +378,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -417,7 +417,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
