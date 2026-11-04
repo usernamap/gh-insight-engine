@@ -43,7 +43,7 @@
     "mcp:run": "cd mcp && npm i && npm run build && npm run start"
   },
   "devDependencies": {
-    "@eslint/js": "^9.31.0",
+    "@eslint/js": "^10.0.1",
     "@stoplight/spectral-cli": "^6.15.0",
     "@stoplight/spectral-core": "^1.20.0",
     "@stoplight/spectral-formats": "^1.8.2",
