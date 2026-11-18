@@ -197,6 +197,11 @@ jobs:
       env:
         DATABASE_URL: mongodb://localhost:27017/test
 
+    - name: Test durable refresh progress against MongoDB
+      run: npm exec -- tsx --test tests/refresh-progress.native.test.ts
+      env:
+        REFRESH_PROGRESS_FIXTURE_DB: mongodb://127.0.0.1:27017/refresh_progress_fixture_000000000001
+
   documentation:
     name: API Documentation Check
     runs-on: ubuntu-latest

@@ -4,10 +4,16 @@ import { asyncHandler, createError } from '@/middleware';
 import { logWithContext } from '@/utils';
 import logger from '@/utils/logger';
 import { AuthenticatedUser } from '@/types';
+import dbConfig from '@/config/database';
 import { RepositoryModel } from '@/models';
 import { RepoController, UserController, AIController } from '@/controllers';
 import { getLanguageMetadataService } from '@/services/LanguageMetadataService';
 import { technologyExtractionService, AIClassificationService } from '@/services';
+import {
+  REFRESH_LEASE_RENEWAL_MS,
+  RefreshProgressService,
+  type RefreshRun,
+} from '@/services/RefreshProgressService';
 import {
   REFRESH_MESSAGES,
   REFRESH_STATUS_CODES,
@@ -17,25 +23,7 @@ import {
   REFRESH_RESPONSE_FIELDS,
 } from '@/constants';
 
-const refreshStatusMap = new Map<
-  string,
-  {
-    status: string;
-    progressPercentage: number;
-    startedAt: Date;
-    completedAt?: Date;
-    estimatedCompletion?: Date;
-    currentStep: number;
-    totalSteps: number;
-    error?: string;
-    steps?: Array<{
-      step: string;
-      success: boolean;
-      duration: number;
-      error?: string;
-    }>;
-  }
->();
+const refreshProgress = new RefreshProgressService(() => dbConfig.getMongooseConnection()?.db);
 
 interface RefreshStepResult {
   step: (typeof REFRESH_STEPS)[keyof typeof REFRESH_STEPS];
@@ -64,13 +52,15 @@ export class RefreshController {
       timestamp: new Date().toISOString(),
     });
 
-    this.updateRefreshStatus(username, {
+    const startedAt = new Date();
+    const estimatedCompletion = new Date(startedAt.getTime() + 10 * 60 * 1000);
+    const run = await refreshProgress.begin(username, {
       status: 'in_progress',
       progressPercentage: 0,
-      startedAt: new Date(),
+      startedAt,
       currentStep: 1,
       totalSteps: 3,
-      estimatedCompletion: new Date(Date.now() + 10 * 60 * 1000),
+      estimatedCompletion,
       steps: [],
     });
 
@@ -80,79 +70,49 @@ export class RefreshController {
       [REFRESH_RESPONSE_FIELDS.USERNAME]: username,
       [REFRESH_RESPONSE_FIELDS.REFRESH_STATUS]: 'in_progress',
       [REFRESH_RESPONSE_FIELDS.METADATA]: {
-        [REFRESH_RESPONSE_FIELDS.STARTED_AT]: new Date().toISOString(),
-        [REFRESH_RESPONSE_FIELDS.ESTIMATED_COMPLETION]: new Date(
-          Date.now() + 10 * 60 * 1000
-        ).toISOString(),
+        [REFRESH_RESPONSE_FIELDS.STARTED_AT]: startedAt.toISOString(),
+        [REFRESH_RESPONSE_FIELDS.ESTIMATED_COMPLETION]: estimatedCompletion.toISOString(),
         [REFRESH_RESPONSE_FIELDS.CURRENT_STEP]: 1,
         [REFRESH_RESPONSE_FIELDS.TOTAL_STEPS]: 3,
       },
       [REFRESH_RESPONSE_FIELDS.TIMESTAMP]: new Date().toISOString(),
     });
 
-    // Start background refresh with comprehensive error handling
-    this.refreshUserDataBackground(authenticatedUser.githubToken, username).catch((error) => {
-      // This catch block ensures no unhandled rejections occur
-      logger.error('Critical error in background refresh process', {
-        username,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString(),
-      });
+    let renewing = false;
+    const renewal = setInterval(() => {
+      if (renewing) return;
+      renewing = true;
+      void refreshProgress.renew(username, run)
+        .then(current => { if (!current) clearInterval(renewal); })
+        .catch(() => { logger.warn('Refresh status lease renewal failed', { username }); })
+        .finally(() => { renewing = false; });
+    }, REFRESH_LEASE_RENEWAL_MS).unref();
 
-      // Update status to failed with appropriate error message
-      const isRateLimitError = error instanceof Error &&
-        (error.name === 'GitHubRateLimitError' ||
-          error.message.includes('rate limit') ||
-          error.message.includes('API rate limit exceeded'));
-
-      const errorMessage = isRateLimitError
-        ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
-        : (error instanceof Error ? error.message : 'An unexpected error occurred during data refresh');
-
-      this.updateRefreshStatus(username, {
-        status: 'failed',
-        progressPercentage: 0,
-        startedAt: new Date(),
-        error: errorMessage,
-        completedAt: new Date(),
-        currentStep: 1,
-        totalSteps: 3,
-        steps: [],
-      });
-    });
+    void this.refreshUserDataBackground(authenticatedUser.githubToken, username, run)
+      .catch(async (error: unknown) => {
+        logger.error('Critical error in background refresh process', {
+          username,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString(),
+        });
+        try {
+          await refreshProgress.update(username, run, {
+            status: 'failed',
+            progressPercentage: 0,
+            startedAt,
+            error: error instanceof Error ? error.message : 'Data refresh failed',
+            completedAt: new Date(),
+            currentStep: 1,
+            totalSteps: 3,
+            steps: [],
+          });
+        } catch {
+          logger.error('Could not persist terminal refresh status', { username });
+        }
+      })
+      .finally(() => { clearInterval(renewal); });
   });
-
-  private static updateRefreshStatus(
-    username: string,
-    status: {
-      status: string;
-      progressPercentage: number;
-      startedAt: Date;
-      completedAt?: Date;
-      estimatedCompletion?: Date;
-      currentStep: number;
-      totalSteps: number;
-      error?: string;
-      steps?: Array<{
-        step: string;
-        success: boolean;
-        duration: number;
-        error?: string;
-      }>;
-    }
-  ): void {
-    refreshStatusMap.set(username, status);
-
-    if (status.status === 'completed' || status.status === 'failed') {
-      setTimeout(
-        () => {
-          refreshStatusMap.delete(username);
-        },
-        60 * 60 * 1000
-      );
-    }
-  }
 
   static getRefreshStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { username } = req.params;
@@ -172,7 +132,7 @@ export class RefreshController {
     });
 
     try {
-      const status = refreshStatusMap.get(username);
+      const status = await refreshProgress.read(username);
 
       if (status == null) {
         throw createError.notFound(REFRESH_MESSAGES.STATUS_NOT_FOUND);
@@ -227,7 +187,8 @@ export class RefreshController {
 
   private static async refreshUserDataBackground(
     githubToken: string,
-    username: string
+    username: string,
+    run: RefreshRun
   ): Promise<void> {
     const startTime = Date.now();
     const steps: RefreshStepResult[] = [];
@@ -236,10 +197,10 @@ export class RefreshController {
 
     let savedUser: PrismaUser;
     try {
-      this.updateRefreshStatus(username, {
+      await refreshProgress.update(username, run, {
         status: 'in_progress',
         progressPercentage: 33,
-        startedAt: new Date(),
+        startedAt: run.startedAt,
         currentStep: 2,
         totalSteps: 3,
         estimatedCompletion: new Date(Date.now() + 7 * 60 * 1000),
@@ -292,10 +253,10 @@ export class RefreshController {
         throw error;
       }
 
-      this.updateRefreshStatus(username, {
+      await refreshProgress.update(username, run, {
         status: 'in_progress',
         progressPercentage: 66,
-        startedAt: new Date(),
+        startedAt: run.startedAt,
         currentStep: 3,
         totalSteps: 3,
         estimatedCompletion: new Date(Date.now() + 3 * 60 * 1000),
@@ -438,10 +399,10 @@ export class RefreshController {
 
       const totalDuration = Date.now() - startTime;
 
-      this.updateRefreshStatus(username, {
+      await refreshProgress.update(username, run, {
         status: 'completed',
         progressPercentage: 100,
-        startedAt: new Date(),
+        startedAt: run.startedAt,
         completedAt: new Date(),
         currentStep: 3,
         totalSteps: 3,
@@ -467,10 +428,10 @@ export class RefreshController {
         ? 'GitHub API rate limit exceeded. Please wait 10-30 minutes and try again.'
         : errorMessage;
 
-      this.updateRefreshStatus(username, {
+      await refreshProgress.update(username, run, {
         status: 'failed',
         progressPercentage: 0,
-        startedAt: new Date(),
+        startedAt: run.startedAt,
         error: finalError,
         completedAt: new Date(),
         currentStep: 1,
