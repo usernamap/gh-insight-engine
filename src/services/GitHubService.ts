@@ -208,7 +208,7 @@ function toGitHubRepo(node: GitHubGraphQLRepositoryNode): GitHubRepo {
           ? {
             name: node.releases.nodes[0].name,
             tagName: node.releases.nodes[0].tagName,
-            publishedAt: (() => {
+            publishedAt: ((): Date | null => {
               const rawDate = node.releases.nodes[0].publishedAt;
               if (!rawDate) return null;
               const parsed = new Date(rawDate);
@@ -930,8 +930,10 @@ export class GitHubService {
         const releasesData = releasesResponse.value as unknown;
         if (Array.isArray(releasesData) && releasesData.length > 0) {
           const latestRelease = releasesData[0] as Record<string, unknown>;
-          const rawPubDate = latestRelease.published_at || latestRelease.created_at;
-          const parsedPubDate = rawPubDate ? new Date(String(rawPubDate)) : null;
+          const publishedAt = latestRelease.published_at;
+          const rawPubDate =
+            typeof publishedAt === 'string' && publishedAt !== '' ? publishedAt : latestRelease.created_at;
+          const parsedPubDate = typeof rawPubDate === 'string' && rawPubDate !== '' ? new Date(rawPubDate) : null;
           repo.releases = {
             totalCount: releasesData.length,
             latestRelease: {
