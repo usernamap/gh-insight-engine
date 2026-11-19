@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  NODE_VERSION: '18.14.0'
+  NODE_VERSION: '24'
 
 jobs:
   setup:
@@ -31,7 +31,7 @@ jobs:
       run: npm run db:generate
       
     - name: Cache node_modules
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -56,7 +56,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -102,7 +102,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -133,7 +133,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -180,7 +180,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -197,6 +197,11 @@ jobs:
       env:
         DATABASE_URL: mongodb://localhost:27017/test
 
+    - name: Test durable refresh progress against MongoDB
+      run: npm exec -- tsx --test tests/refresh-progress.native.test.ts
+      env:
+        REFRESH_PROGRESS_FIXTURE_DB: mongodb://127.0.0.1:27017/refresh_progress_fixture_000000000001
+
   documentation:
     name: API Documentation Check
     runs-on: ubuntu-latest
@@ -205,6 +210,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -213,7 +220,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -229,8 +236,14 @@ jobs:
       run: npm run openapi:coverage
       
     - name: Check for breaking changes
-      run: npm run openapi:diff:breaking
       if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        OPENAPI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        [[ "$OPENAPI_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+        git show "${OPENAPI_BASE_SHA}:openapi.yaml" > "$RUNNER_TEMP/openapi-base.yaml"
+        npm exec -- openapi-diff "$RUNNER_TEMP/openapi-base.yaml" openapi.yaml
 
   performance:
     name: Performance Check
@@ -248,7 +261,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -283,7 +296,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -327,7 +340,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -378,7 +391,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules
@@ -391,9 +404,11 @@ jobs:
       run: npm run build
       
     - name: Deploy to staging preview
+      env:
+        PR_BRANCH: ${{ github.head_ref }}
       run: |
         echo "Deploying to staging preview for PR #${{ github.event.pull_request.number }}"
-        echo "Branch: ${{ github.head_ref }}"
+        printf 'Branch: %s\n' "$PR_BRANCH"
         echo "This would deploy to a preview environment"
         # Add actual preview deployment steps here
 
@@ -417,7 +432,7 @@ jobs:
         cache: 'npm'
         
     - name: Restore node_modules cache
-      uses: actions/cache@v3
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           node_modules

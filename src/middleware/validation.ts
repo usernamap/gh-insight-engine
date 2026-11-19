@@ -59,14 +59,14 @@ export const validate = (schemas: ValidationSchemas) => {
       if (_error instanceof ZodError) {
         logWithContext.api('validation_error', req.path, false, {
           method: req.method,
-          errors: _error.errors,
+          errors: _error.issues,
           schemas: Object.keys(schemas),
         });
 
         _res.status(VALIDATION_STATUS_CODES.BAD_REQUEST).json({
           error: VALIDATION_ERROR_CODES.VALIDATION_ERROR,
           message: VALIDATION_ERROR_MESSAGES.DATA_FORMAT_MISMATCH,
-          details: _error.errors.map(err => ({
+          details: _error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message,
             code: err.code,

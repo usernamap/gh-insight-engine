@@ -178,7 +178,7 @@ const classifyError = (_error: Error): APIError => {
 
   if (_error instanceof ZodError) {
     return new ValidationError(ERROR_HANDLER_MESSAGES.DATA_VALIDATION_ERROR, {
-      validationErrors: _error.errors.map((err: ZodIssue) => ({
+      validationErrors: _error.issues.map((err: ZodIssue) => ({
         field: err.path.join('.'),
         message: err.message,
         code: err.code,
