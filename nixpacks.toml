@@ -1,0 +1,3 @@
+# Keep Dokploy builds on the Node major used by the production runtime.
+[variables]
+NIXPACKS_NODE_VERSION = "22"
